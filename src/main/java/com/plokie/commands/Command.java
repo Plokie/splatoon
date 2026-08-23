@@ -5,8 +5,6 @@ import net.minecraft.commands.CommandBuildContext;
 import net.minecraft.commands.CommandSourceStack;
 
 public class Command {
-    void register(CommandDispatcher<CommandSourceStack> dispatcher, CommandBuildContext registryAccess) {
 
-    }
 }
 

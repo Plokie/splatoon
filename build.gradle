@@ -15,7 +15,7 @@ loom {
 	splitEnvironmentSourceSets()
 
 	mods {
-		"splatoonplugin" {
+		"splatoon" {
 			sourceSet sourceSets.main
 			sourceSet sourceSets.client
 		}

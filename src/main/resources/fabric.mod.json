@@ -1,6 +1,6 @@
 {
 	"schemaVersion": 1,
-	"id": "splatoonplugin",
+	"id": "splatoon",
 	"version": "${version}",
 	"name": "Splatoon",
 	"description": "This is an example description! Tell everyone what your mod is about!",
@@ -12,15 +12,15 @@
 		"sources": "https://github.com/Plokie/"
 	},
 	"license": "CC0-1.0",
-	"icon": "assets/splatoonplugin/icon.png",
+	"icon": "assets/splatoon/icon.png",
 	"environment": "*",
 	"entrypoints": {
 		"main": [
-			"com.plokie.SplatoonPlugin"
+			"com.plokie.Splatoon"
 		]
 	},
 	"mixins": [
-		"splatoonplugin.mixins.json"
+		"splatoon.mixins.json"
 	],
 	"depends": {
 		"fabricloader": ">=0.19.3",

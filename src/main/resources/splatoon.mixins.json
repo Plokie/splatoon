@@ -3,7 +3,9 @@
 	"package": "com.plokie.mixin",
 	"compatibilityLevel": "JAVA_21",
 	"mixins": [
-		"ExampleMixin"
+		"ExampleZombieMixin",
+		"PlayerTeamMixin",
+		"TeamCommandMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1
