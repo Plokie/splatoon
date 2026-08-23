@@ -52,8 +52,4 @@ public class TeamSaveData extends SavedData {
 
         return teamData;
     }
-
-    public void saveTeamData() {
-        this.setDirty();
-    }
 }

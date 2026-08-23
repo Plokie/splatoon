@@ -12,11 +12,15 @@ import net.minecraft.world.level.block.Blocks;
 import java.util.Optional;
 
 public class TeamData {
-    String groundBlockId = "minecraft:air";
+    String groundBlockId = "minecraft:black_concrete_powder";
+    String wallBlockId = "minecraft:black_wool";
 
     public static final Codec<TeamData> CODEC = RecordCodecBuilder.create(instance->
             instance.group(
-                    Codec.STRING.fieldOf("groundBlock").forGetter(TeamData::getGroundBlockId)
+                    Codec.STRING.optionalFieldOf("groundBlock", "minecraft:black_concrete_powder")
+                            .forGetter(TeamData::getGroundBlockId),
+                    Codec.STRING.optionalFieldOf("wallBlock", "minecraft:black_wool")
+                            .forGetter(TeamData::getWallBlockId)
             ).apply(instance, TeamData::new)
     );
 
@@ -25,9 +29,10 @@ public class TeamData {
 
     }
 
-    TeamData(String groundBlock)
+    TeamData(String groundBlock, String wallBlock)
     {
         this.groundBlockId = groundBlock;
+        this.wallBlockId = wallBlock;
     }
 
     public String getGroundBlockId()
@@ -51,5 +56,29 @@ public class TeamData {
         groundBlockId = BuiltInRegistries.BLOCK.getKey(block).toString();
 
         Splatoon.LOGGER.info("TeamData:Set ground block to {}", groundBlockId);
+    }
+
+
+    public String getWallBlockId()
+    {
+        return wallBlockId;
+    }
+
+    public Block getWallBlock()
+    {
+        Optional<Holder.Reference<Block>> block = BuiltInRegistries.BLOCK.get(ResourceLocation.parse(wallBlockId));
+
+        if(block.isEmpty()) {
+            return Blocks.AIR;
+        }
+
+        return block.get().value();
+    }
+
+    public void setWallBlock(Block block)
+    {
+        wallBlockId = BuiltInRegistries.BLOCK.getKey(block).toString();
+
+        Splatoon.LOGGER.info("TeamData:Set wall block to {}", wallBlockId);
     }
 }

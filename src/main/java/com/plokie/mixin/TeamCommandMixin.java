@@ -47,10 +47,28 @@ public class TeamCommandMixin {
                                                         .requires(source -> source.hasPermission(2))
                                                         .executes(TeamCommandMixin::setTeamGroundBlock)
                                         )
+
                                 )
                         )
                 )
         );
+
+        dispatcher.register(
+                Commands.literal("team")
+                        .requires(source -> source.hasPermission(2))
+                        .then(Commands.literal("modify")
+                                .then(Commands.argument("team", TeamArgument.team())
+                                        .then(Commands.literal("wallBlock")
+                                                .then(Commands.argument("block", ResourceArgument.resource(context, Registries.BLOCK))
+                                                        .requires(source -> source.hasPermission(2))
+                                                        .executes(TeamCommandMixin::setTeamWallBlock)
+                                        )
+                                )
+                        )
+                )
+        );
+
+
 
         dispatcher.register(
                 Commands.literal("team")
@@ -60,6 +78,10 @@ public class TeamCommandMixin {
                                         .then(Commands.literal("groundBlock")
                                                 .requires(source -> source.hasPermission(2))
                                                 .executes(TeamCommandMixin::getTeamGroundBlock)
+                                        )
+                                        .then(Commands.literal("wallBlock")
+                                                .requires(source -> source.hasPermission(2))
+                                                .executes(TeamCommandMixin::getTeamWallBlock)
                                         )
                                 )
                         )
@@ -91,6 +113,38 @@ public class TeamCommandMixin {
         PlayerTeam team = TeamArgument.getTeam(ctx, "team");
 
         Block block = ((IPlayerTeamMixin)team).getGroundBlock();
+        String blockId = BuiltInRegistries.BLOCK.getKey(block).toString();
+
+        ctx.getSource().sendSuccess(()->Component.literal("Got: " + blockId), false);
+
+        return 1;
+    }
+
+    @Unique
+    private static int setTeamWallBlock(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        PlayerTeam team = TeamArgument.getTeam(ctx, "team");
+
+        Holder.Reference<Block> blockHolder = ResourceArgument.getResource(ctx, "block", Registries.BLOCK);
+        Block block = blockHolder.value();
+
+        ((IPlayerTeamMixin)team).setWallBlock(block);
+
+        ctx.getSource().sendSuccess(() ->
+                        Component.literal("Set wall block for team ")
+                                .append(team.getFormattedDisplayName())
+                                .append(" to ")
+                                .append(block.getName())
+                , true
+        );
+
+        return 1;
+    }
+
+    @Unique
+    private static int getTeamWallBlock(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        PlayerTeam team = TeamArgument.getTeam(ctx, "team");
+
+        Block block = ((IPlayerTeamMixin)team).getWallBlock();
         String blockId = BuiltInRegistries.BLOCK.getKey(block).toString();
 
         ctx.getSource().sendSuccess(()->Component.literal("Got: " + blockId), false);

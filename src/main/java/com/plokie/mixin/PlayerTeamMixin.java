@@ -21,6 +21,9 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.Optional;
+import java.util.concurrent.Callable;
+import java.util.function.Consumer;
+import java.util.function.Function;
 
 @Mixin(PlayerTeam.class)
 public class PlayerTeamMixin implements IPlayerTeamMixin {
@@ -28,31 +31,51 @@ public class PlayerTeamMixin implements IPlayerTeamMixin {
     @Final
     private String name;
 
-    @Override public Block getGroundBlock()
+
+    @Unique
+    <T> T getData(Function<TeamData, T> callback)
     {
-        Splatoon.LOGGER.info("Requested {} get ground block", this.name);
+        Splatoon.LOGGER.info("Requested {} get data", this.name);
         TeamSaveData teamSaveData = Splatoon.SERVER.overworld().getDataStorage().get(TeamSaveData.TYPE);
         assert teamSaveData != null;
         TeamData data = teamSaveData.getTeamData(this.name);
 
-        Splatoon.LOGGER.info("\tGot data");
+        Splatoon.LOGGER.info("\tGot data for getting");
 
-        return data.getGroundBlock();
+        return callback.apply(data);
+    }
+
+    @Unique
+    <T> void setData(Consumer<TeamData> callback)
+    {
+        Splatoon.LOGGER.info("Requested {} set data field", this.name);
+        TeamSaveData teamSaveData = Splatoon.SERVER.overworld().getDataStorage().get(TeamSaveData.TYPE);
+        assert teamSaveData != null;
+        TeamData data = teamSaveData.getTeamData(this.name);
+
+        Splatoon.LOGGER.info("\tGot data for setting");
+
+        callback.accept(data);
+
+        teamSaveData.setDirty();
+    }
+
+    @Override public Block getGroundBlock()
+    {
+        return getData(TeamData::getGroundBlock);
     }
     @Override public void setGroundBlock(Block block)
     {
-        Splatoon.LOGGER.info("Requested {} set ground block {}", this.name, block.getDescriptionId());
-        TeamSaveData teamSaveData = Splatoon.SERVER.overworld().getDataStorage().get(TeamSaveData.TYPE);
-        assert teamSaveData != null;
-        TeamData data = teamSaveData.getTeamData(this.name);
+        setData(data -> data.setGroundBlock(block));
+    }
 
-        Splatoon.LOGGER.info("\tGot data");
-
-        data.setGroundBlock(block);
-
-        teamSaveData.setDirty();
-
-        Splatoon.LOGGER.info("\tSet data");
+    @Override public Block getWallBlock()
+    {
+        return getData(TeamData::getWallBlock);
+    }
+    @Override public void setWallBlock(Block block)
+    {
+        setData(data -> data.setWallBlock(block));
     }
 
     @Inject(method = "<init>", at = @At("TAIL"))
