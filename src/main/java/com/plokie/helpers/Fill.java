@@ -2,13 +2,17 @@ package com.plokie.helpers;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.tags.BlockTags;
 import net.minecraft.tags.TagKey;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
 
-public class fill {
+public class Fill {
+    public static int replace(Level level, BlockPos point, BlockPos min, BlockPos max, Block block, TagKey<Block> replaceBlockTag) {
+        return replace((ServerLevel)level, point.offset(min), point.offset(max), block, replaceBlockTag);
+    }
+
     public static int replace(ServerLevel level, BlockPos point, BlockPos min, BlockPos max, Block block, TagKey<Block> replaceBlockTag) {
         return replace(level, point.offset(min), point.offset(max), block, replaceBlockTag);
     }

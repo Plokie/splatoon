@@ -9,4 +9,5 @@ public interface IPlayerMixin {
     void grantAbility(Ability ability);
     void revokeAbility(String abilityId);
     void onUseAbilityBlock(String abilityId, Player player, InteractionHand hand, BlockHitResult hitResult);
+    void onUseAbilityItem(String abilityId, Player player, InteractionHand hand);
 }

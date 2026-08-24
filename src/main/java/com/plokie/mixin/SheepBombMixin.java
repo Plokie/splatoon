@@ -1,20 +1,18 @@
 package com.plokie.mixin;
 
 import com.mojang.math.Transformation;
-import com.plokie.Splatoon;
-import com.plokie.helpers.fill;
-import com.plokie.helpers.teams;
+import com.plokie.helpers.Affects;
+import com.plokie.helpers.Effects;
+import com.plokie.helpers.Fill;
+import com.plokie.helpers.Teams;
 import com.plokie.interfaces.IPlayerTeamMixin;
 import com.plokie.interfaces.IProjectile;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.particles.ParticleTypes;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.tags.BlockTags;
-import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.entity.Display;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntitySpawnReason;
@@ -27,7 +25,6 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
-import net.minecraft.world.scores.PlayerTeam;
 import org.joml.Vector3f;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
@@ -126,7 +123,7 @@ public class SheepBombMixin implements IProjectile {
 
         if(!initialisedTeam)
         {
-            IPlayerTeamMixin playerTeam = teams.getTeamMixinFromPlayerUUID(playerOwnerUUID);
+            IPlayerTeamMixin playerTeam = Teams.getTeamMixinFromPlayerUUID(playerOwnerUUID);
             if(playerTeam!=null) {
 
                 sheep.level().playSound(
@@ -170,43 +167,38 @@ public class SheepBombMixin implements IProjectile {
         if(fuseTime >= 120 && sheep.deathTime == 0) {
             if(sheep.level() instanceof ServerLevel serverLevel)
             {
-                serverLevel.sendParticles(ParticleTypes.EXPLOSION_EMITTER,
-                        sheep.getX(), sheep.getY(), sheep.getZ(),
-                        1, // count
-                        0.0, 0.0, 0.0, // delta
-                        0.0 // speed
-                );
+                Effects.explosionEffect(serverLevel, sheep.getOnPos());
 
-                serverLevel.playSound(
-                        null, // everyone
-                        sheep.getX(), sheep.getY(), sheep.getZ(),
-                        SoundEvents.GENERIC_EXPLODE,
-                        SoundSource.HOSTILE,
-                        4.0f, // volume
-                        1.0f // pitch
-                );
-
-                IPlayerTeamMixin playerTeam = teams.getTeamMixinFromPlayerUUID(playerOwnerUUID);
-                if(playerTeam!=null)
+                Player player = serverLevel.getPlayerByUUID(playerOwnerUUID);
+                if(player != null)
                 {
-                    int numReplaced = fill.replace(
-                            serverLevel,
-                            sheep.getOnPos(),
-                            new BlockPos(4,4,4),
-                            new BlockPos(-4,-4,-4),
-                            playerTeam.getGroundBlock(),
-                            BlockTags.CONCRETE_POWDER
+                    int numHurtEntities = Affects.hurtLivingEntitiesInRange(
+                            serverLevel, sheep.getOnPos(), 4.0f, 28.0f, player, DamageTypes.EXPLOSION
                     );
 
-                    numReplaced += fill.replace(
-                            serverLevel,
-                            sheep.getOnPos(),
-                            new BlockPos(4,4,4),
-                            new BlockPos(-4,-4,-4),
-                            playerTeam.getWallBlock(),
-                            BlockTags.WOOL
-                    );
+                    IPlayerTeamMixin playerTeam = Teams.getTeamMixinFromPlayer(player);
+                    if(playerTeam!=null)
+                    {
+                        int numReplaced = Fill.replace(
+                                serverLevel,
+                                sheep.getOnPos(),
+                                new BlockPos(3,3,3),
+                                new BlockPos(-3,-3,-3),
+                                playerTeam.getGroundBlock(),
+                                BlockTags.CONCRETE_POWDER
+                        );
+
+                        numReplaced += Fill.replace(
+                                serverLevel,
+                                sheep.getOnPos(),
+                                new BlockPos(3,3,3),
+                                new BlockPos(-3,-3,-3),
+                                playerTeam.getWallBlock(),
+                                BlockTags.WOOL
+                        );
+                    }
                 }
+
 
                 sheep.kill(serverLevel);
             }

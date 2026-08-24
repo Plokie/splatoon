@@ -85,6 +85,20 @@ public class PlayerMixin implements IPlayerMixin {
         }
     }
 
+    @Override
+    public void onUseAbilityItem(String abilityId, Player player, InteractionHand hand) {
+        int idx = 0;
+        for(Ability ability : abilities.stream().toList()) {
+            //Splatoon.LOGGER.info("-{}|{}", ability.getClass().getSimpleName(), abilityId);
+            if(ability.getClass().getSimpleName().equals(abilityId))
+            {
+                ability.onUseItem(player, hand, idx);
+            }
+
+            idx++;
+        }
+    }
+
     @Inject(method="addAdditionalSaveData", at=@At("TAIL"))
     void onSaveData(ValueOutput valueOutput, CallbackInfo ci)
     {

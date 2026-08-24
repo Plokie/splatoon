@@ -8,7 +8,7 @@ import net.minecraft.world.scores.PlayerTeam;
 
 import java.util.UUID;
 
-public class teams {
+public class Teams {
     public static IPlayerTeamMixin getTeamMixinFromPlayerUUID(UUID playerUUID)
     {
         if(playerUUID == null) return null;
