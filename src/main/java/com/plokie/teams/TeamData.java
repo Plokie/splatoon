@@ -67,7 +67,7 @@ public class TeamData {
     {
         groundBlockId = BuiltInRegistries.BLOCK.getKey(block).toString();
 
-        Splatoon.LOGGER.info("TeamData:Set ground block to {}", this.groundBlockId);
+        //Splatoon.LOGGER.info("TeamData:Set ground block to {}", this.groundBlockId);
     }
 
 
@@ -91,7 +91,7 @@ public class TeamData {
     {
         wallBlockId = BuiltInRegistries.BLOCK.getKey(block).toString();
 
-        Splatoon.LOGGER.info("TeamData:Set wall block to {}", this.wallBlockId);
+        //Splatoon.LOGGER.info("TeamData:Set wall block to {}", this.wallBlockId);
     }
 
     public int getTeamColourInt()
@@ -103,7 +103,7 @@ public class TeamData {
     {
         this.teamColourInt = teamColourInt;
 
-        Splatoon.LOGGER.info("TeamData:Set team colour integer to {}", this.teamColourInt);
+        //Splatoon.LOGGER.info("TeamData:Set team colour integer to {}", this.teamColourInt);
     }
 
     public byte getTeamColourByte()
@@ -115,7 +115,7 @@ public class TeamData {
     {
         this.teamColourByte = teamColourByte;
 
-        Splatoon.LOGGER.info("TeamData:Set team colour byte to {}", this.teamColourByte);
+        //Splatoon.LOGGER.info("TeamData:Set team colour byte to {}", this.teamColourByte);
     }
 
     public String getBossbarColour()
@@ -127,6 +127,6 @@ public class TeamData {
     {
         this.bossbarColour = bossbarColour;
 
-        Splatoon.LOGGER.info("TeamData:Set team bossbar colour to {}", this.bossbarColour);
+        //Splatoon.LOGGER.info("TeamData:Set team bossbar colour to {}", this.bossbarColour);
     }
 }

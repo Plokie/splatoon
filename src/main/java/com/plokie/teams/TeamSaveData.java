@@ -40,15 +40,15 @@ public class TeamSaveData extends SavedData {
     }
 
     public TeamData getTeamData(String teamName) {
-        Splatoon.LOGGER.info("\tLooking for team data key {}", teamName);
+        //Splatoon.LOGGER.info("\tLooking for team data key {}", teamName);
         TeamData teamData = m_teamDataMap.get(teamName);
 
         if(teamData == null) {
-            Splatoon.LOGGER.info("\tNot found, creating new entry...");
+            //Splatoon.LOGGER.info("\tNot found, creating new entry...");
             return m_teamDataMap.put(teamName, new TeamData());
         }
 
-        Splatoon.LOGGER.info("\tFound, returning...");
+        //Splatoon.LOGGER.info("\tFound, returning...");
 
         return teamData;
     }

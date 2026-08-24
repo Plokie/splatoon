@@ -35,12 +35,12 @@ public class PlayerTeamMixin implements IPlayerTeamMixin {
     @Unique
     <T> T getData(Function<TeamData, T> callback)
     {
-        Splatoon.LOGGER.info("Requested {} get data", this.name);
+        //Splatoon.LOGGER.info("Requested {} get data", this.name);
         TeamSaveData teamSaveData = Splatoon.SERVER.overworld().getDataStorage().get(TeamSaveData.TYPE);
         assert teamSaveData != null;
         TeamData data = teamSaveData.getTeamData(this.name);
 
-        Splatoon.LOGGER.info("\tGot data for getting");
+        //Splatoon.LOGGER.info("\tGot data for getting");
 
         return callback.apply(data);
     }
@@ -48,12 +48,12 @@ public class PlayerTeamMixin implements IPlayerTeamMixin {
     @Unique
     <T> void setData(Consumer<TeamData> callback)
     {
-        Splatoon.LOGGER.info("Requested {} set data field", this.name);
+        //Splatoon.LOGGER.info("Requested {} set data field", this.name);
         TeamSaveData teamSaveData = Splatoon.SERVER.overworld().getDataStorage().get(TeamSaveData.TYPE);
         assert teamSaveData != null;
         TeamData data = teamSaveData.getTeamData(this.name);
 
-        Splatoon.LOGGER.info("\tGot data for setting");
+        //Splatoon.LOGGER.info("\tGot data for setting");
 
         callback.accept(data);
 
