@@ -23,7 +23,8 @@ public class AbilityManager {
         InkBombs("Ink Bombs", InkBombs::new),
         CleansingGrenade("Cleansing Grenade", CleansingGrenade::new),
         Hook("Hook", Hook::new),
-        EnderPearl("Ender Pearl", EnderPearl::new);
+        EnderPearl("Ender Pearl", EnderPearl::new),
+        WindCharges("Wind Charges", WindCharges::new);
 
         public static final Codec<AbilityEnum> CODEC = StringRepresentable.fromEnum(AbilityEnum::values);
 
