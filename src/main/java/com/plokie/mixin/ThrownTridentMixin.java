@@ -80,7 +80,10 @@ public class ThrownTridentMixin implements IProjectile {
 
         if(hasHit && hookedEntity != null)
         {
-            hookedEntity.startRiding(self, true);
+            if(!hookedEntity.isPassenger())
+            {
+                hookedEntity.startRiding(self, true);
+            }
         }
     }
 

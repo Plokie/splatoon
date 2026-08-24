@@ -22,7 +22,8 @@ public class AbilityManager {
     public enum AbilityEnum implements StringRepresentable {
         InkBombs("Ink Bombs", InkBombs::new),
         CleansingGrenade("Cleansing Grenade", CleansingGrenade::new),
-        Hook("Hook", Hook::new);
+        Hook("Hook", Hook::new),
+        EnderPearl("Ender Pearl", EnderPearl::new);
 
         public static final Codec<AbilityEnum> CODEC = StringRepresentable.fromEnum(AbilityEnum::values);
 

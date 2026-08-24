@@ -8,8 +8,9 @@
     "PlayerTeamMixin",
     "SheepBombMixin",
     "TeamCommandMixin",
-    "XpBottleGrenadeMixin",
-    "ThrownTridentMixin"
+    "ThrownEnderpearlMixin",
+    "ThrownTridentMixin",
+    "XpBottleGrenadeMixin"
   ],
   "injectors": {
     "defaultRequire": 1
