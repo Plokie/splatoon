@@ -1,10 +1,15 @@
 package com.plokie.helpers;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Holder;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.effect.MobEffect;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.Level;
 import org.joml.Vector3d;
 
@@ -47,5 +52,19 @@ public class Effects {
                 4.0f, // volume
                 1.0f // pitch
         );
+    }
+
+    public static void givePotionEffect(LivingEntity entity, Holder<MobEffect> effect, float timeSeconds, int strength, boolean hidden)
+    {
+        MobEffectInstance effectInstance = new MobEffectInstance(
+                effect,
+                (int)timeSeconds * 20,
+                strength,
+                false, // ambient
+                !hidden, // visible particles
+                !hidden // show icon
+        );
+
+        entity.addEffect(effectInstance);
     }
 }
