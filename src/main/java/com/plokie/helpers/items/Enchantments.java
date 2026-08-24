@@ -12,7 +12,7 @@ import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.item.enchantment.ItemEnchantments;
 
 public class Enchantments {
-    public static void AddEnchantment(ItemStack item, String enchantmentId, int level)
+    public static void AddEnchantmentToItem(ItemStack item, String enchantmentId, int level)
     {
         Registry<Enchantment> enchantmentRegistry = Splatoon.SERVER.registryAccess().lookupOrThrow(Registries.ENCHANTMENT);
 

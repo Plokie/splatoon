@@ -4,6 +4,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.entity.EntityType;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
@@ -14,10 +15,10 @@ import java.util.Objects;
 
 @Mixin(Zombie.class)
 public abstract class ExampleZombieMixin {
-    private Zombie zombie;
+    @Unique Zombie zombie;
 
     @Inject(method = "registerGoals", at = @At("TAIL"))
-    private void addCustomHiGoal(CallbackInfo ci) {
+    private void onRegister(CallbackInfo ci) {
         zombie = (Zombie)(Object)this;
     }
 

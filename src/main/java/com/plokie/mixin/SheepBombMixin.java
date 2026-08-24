@@ -1,0 +1,231 @@
+package com.plokie.mixin;
+
+import com.mojang.math.Transformation;
+import com.plokie.Splatoon;
+import com.plokie.helpers.fill;
+import com.plokie.helpers.teams;
+import com.plokie.interfaces.IPlayerTeamMixin;
+import com.plokie.interfaces.IProjectile;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.tags.BlockTags;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.Display;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntitySpawnReason;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.animal.sheep.Sheep;
+
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
+import net.minecraft.world.scores.PlayerTeam;
+import org.joml.Vector3f;
+import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Unique;
+import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+
+@Mixin(Sheep.class)
+public class SheepBombMixin implements IProjectile {
+    @Unique
+    Sheep sheep;
+
+    @Unique
+    UUID playerOwnerUUID = null;
+
+    @Unique
+    int fuseTime = 0;
+
+    @Unique boolean initialisedTeam = false;
+
+    @Override
+    public void setPlayerOwner(Player player)
+    {
+        playerOwnerUUID = player.getUUID();
+    }
+
+    @Inject(method="addAdditionalSaveData", at = @At("TAIL"))
+    private void onSaveData(ValueOutput valueOutput, CallbackInfo ci)
+    {
+        if(playerOwnerUUID!=null)
+        {
+            valueOutput.putString("playerOwnerUUID", playerOwnerUUID.toString());
+        }
+    }
+
+    @Inject(method="readAdditionalSaveData", at = @At("TAIL"))
+    private void onReadData(ValueInput valueInput, CallbackInfo ci)
+    {
+        if(playerOwnerUUID!=null)
+        {
+            Optional<String> uuidString = valueInput.getString("playerOwnerUUID");
+            if(uuidString.isPresent())
+            {
+                playerOwnerUUID = UUID.fromString(uuidString.get());
+            }
+        }
+    }
+
+
+    @Inject(method = "<init>", at = @At("TAIL"))
+    private void onInit(CallbackInfo ci) {
+        sheep = (Sheep)(Object)this;
+        if(sheep == null) return;
+
+        Level level = sheep.level();
+
+        sheep.setInvisible(true);
+        sheep.setSilent(true);
+
+        if(level.isClientSide()) return;
+
+        //if(!sheep.getTags().contains("InkBomb")) return;
+
+        {
+            Display.BlockDisplay tntBlock = EntityType.BLOCK_DISPLAY.create(level, EntitySpawnReason.SPAWN_ITEM_USE);
+            if(tntBlock == null) return;
+
+            BlockState blockState = Blocks.TNT.defaultBlockState();
+            tntBlock.setBlockState(blockState);
+
+            Transformation transform = new Transformation(
+                    new Vector3f(-0.5f, -1.25f, -0.5f),
+                    null, null, null
+            );
+            tntBlock.setTransformation(transform);
+
+            tntBlock.setUUID(UUID.randomUUID());
+
+            level.addFreshEntity(tntBlock);
+
+            tntBlock.startRiding(sheep, true);
+        }
+
+
+    }
+
+    @Inject(method = "aiStep", at = @At("TAIL"))
+    private void onTick(CallbackInfo ci) {
+        if(sheep.level().isClientSide()) return;
+
+        if(!sheep.getTags().contains("InkBomb")) return;
+
+        if(!initialisedTeam)
+        {
+            IPlayerTeamMixin playerTeam = teams.getTeamMixinFromPlayerUUID(playerOwnerUUID);
+            if(playerTeam!=null) {
+
+                sheep.level().playSound(
+                        null, // everyone
+                        sheep.getX(), sheep.getY(), sheep.getZ(),
+                        SoundEvents.TNT_PRIMED,
+                        SoundSource.HOSTILE,
+                        4.0f, // volume
+                        1.0f // pitch
+                );
+
+                Display.BlockDisplay woolBlock = EntityType.BLOCK_DISPLAY.create(sheep.level(), EntitySpawnReason.SPAWN_ITEM_USE);
+                if(woolBlock == null) return;
+
+                BlockState blockState = playerTeam.getWallBlock().defaultBlockState();
+                woolBlock.setBlockState(blockState);
+
+                Transformation transform = new Transformation(
+                        new Vector3f(-0.53125f,-1.0f,-0.53125f),
+                        null, new Vector3f(1.05f, 0.5f, 1.05f), null
+                );
+                woolBlock.setTransformation(transform);
+
+                woolBlock.setUUID(UUID.randomUUID());
+
+                sheep.level().addFreshEntity(woolBlock);
+
+                woolBlock.startRiding(sheep, true);
+
+                initialisedTeam = true;
+            }
+        }
+
+        if(sheep.onGround()) {
+            fuseTime += 3;
+        }
+        else {
+            fuseTime += 1;
+        }
+
+        if(fuseTime >= 120 && sheep.deathTime == 0) {
+            if(sheep.level() instanceof ServerLevel serverLevel)
+            {
+                serverLevel.sendParticles(ParticleTypes.EXPLOSION_EMITTER,
+                        sheep.getX(), sheep.getY(), sheep.getZ(),
+                        1, // count
+                        0.0, 0.0, 0.0, // delta
+                        0.0 // speed
+                );
+
+                serverLevel.playSound(
+                        null, // everyone
+                        sheep.getX(), sheep.getY(), sheep.getZ(),
+                        SoundEvents.GENERIC_EXPLODE,
+                        SoundSource.HOSTILE,
+                        4.0f, // volume
+                        1.0f // pitch
+                );
+
+                IPlayerTeamMixin playerTeam = teams.getTeamMixinFromPlayerUUID(playerOwnerUUID);
+                if(playerTeam!=null)
+                {
+                    int numReplaced = fill.replace(
+                            serverLevel,
+                            sheep.getOnPos(),
+                            new BlockPos(4,4,4),
+                            new BlockPos(-4,-4,-4),
+                            playerTeam.getGroundBlock(),
+                            BlockTags.CONCRETE_POWDER
+                    );
+
+                    numReplaced += fill.replace(
+                            serverLevel,
+                            sheep.getOnPos(),
+                            new BlockPos(4,4,4),
+                            new BlockPos(-4,-4,-4),
+                            playerTeam.getWallBlock(),
+                            BlockTags.WOOL
+                    );
+                }
+
+                sheep.kill(serverLevel);
+            }
+
+        }
+
+        if(sheep.deathTime == 1) {
+            onDeath();
+        }
+    }
+
+    @Unique
+    void onDeath()
+    {
+        List<Entity> passengers = sheep.getPassengers();
+
+        for(Entity entity : passengers)
+        {
+            entity.discard();
+        }
+    }
+}

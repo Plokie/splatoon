@@ -6,6 +6,7 @@
     "ExampleZombieMixin",
     "PlayerMixin",
     "PlayerTeamMixin",
+    "SheepBombMixin",
     "TeamCommandMixin"
   ],
   "injectors": {
