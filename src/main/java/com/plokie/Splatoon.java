@@ -1,5 +1,6 @@
 package com.plokie;
 
+import com.plokie.classes.abilities.AbilityManager;
 import com.plokie.commands.PingCommand;
 
 import net.fabricmc.api.ModInitializer;
@@ -24,7 +25,7 @@ public class Splatoon implements ModInitializer {
 
 	public static MinecraftServer SERVER = null;
 
-	//TeamManager m_teamManager;
+	AbilityManager abilityManager;
 
 	@Override
 	public void onInitialize() {
@@ -35,7 +36,7 @@ public class Splatoon implements ModInitializer {
 			SERVER = null;
 		});
 
-		//m_teamManager = new TeamManager();
+		this.abilityManager = new AbilityManager();
 
 		CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
 			dispatcher.register(Commands.literal("ping").executes(PingCommand::execute));

@@ -1,6 +1,8 @@
 package com.plokie.mixin;
 
 import com.mojang.brigadier.CommandDispatcher;
+import com.mojang.brigadier.arguments.IntegerArgumentType;
+import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.ArgumentBuilder;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
@@ -17,6 +19,7 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.commands.PermissionCheck;
 import net.minecraft.server.commands.TeamCommand;
+import net.minecraft.world.BossEvent;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.scores.PlayerTeam;
 import org.spongepowered.asm.mixin.Mixin;
@@ -66,6 +69,51 @@ public class TeamCommandMixin {
                                 )
                         )
                 )
+        );
+
+        dispatcher.register(
+                Commands.literal("team")
+                        .requires(source -> source.hasPermission(2))
+                        .then(Commands.literal("modify")
+                                .then(Commands.argument("team", TeamArgument.team())
+                                        .then(Commands.literal("integerCol")
+                                                .then(Commands.argument("int", IntegerArgumentType.integer())
+                                                        .requires(source -> source.hasPermission(2))
+                                                        .executes(TeamCommandMixin::setTeamIntegerColour)
+                                                )
+                                        )
+                                )
+                        )
+        );
+
+        dispatcher.register(
+                Commands.literal("team")
+                        .requires(source -> source.hasPermission(2))
+                        .then(Commands.literal("modify")
+                                .then(Commands.argument("team", TeamArgument.team())
+                                        .then(Commands.literal("byteCol")
+                                                .then(Commands.argument("int", IntegerArgumentType.integer())
+                                                        .requires(source -> source.hasPermission(2))
+                                                        .executes(TeamCommandMixin::setTeamByteColour)
+                                                )
+                                        )
+                                )
+                        )
+        );
+
+        dispatcher.register(
+                Commands.literal("team")
+                        .requires(source -> source.hasPermission(2))
+                        .then(Commands.literal("modify")
+                                .then(Commands.argument("team", TeamArgument.team())
+                                        .then(Commands.literal("bossbarCol")
+                                                .then(Commands.argument("string", StringArgumentType.string())
+                                                        .requires(source -> source.hasPermission(2))
+                                                        .executes(TeamCommandMixin::setTeamBossbarColour)
+                                                )
+                                        )
+                                )
+                        )
         );
 
 
@@ -148,6 +196,63 @@ public class TeamCommandMixin {
         String blockId = BuiltInRegistries.BLOCK.getKey(block).toString();
 
         ctx.getSource().sendSuccess(()->Component.literal("Got: " + blockId), false);
+
+        return 1;
+    }
+
+    @Unique
+    private static int setTeamIntegerColour(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        PlayerTeam team = TeamArgument.getTeam(ctx, "team");
+
+        int value = IntegerArgumentType.getInteger(ctx, "int");
+
+        ((IPlayerTeamMixin)team).setTeamColourInt(value);
+
+        ctx.getSource().sendSuccess(() ->
+            Component.literal("Set int colour for team ")
+                    .append(team.getFormattedDisplayName())
+                    .append(" to ")
+                    .append(String.valueOf(value))
+            , true
+        );
+
+        return 1;
+    }
+
+    @Unique
+    private static int setTeamByteColour(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        PlayerTeam team = TeamArgument.getTeam(ctx, "team");
+
+        int value = IntegerArgumentType.getInteger(ctx, "int");
+
+        ((IPlayerTeamMixin)team).setTeamColourByte((byte)value);
+
+        ctx.getSource().sendSuccess(() ->
+                        Component.literal("Set byte colour for team ")
+                                .append(team.getFormattedDisplayName())
+                                .append(" to ")
+                                .append(String.valueOf(value))
+                , true
+        );
+
+        return 1;
+    }
+
+    @Unique
+    private static int setTeamBossbarColour(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        PlayerTeam team = TeamArgument.getTeam(ctx, "team");
+
+        String value = StringArgumentType.getString(ctx, "string");
+
+        ((IPlayerTeamMixin)team).setBossbarColour(value);
+
+        ctx.getSource().sendSuccess(() ->
+                        Component.literal("Set bossbar colour for team ")
+                                .append(team.getFormattedDisplayName())
+                                .append(" to ")
+                                .append(String.valueOf(value))
+                , true
+        );
 
         return 1;
     }

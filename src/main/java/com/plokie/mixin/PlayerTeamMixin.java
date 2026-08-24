@@ -77,6 +77,31 @@ public class PlayerTeamMixin implements IPlayerTeamMixin {
     {
         setData(data -> data.setWallBlock(block));
     }
+    @Override public int getTeamColourInt()
+    {
+        return getData(TeamData::getTeamColourInt);
+    }
+    @Override public void setTeamColourInt(int teamColourInt)
+    {
+        setData(data -> data.setTeamColourInt(teamColourInt));
+    }
+    @Override public byte getTeamColourByte()
+    {
+        return getData(TeamData::getTeamColourByte);
+    }
+    @Override public void setTeamColourByte(byte teamColourByte)
+    {
+        setData(data -> data.setTeamColourByte(teamColourByte));
+    }
+    @Override public String getBossbarColour()
+    {
+        return getData(TeamData::getBossbarColour);
+    }
+    @Override public void setBossbarColour(String teamBosssbarColour)
+    {
+        setData(data -> data.setBossbarColour(teamBosssbarColour));
+    }
+
 
     @Inject(method = "<init>", at = @At("TAIL"))
     private void onInit(Scoreboard scoreboard, String name, CallbackInfo ci) {

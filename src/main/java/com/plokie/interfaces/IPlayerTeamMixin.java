@@ -8,4 +8,13 @@ public interface IPlayerTeamMixin {
 
     Block getWallBlock();
     void setWallBlock(Block block);
+
+    int getTeamColourInt();
+    void setTeamColourInt(int teamColourInt);
+
+    byte getTeamColourByte();
+    void setTeamColourByte(byte teamColourByte);
+
+    String getBossbarColour();
+    void setBossbarColour(String teamBossbarColour);
 }

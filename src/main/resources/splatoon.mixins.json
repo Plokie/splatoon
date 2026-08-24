@@ -1,16 +1,17 @@
 {
-	"required": true,
-	"package": "com.plokie.mixin",
-	"compatibilityLevel": "JAVA_21",
-	"mixins": [
-		"ExampleZombieMixin",
-		"PlayerTeamMixin",
-		"TeamCommandMixin"
-	],
-	"injectors": {
-		"defaultRequire": 1
-	},
-	"overwrites": {
-		"requireAnnotations": true
+  "required": true,
+  "package": "com.plokie.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [
+    "ExampleZombieMixin",
+    "PlayerMixin",
+    "PlayerTeamMixin",
+    "TeamCommandMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  },
+  "overwrites": {
+    "requireAnnotations": true
 	}
 }
