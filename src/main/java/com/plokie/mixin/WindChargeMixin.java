@@ -19,8 +19,14 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(AbstractWindCharge.class)
 public class WindChargeMixin {
 
+    @Inject(method="onHitEntity", at=@At("TAIL"))
+    void onHitEntity(CallbackInfo ci)
+    {
+        onHitBlock(ci);
+    }
+
     @Inject(method="onHitBlock", at=@At("TAIL"))
-    void onExplode(CallbackInfo ci)
+    void onHitBlock(CallbackInfo ci)
     {
         Splatoon.LOGGER.info("EXPLODEEEEE");
         AbstractWindCharge self = ((AbstractWindCharge)(Object)this);

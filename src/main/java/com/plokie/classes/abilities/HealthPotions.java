@@ -3,33 +3,31 @@ package com.plokie.classes.abilities;
 import com.plokie.interfaces.IPlayerMixin;
 import net.fabricmc.fabric.api.event.player.UseItemCallback;
 import net.minecraft.core.component.DataComponents;
-import net.minecraft.network.chat.Component;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraft.world.item.component.UseCooldown;
+import net.minecraft.world.item.alchemy.PotionContents;
+import net.minecraft.world.item.alchemy.Potions;
 
-public class WindCharges extends Ability {
+public class HealthPotions extends Ability {
     static boolean isStaticInitialised = false;
 
-    public WindCharges()
+    public HealthPotions()
     {
         this.rechargeTime = 5 * 20;
-        this.maxCount = 5;
+        this.maxCount = 16;
 
         this.createItemFunc = player -> {
-            ItemStack item = new ItemStack(Items.WIND_CHARGE);
+            ItemStack item = new ItemStack(Items.SPLASH_POTION);
+
+            PotionContents potionContents = new PotionContents(Potions.STRONG_HEALING);
 
             item.set(
-                    DataComponents.ITEM_NAME,
-                    Component.literal("Wind Charge")
-            );
-
-            item.set(
-                DataComponents.USE_COOLDOWN,
-                new UseCooldown(0.0f)
+                    DataComponents.POTION_CONTENTS,
+                    potionContents
             );
 
             return item;
@@ -39,9 +37,9 @@ public class WindCharges extends Ability {
     void staticInitialise()
     {
         UseItemCallback.EVENT.register((player, world, hand)->{
-            if(!world.isClientSide() && player.getItemInHand(hand).getItem() == Items.WIND_CHARGE)
+            if(!world.isClientSide() && player.getItemInHand(hand).getItem() == Items.SPLASH_POTION)
             {
-                ((IPlayerMixin)player).onUseAbilityItem("WindCharges", player, hand);
+                ((IPlayerMixin)player).onUseAbilityItem("HealthPotions", player, hand);
             }
 
             return InteractionResult.PASS;
@@ -51,12 +49,14 @@ public class WindCharges extends Ability {
     }
 
     @Override
-    public void onUseItem(Player player, InteractionHand hand, int abilityIndex) {
+    public void onUseItem(Player player, InteractionHand hand, int abilityIndex)
+    {
         super.onUse();
     }
 
     @Override
     public void tick(Player player, int abilityIndex) {
+
         if(!isStaticInitialised)
         {
             staticInitialise();

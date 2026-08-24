@@ -24,7 +24,8 @@ public class AbilityManager {
         CleansingGrenade("Cleansing Grenade", CleansingGrenade::new),
         Hook("Hook", Hook::new),
         EnderPearl("Ender Pearl", EnderPearl::new),
-        WindCharges("Wind Charges", WindCharges::new);
+        WindCharges("Wind Charges", WindCharges::new),
+        HealthPotions("Health Potions", HealthPotions::new);
 
         public static final Codec<AbilityEnum> CODEC = StringRepresentable.fromEnum(AbilityEnum::values);
 
