@@ -8,6 +8,7 @@
     "PlayerMixin",
     "PlayerTeamMixin",
     "SheepBombMixin",
+    "HealthBubbleMixin",
     "SmokeCloudMixin",
     "SplashPotionMixin",
     "TeamCommandMixin",

@@ -51,6 +51,8 @@ public abstract class SmokeCloudMixin {
 
         ServerLevel level = (ServerLevel)self.level();
 
+        if(level.isClientSide()) return;
+
         level.getPlayers(player->true).forEach(player->{
             level.sendParticles(player,
                     ParticleTypes.EXPLOSION_EMITTER,

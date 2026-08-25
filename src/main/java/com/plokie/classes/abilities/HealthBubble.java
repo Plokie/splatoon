@@ -1,7 +1,6 @@
 package com.plokie.classes.abilities;
 
 import com.plokie.Splatoon;
-import com.plokie.helpers.items.Enchantments;
 import com.plokie.helpers.Teams;
 import com.plokie.interfaces.IPlayerMixin;
 import com.plokie.interfaces.IPlayerTeamMixin;
@@ -17,7 +16,9 @@ import net.minecraft.server.TickTask;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.animal.sheep.Sheep;
+import net.minecraft.world.entity.monster.Shulker;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.component.CustomData;
@@ -25,69 +26,57 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 
+import javax.xml.crypto.Data;
 import java.util.Objects;
 
-public class InkBombs extends Ability {
-    private static boolean isStaticInitialised = false;
+public class HealthBubble extends Ability {
+    static boolean isStaticInitialised = false;
 
-    public InkBombs()
+    public HealthBubble()
     {
-
-
-        this.rechargeTime = 10 * 20; // 10 seconds to recharge an item
-        this.maxCount = 5; // Up to 5 at a time
+        this.rechargeTime = 20*20;
+        this.maxCount = 1;
 
         this.createItemFunc = player -> {
-            ItemStack item = new ItemStack(Items.SHEEP_SPAWN_EGG);
+            ItemStack item = new ItemStack(Items.SHULKER_SPAWN_EGG);
 
             item.set(
                     DataComponents.ITEM_NAME,
-                    Component.literal("Ink Bombs")
+                    Component.literal("Health Bubble")
             );
 
-            item.set(
-                    DataComponents.ITEM_MODEL,
-                    ResourceLocation.fromNamespaceAndPath("minecraft", "tnt")
-            );
-
-
-            Enchantments.AddEnchantmentToItem(item, "knockback", 5);
+//            item.set(
+//                    Data.ITEM_MODEL,
+//                    ResourceLocation.fromNamespaceAndPath("splatoon","health_bubble")
+//            );
 
             CompoundTag entityNbt = new CompoundTag();
-            entityNbt.putString("id", "minecraft:sheep");
+            entityNbt.putString("id", "minecraft:shulker");
 
             IPlayerTeamMixin playerTeam = Teams.getTeamMixinFromPlayer(player);
             if(playerTeam != null) {
                 entityNbt.putByte("Color", playerTeam.getTeamColourByte());
             }
+            entityNbt.putByte("NoAI", (byte)1);
+            entityNbt.putByte("Peek", (byte)100);
+            entityNbt.putByte("AttachFace", (byte)0);
+            entityNbt.putByte("Glowing", (byte)1);
+            entityNbt.putFloat("Health", 100.0f);
 
             {
                 ListTag attributesList = new ListTag();
 
-                CompoundTag movementSpeed = new CompoundTag();
-                movementSpeed.putString("id", "minecraft:movement_speed");
-                movementSpeed.putDouble("base", -10.0d);
-                attributesList.add(movementSpeed);
+                CompoundTag maxHealth = new CompoundTag();
+                maxHealth.putString("id", "minecraft:max_health");
+                maxHealth.putDouble("base", 150.0d);
+                attributesList.add(maxHealth);
 
                 entityNbt.put("attributes", attributesList);
             }
 
             {
-                ListTag effectsList = new ListTag();
-
-                CompoundTag invisibility = new CompoundTag();
-                invisibility.putString("id", "minecraft:invisibility");
-                invisibility.putInt("amplifier", 1);
-                invisibility.putInt("duration", -1);
-                invisibility.putByte("show_particles", (byte)0);
-                effectsList.add(invisibility);
-
-                entityNbt.put("active_effects", effectsList);
-            }
-
-            {
                 ListTag tagList = new ListTag();
-                tagList.add(StringTag.valueOf("InkBomb"));
+                tagList.add(StringTag.valueOf("HealthBubble"));
 
                 entityNbt.put("Tags", tagList);
             }
@@ -103,14 +92,10 @@ public class InkBombs extends Ability {
 
     void staticInitialise()
     {
-        Splatoon.LOGGER.info("\tStatic initialising InkBomb");
-
         UseBlockCallback.EVENT.register((player, world, hand, hitResult) -> {
-            if(!world.isClientSide() && player.getItemInHand(hand).getItem() == Items.SHEEP_SPAWN_EGG)
+            if(!world.isClientSide() && player.getItemInHand(hand).getItem() == Items.SHULKER_SPAWN_EGG)
             {
-                Splatoon.LOGGER.info("\tUsing spawn egg {}", player.getName());
-
-                ((IPlayerMixin)player).onUseAbilityBlock("InkBombs", player, hand, hitResult);
+                ((IPlayerMixin)player).onUseAbilityBlock("HealthBubble", player, hand, hitResult);
             }
 
             return InteractionResult.PASS;
@@ -120,35 +105,19 @@ public class InkBombs extends Ability {
     }
 
     @Override
-    public void onGranted(Player player, int abilityIndex)
-    {
-        super.onGranted(player, abilityIndex);
-    }
-
-    @Override
-    public void onRevoked(Player player, int abilityIndex)
-    {
-        super.onRevoked(player, abilityIndex);
-    }
-
-    @Override
-    public void onUseBlock(Player player, InteractionHand hand, BlockHitResult hitResult, int abilityIndex)
-    {
+    public void onUseBlock(Player player, InteractionHand hand, BlockHitResult hitResult, int abilityIndex) {
         super.onUse();
 
         Level level = player.level();
 
         Objects.requireNonNull(level.getServer()).schedule(
                 new TickTask(level.getServer().getTickCount() + 1, ()->{
-                    Splatoon.LOGGER.info("\tTick task {}", player.getName());
                     AABB area = new AABB(hitResult.getBlockPos()).inflate(2.0);
 
-                    level.getEntitiesOfClass(Sheep.class, area).forEach(sheep -> {
-                        Splatoon.LOGGER.info("\tFound sheep {}", sheep.getName());
-                        ((IProjectile)sheep).setPlayerOwner(player);
+                    level.getEntitiesOfClass(Shulker.class, area).forEach(shulker -> {
+                        ((IProjectile)shulker).setPlayerOwner(player);
                     });
-                }
-            )
+                })
         );
     }
 
@@ -162,6 +131,4 @@ public class InkBombs extends Ability {
 
         super.tick(player, abilityIndex);
     }
-
-
 }

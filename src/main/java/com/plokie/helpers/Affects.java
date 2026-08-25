@@ -58,7 +58,7 @@ public class Affects {
 
         for(LivingEntity entity : level.getEntitiesOfClass(LivingEntity.class, aabb))
         {
-            if(entity.distanceToSqr(new Vec3(pos.x, pos.y, pos.z)) < radius)
+            if(entity.distanceToSqr(new Vec3(pos.x, pos.y, pos.z)) < radius*radius)
             {
                 entity.hurtServer((ServerLevel)level, source, amount);
                 numHurtEntities++;

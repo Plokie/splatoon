@@ -63,8 +63,11 @@ public class Ability {
 
         if(count == 0)
         {
-            if(!currentItem.is(Items.AIR)) {
-                ItemStack customItem = new ItemStack(Items.AIR);
+            int secondsLeft = (int)Math.ceil((rechargeTime - rechargeTimer) / 20.0);
+
+            if(!currentItem.is(Items.BARRIER) || currentItem.getCount() != secondsLeft) {
+                ItemStack customItem = new ItemStack(Items.BARRIER);
+                customItem.setCount(secondsLeft);
                 player.getInventory().setItem(slot, customItem);
             }
         }

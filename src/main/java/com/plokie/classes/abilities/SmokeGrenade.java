@@ -36,21 +36,21 @@ public class SmokeGrenade extends Ability {
         this.maxCount = 1;
 
         this.createItemFunc = player -> {
-            ItemStack customItem = new ItemStack(Items.LINGERING_POTION);
+            ItemStack item = new ItemStack(Items.LINGERING_POTION);
 
             PotionContents potionContents = new PotionContents(Optional.of(Potions.AWKWARD), Optional.of(6473482), List.of(), Optional.empty());
 
-            customItem.set(
+            item.set(
                     DataComponents.POTION_CONTENTS,
                     potionContents
             );
 
-            customItem.set(
+            item.set(
                     DataComponents.CUSTOM_NAME,
                     Component.literal("Smoke Grenade").setStyle(Style.EMPTY.withItalic(false))
             );
 
-            return customItem;
+            return item;
         };
     }
 

@@ -17,9 +17,11 @@ import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.projectile.AbstractArrow;
 import net.minecraft.world.entity.projectile.ThrownTrident;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.HitResult;
 import org.spongepowered.asm.mixin.Mixin;
@@ -30,7 +32,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.UUID;
 
-@Mixin(ThrownTrident.class)
+@Mixin(AbstractArrow.class)
 public class ThrownTridentMixin implements IProjectile {
     @Unique
     UUID playerOwnerUUID = null;
@@ -48,6 +50,23 @@ public class ThrownTridentMixin implements IProjectile {
 
     @Inject(method="onHitEntity", at = @At("TAIL"))
     private void onHitEntity(EntityHitResult entityHitResult, CallbackInfo ci) {
+        AbstractArrow self = (AbstractArrow) (Object)this;
+
+        if(!(self instanceof ThrownTrident)) return;
+
+        if(!hasHit)
+        {
+            hitGround();
+        }
+    }
+
+    @Inject(method="onHitBlock", at = @At("TAIL"))
+    void onHitBlock(BlockHitResult blockHitResult, CallbackInfo ci)
+    {
+        AbstractArrow self = (AbstractArrow) (Object)this;
+
+        if(!(self instanceof ThrownTrident)) return;
+
         if(!hasHit)
         {
             hitGround();
@@ -57,9 +76,9 @@ public class ThrownTridentMixin implements IProjectile {
     @Inject(method="tick", at = @At("TAIL"))
     private void onTick(CallbackInfo ci)
     {
-        ThrownTrident self = (ThrownTrident)(Object)this;
+        AbstractArrow self = (AbstractArrow) (Object)this;
 
-        //Splatoon.LOGGER.info("Trident tick");
+        if(!(self instanceof ThrownTrident)) return;
 
         if(!hasSetup)
         {
@@ -71,11 +90,6 @@ public class ThrownTridentMixin implements IProjectile {
                 ((IPlayerMixin)player).onUseAbilityItem("Hook", player, player.getUsedItemHand());
             }
             hasSetup = true;
-        }
-
-        if(self.onGround() && !hasHit)
-        {
-            hitGround();
         }
 
         if(hasHit && hookedEntity != null)

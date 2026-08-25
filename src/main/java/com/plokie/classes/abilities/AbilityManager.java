@@ -15,8 +15,10 @@ import com.mojang.serialization.Codec;
 import net.minecraft.world.entity.player.Player;
 
 import java.util.Arrays;
+import java.util.List;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import java.util.stream.Stream;
 
 public class AbilityManager {
     public enum AbilityEnum implements StringRepresentable {
@@ -25,8 +27,10 @@ public class AbilityManager {
         Hook("Hook", Hook::new),
         EnderPearl("Ender Pearl", EnderPearl::new),
         WindCharges("Wind Charges", WindCharges::new),
+        HealthBubble("Health Bubble", HealthBubble::new),
         HealthPotions("Health Potions", HealthPotions::new),
-        SmokeGrenade("Smoke Grenade", SmokeGrenade::new);
+        SmokeGrenade("Smoke Grenade", SmokeGrenade::new),
+        FocusApple("Focus Apple", FocusApple::new);
 
         public static final Codec<AbilityEnum> CODEC = StringRepresentable.fromEnum(AbilityEnum::values);
 
@@ -101,35 +105,56 @@ public class AbilityManager {
                                             Commands.argument("target", EntityArgument.player())
                                                     .then(
                                                             Commands.argument("abilityName", StringArgumentType.word())
-                                                                    .suggests((ctx, builder) -> SharedSuggestionProvider.suggest(
-                                                                            Arrays.stream(AbilityEnum.values()).map(AbilityEnum::toString), builder
-                                                                    ))
+                                                                    .suggests((ctx, builder) -> {
+                                                                        ServerPlayer target = EntityArgument.getPlayer(ctx, "target");
+
+                                                                        List<String> abilitiesAutocomplete = new java.util.ArrayList<>();
+                                                                        for(Ability ability : ((IPlayerMixin)(Player)target).getAbilities()) {
+                                                                            abilitiesAutocomplete.add(ability.getClass().getSimpleName());
+                                                                        }
+                                                                        abilitiesAutocomplete.add("all");
+
+                                                                        return SharedSuggestionProvider.suggest(
+                                                                                abilitiesAutocomplete.stream(), builder
+                                                                        );
+                                                                    })
                                                                     .executes(ctx -> {
                                                                         ServerPlayer target = EntityArgument.getPlayer(ctx, "target");
 
                                                                         String abilityValue = StringArgumentType.getString(ctx, "abilityName");
-                                                                        try {
-                                                                            AbilityEnum abilityEnum = AbilityEnum.valueOf(abilityValue);
-
-                                                                            ((IPlayerMixin)(Player)target).revokeAbility(abilityValue);
-
-                                                                            ctx.getSource().sendSuccess(() ->
-                                                                                            Component.literal("Revoked ")
-                                                                                                    .append(target.getDisplayName())
-                                                                                                    .append(" ability ")
-                                                                                                    .append(abilityEnum.toString())
-                                                                                    , true
-                                                                            );
-
+                                                                        if(abilityValue.equals("all"))
+                                                                        {
+                                                                            for(Ability ability : new java.util.ArrayList<>(((IPlayerMixin)(Player)target).getAbilities()))
+                                                                            {
+                                                                                ((IPlayerMixin)(Player)target).revokeAbility(ability.getClass().getSimpleName());
+                                                                            }
                                                                             return 1;
                                                                         }
-                                                                        catch (IllegalArgumentException e) {
-                                                                            ctx.getSource().sendFailure(
-                                                                                    Component.literal("Unrecognised ability: ").append(abilityValue)
-                                                                            );
+                                                                        else {
+                                                                            try {
+                                                                                AbilityEnum abilityEnum = AbilityEnum.valueOf(abilityValue);
 
-                                                                            return 0;
+                                                                                ((IPlayerMixin)(Player)target).revokeAbility(abilityValue);
+
+                                                                                ctx.getSource().sendSuccess(() ->
+                                                                                                Component.literal("Revoked ")
+                                                                                                        .append(target.getDisplayName())
+                                                                                                        .append(" ability ")
+                                                                                                        .append(abilityEnum.toString())
+                                                                                        , true
+                                                                                );
+
+                                                                                return 1;
+                                                                            }
+                                                                            catch (IllegalArgumentException e) {
+                                                                                ctx.getSource().sendFailure(
+                                                                                        Component.literal("Unrecognised ability: ").append(abilityValue)
+                                                                                );
+
+                                                                                return 0;
+                                                                            }
                                                                         }
+
 
                                                                     })
                                                     )

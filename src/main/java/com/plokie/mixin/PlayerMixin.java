@@ -30,6 +30,12 @@ public class PlayerMixin implements IPlayerMixin {
     @Unique private Player player;
     @Unique private List<Ability> abilities = new ArrayList<Ability>();
 
+    @Override
+    public List<Ability> getAbilities()
+    {
+        return abilities;
+    }
+
     @Inject(method = "<init>", at = @At("TAIL"))
     private void onInit(CallbackInfo ci) {
         player = (Player)(Object)this;
