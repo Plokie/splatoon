@@ -3,18 +3,26 @@ package com.plokie.helpers;
 import com.plokie.Splatoon;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.damagesource.DamageType;
 import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.ai.attributes.Attribute;
+import net.minecraft.world.entity.ai.attributes.AttributeInstance;
+import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Vector3d;
+
+import java.util.Optional;
+import java.util.jar.Attributes;
 
 public class Affects {
     public static int hurtLivingEntitiesInRange(Level level, BlockPos pos, double radius, float amount)
@@ -88,5 +96,41 @@ public class Affects {
         }
 
         entity.hurtServer((ServerLevel)entity.level(), source, amount);
+    }
+
+    public static void setAttributeModifier(LivingEntity entity, String attribute, String modifierName, double value, AttributeModifier.Operation operation)
+    {
+        AttributeModifier modifier = new AttributeModifier(
+                ResourceLocation.withDefaultNamespace(modifierName),
+                value,
+                operation
+        );
+
+        Optional<Holder.Reference<Attribute>> optAttrib = BuiltInRegistries.ATTRIBUTE.get(ResourceLocation.withDefaultNamespace(attribute));
+
+        if(optAttrib.isEmpty()) return;
+
+        Holder.Reference<Attribute> attrib = optAttrib.get();
+
+        AttributeInstance attributeInstance = entity.getAttribute(attrib);
+
+        if(attributeInstance == null) return;
+
+        attributeInstance.addOrReplacePermanentModifier(modifier);
+    }
+
+    public static void removeAttributeModifier(LivingEntity entity, String attribute, String modifierName)
+    {
+        Optional<Holder.Reference<Attribute>> optAttrib = BuiltInRegistries.ATTRIBUTE.get(ResourceLocation.withDefaultNamespace(attribute));
+
+        if(optAttrib.isEmpty()) return;
+
+        Holder.Reference<Attribute> attrib = optAttrib.get();
+
+        AttributeInstance attributeInstance = entity.getAttribute(attrib);
+
+        if(attributeInstance == null) return;
+
+        attributeInstance.removeModifier(ResourceLocation.withDefaultNamespace(modifierName));
     }
 }

@@ -11,6 +11,13 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 
 public enum CustomItem {
+    StandardSword(
+            Builder
+                    .item(Items.DIAMOND_SWORD)
+                    .name("Diamond Sword")
+                    .enchant("sharpness", 3)
+            .build()
+    ),
     InkRoller(
             Builder
                     .item(Items.IRON_AXE)
@@ -18,6 +25,36 @@ public enum CustomItem {
                     .enchant("sharpness", 1)
                     .enchant("smite", 3)
                     .behaviour(new InkRoller())
+            .build()
+    ),
+    ScoutSword(
+            Builder
+                    .item(Items.NETHERITE_SWORD)
+                    .name("Netherite Sword")
+                    .enchant("sharpness", 6)
+            .build()
+    ),
+    SupportAxe(
+            Builder
+                    .item(Items.IRON_AXE)
+                    .name("Iron Axe")
+                    .enchant("sharpness", 4)
+            .build()
+    ),
+    JumperMace(
+            Builder
+                    .item(Items.MACE)
+                    .name("Mace")
+                    .enchant("wind_burst", 3)
+                    .enchant("density", 3)
+            .build()
+    ),
+    SniperSword(
+            Builder
+                    .item(Items.DIAMOND_SWORD)
+                    .name("Diamond Sword")
+                    .enchant("sharpness", 4)
+                    .enchant("knockback", 2)
             .build()
     ),
     Splattershot(
@@ -59,7 +96,24 @@ public enum CustomItem {
                     .model(ResourceLocation.fromNamespaceAndPath("splatoon", "pistol"))
                     .behaviour(new Revolver())
             .build()
+    ),
+    SniperGun(
+            Builder
+                    .item(Items.CARROT_ON_A_STICK)
+                    .name("Sniper")
+                    .model(ResourceLocation.fromNamespaceAndPath("splatoon", "sniper"))
+                    .behaviour(new SniperGun())
+            .build()
+    ),
+    KnockbackBrush(
+            Builder
+                    .item(Items.BRUSH)
+                    .name("Knockback Brush")
+                    .enchant("knockback", 5)
+                    .behaviour(new SniperGun())
+            .build()
     );
+
 
     final CustomItemDefinition itemInstance;
 

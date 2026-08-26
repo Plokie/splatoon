@@ -67,4 +67,9 @@ public class Effects {
 
         entity.addEffect(effectInstance);
     }
+
+    public static void clearPotionEffect(LivingEntity entity, Holder<MobEffect> effect)
+    {
+        entity.removeEffect(effect);
+    }
 }

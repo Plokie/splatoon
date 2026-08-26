@@ -37,11 +37,18 @@ public class CustomItemManager {
                 Player player = entry.getKey();
                 CustomItem item = entry.getValue().item;
 
-                if(player.getItemInHand(player.getUsedItemHand()).getItemName().equals(item.getItem().getItemName()))
+                if(entry.getValue().timeUsing % item.getItemDefinition().getItemInterface().getUsageRate() == 0)
                 {
-                    if(entry.getValue().timeUsing % item.getItemDefinition().getItemInterface().getUsageRate() == 0)
+                    if(entry.getValue().ticksLeft <= 0) {
+                        extraItemUsageTicks.remove(player);
+                    }
+                    else
                     {
-                        item.getItemDefinition().getItemInterface().onUse(player);
+                        if(player.getItemInHand(player.getUsedItemHand()).getItemName().equals(item.getItem().getItemName()))
+                        {
+                            item.getItemDefinition().getItemInterface().onUse(player);
+                        }
+
                     }
                 }
 
@@ -51,9 +58,9 @@ public class CustomItemManager {
 
                 entry.getValue().ticksLeft--;
 
-                if(entry.getValue().ticksLeft <= 0) {
-                    extraItemUsageTicks.remove(player);
-                }
+//                if(entry.getValue().ticksLeft <= 0) {
+//                    extraItemUsageTicks.remove(player);
+//                }
             }
         });
 

@@ -3,6 +3,7 @@ package com.plokie.interfaces;
 import com.plokie.classes.SplatoonClasses;
 import com.plokie.classes.abilities.Ability;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.player.Input;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.BlockHitResult;
 
@@ -17,4 +18,6 @@ public interface IPlayerMixin {
     void onUseAbilityItem(String abilityId, Player player, InteractionHand hand);
 
     void setClass(SplatoonClasses.SplatoonClass klass);
+
+    void setInputPacket(Input input);
 }

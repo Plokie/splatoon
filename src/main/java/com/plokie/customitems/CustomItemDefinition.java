@@ -16,6 +16,12 @@ public class CustomItemDefinition {
     public CustomItemDefinition(ItemStack baseItem, ICustomItem itemInterface)
     {
         this.baseItem = baseItem;
+
+        if(itemInterface == null)
+        {
+            itemInterface = new ICustomItem();
+        }
+
         this.itemInterface = itemInterface;
     }
 }

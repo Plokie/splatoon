@@ -78,7 +78,7 @@ public class FocusApple extends Ability {
         super.onUse();
 
         //Effects.givePotionEffect(player, MobEffects.SLOWNESS, 14, 1, true);
-        Effects.givePotionEffect(player, MobEffects.STRENGTH, 14, 3, true);
+        //Effects.givePotionEffect(player, MobEffects.STRENGTH, 14, 3, true);
         Effects.givePotionEffect(player, MobEffects.REGENERATION, 14, 1, true);
     }
 

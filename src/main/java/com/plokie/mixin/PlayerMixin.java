@@ -6,14 +6,29 @@ import com.plokie.classes.SplatoonClasses;
 import com.plokie.classes.abilities.Ability;
 import com.plokie.classes.abilities.AbilityManager;
 import com.plokie.customitems.CustomItem;
+import com.plokie.helpers.Affects;
+import com.plokie.helpers.Effects;
+import com.plokie.helpers.Teams;
 import com.plokie.interfaces.IPlayerMixin;
+import com.plokie.interfaces.IPlayerTeamMixin;
+import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.protocol.game.ServerboundPlayerInputPacket;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.monster.Zombie;
+import net.minecraft.world.entity.player.Input;
 import net.minecraft.world.entity.player.Player;
 
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.BlockHitResult;
@@ -30,32 +45,61 @@ import java.util.stream.Stream;
 public class PlayerMixin implements IPlayerMixin {
     @Unique private Player player;
 
+    @Unique private Input input = new Input(false, false, false, false, false, false, false);
+    @Override
+    public void setInputPacket(Input input)
+    {
+        this.input = input;
+    }
+
     @Unique
     SplatoonClasses.SplatoonClass splatoonClass = null;
 
     @Override
     public void setClass(SplatoonClasses.SplatoonClass klass) {
+
+        if(splatoonClass != null)
+        {
+            ItemStack airItem = new ItemStack(Items.AIR);
+
+            int idx=0;
+            for(CustomItem customItem : splatoonClass.definition.customItems)
+            {
+                int slotIdx = idx;
+                if(slotIdx >= 2) {
+                    slotIdx += abilities.size();
+                }
+
+                player.getInventory().setItem(slotIdx, airItem);
+
+                idx++;
+            }
+        }
+
         splatoonClass = klass;
 
         revokeAllAbilities();
 
         if(splatoonClass != null)
         {
-            splatoonClass.abilities.forEach(abilityId->{
-                try {
-                    AbilityManager.AbilityEnum abilityEnum = AbilityManager.AbilityEnum.valueOf(abilityId);
-
-                    grantAbility(abilityEnum.Construct());
-                }
-                catch(IllegalArgumentException e)
-                {
-                    Splatoon.LOGGER.warn("Classes wants to add unrecongised ability '{}'", abilityId);
-                }
+            splatoonClass.definition.abilities.forEach(abilityEnum ->
+            {
+                grantAbility(abilityEnum.Construct());
             });
         }
+
     }
 
     @Unique private List<Ability> abilities = new ArrayList<Ability>();
+
+    @Unique IPlayerTeamMixin playerTeam = null;
+    @Unique Block groundBlock = null;
+    @Unique Block wallBlock = null;
+
+    @Unique boolean inInk = false;
+    @Unique boolean onWall = false;
+    @Unique int timeNotInInk = 0;
+
 
     @Override
     public List<Ability> getAbilities()
@@ -68,10 +112,13 @@ public class PlayerMixin implements IPlayerMixin {
         player = (Player)(Object)this;
     }
 
+
     @Inject(method = "tick", at = @At("TAIL"))
     private void onTick(CallbackInfo ci) {
 
-        if(player.level().isClientSide()) return;
+        ServerLevel level = (ServerLevel)player.level();
+
+        if(level.isClientSide()) return;
 
         Arrays.stream(CustomItem.values()).forEach(item -> {
             if(player.getItemInHand(player.getUsedItemHand()).getItemName().equals(item.getItem().getItemName()))
@@ -80,10 +127,140 @@ public class PlayerMixin implements IPlayerMixin {
             }
         });
 
-        int idx = 0;
-        for(Ability ability : abilities) {
-            ability.tick(player, idx);
-            idx++;
+        IPlayerTeamMixin playerTeam = Teams.getTeamMixinFromPlayer(player);
+        if(playerTeam != this.playerTeam) // if team has changes
+        {
+            // re-cache blocks
+            groundBlock = null;
+            wallBlock = null;
+            this.playerTeam = playerTeam;
+
+            if(this.playerTeam != null)
+            {
+                groundBlock = playerTeam.getGroundBlock();
+                wallBlock = playerTeam.getWallBlock();
+            }
+        }
+
+
+        boolean wasInInk = inInk;
+
+        if(groundBlock != null && wallBlock != null && splatoonClass != null)
+        {
+            inInk = false;
+            onWall = false;
+
+            if(player.isCrouching())
+            {
+                BlockPos playerPos = player.getOnPos();
+
+                for(int y=-2; y<=-1; y++)
+                {
+                    BlockPos groundCheckPos = new BlockPos(playerPos.getX(), playerPos.getY() + y, playerPos.getZ());
+                    BlockState checkGroundBlock = level.getBlockState(groundCheckPos);
+                    if(checkGroundBlock.getBlock() == groundBlock) {
+                        inInk = true;
+                    }
+                }
+
+                for(int x=-1; x<=1; x++)
+                {
+                    for(int z=-1; z<=1; z++)
+                    {
+                        BlockPos wallCheckPos = new BlockPos(playerPos.getX() + x, playerPos.getY() + 1, playerPos.getZ() + z);
+
+                        BlockState checkWallBlock = level.getBlockState(wallCheckPos);
+                        if(checkWallBlock.getBlock() == groundBlock || checkWallBlock.getBlock() == wallBlock)
+                        {
+                            inInk = true;
+                            onWall = true;
+                        }
+                    }
+                }
+            }
+        }
+
+        if(inInk)
+        {
+            timeNotInInk=0;
+
+            if(player.tickCount % 7 == 0)
+            {
+                level.playSound(null, player.getOnPos(), SoundEvents.SQUID_AMBIENT, SoundSource.HOSTILE);
+            }
+
+            Effects.givePotionEffect(player, MobEffects.WEAKNESS, 1, 200, true);
+            Effects.givePotionEffect(player, MobEffects.INVISIBILITY, 1, 1, true);
+
+            if(onWall)
+            {
+                if(input.jump())
+                {
+                    Effects.givePotionEffect(player, MobEffects.LEVITATION, 10, 5, true);
+                }
+                else {
+                    Effects.clearPotionEffect(player, MobEffects.LEVITATION);
+                    Effects.givePotionEffect(player, MobEffects.SLOW_FALLING, 10, 5, true);
+                }
+            }
+            else {
+                Effects.clearPotionEffect(player, MobEffects.SLOW_FALLING);
+                Effects.clearPotionEffect(player, MobEffects.LEVITATION);
+            }
+        }
+        else {
+            timeNotInInk++;
+            Effects.clearPotionEffect(player, MobEffects.SLOW_FALLING);
+            Effects.clearPotionEffect(player, MobEffects.LEVITATION);
+        }
+
+        if(inInk && !wasInInk)
+        {
+            level.playSound(null, player.getOnPos(), SoundEvents.SLIME_BLOCK_BREAK, SoundSource.HOSTILE);
+
+            Affects.setAttributeModifier(player, "scale", "inkscale", -0.75, AttributeModifier.Operation.ADD_MULTIPLIED_BASE);
+            Affects.setAttributeModifier(player, "sneaking_speed", "inkspeed", 0.7, AttributeModifier.Operation.ADD_VALUE);
+            Affects.setAttributeModifier(player, "movement_speed", "inkspeed", 1.0, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
+        }
+        else if(!inInk && wasInInk)
+        {
+            level.playSound(null, player.getOnPos(), SoundEvents.SLIME_BLOCK_BREAK, SoundSource.HOSTILE);
+
+            Affects.removeAttributeModifier(player, "scale", "inkscale");
+            Affects.removeAttributeModifier(player, "sneaking_speed", "inkspeed");
+            Affects.removeAttributeModifier(player, "movement_speed", "inkspeed");
+            Effects.clearPotionEffect(player, MobEffects.INVISIBILITY);
+
+            player.setInvisible(false);
+        }
+
+        if(!inInk)
+        {
+            int idx = 0;
+            for(Ability ability : abilities) {
+                ability.tick(player, idx);
+                idx++;
+            }
+
+            if(splatoonClass != null)
+            {
+                idx=0;
+                for(CustomItem customItem : splatoonClass.definition.customItems)
+                {
+                    ItemStack baseItem = customItem.getItem();
+                    int slotIdx = idx;
+                    if(slotIdx >= 2) {
+                        slotIdx += abilities.size();
+                    }
+
+                    if(!player.getInventory().getItem(slotIdx).getItemName().equals(baseItem.getItemName()))
+                    {
+                        player.getInventory().setItem(slotIdx, baseItem);
+                    }
+
+                    idx++;
+                }
+            }
         }
     }
 
@@ -162,10 +339,14 @@ public class PlayerMixin implements IPlayerMixin {
         Stream<String> abilitiesList = abilities.stream().map(ability -> ability.getClass().getSimpleName());
 
         valueOutput.store("abilities", Codec.list(Codec.STRING), abilitiesList.toList());
+
+        String classString = "none";
+        if(splatoonClass != null) classString = splatoonClass.getID();
+        valueOutput.putString("class", classString);
     }
 
     @Inject(method="readAdditionalSaveData", at=@At("TAIL"))
-    void onReData(ValueInput valueInput, CallbackInfo ci)
+    void onReadData(ValueInput valueInput, CallbackInfo ci)
     {
         List<String> abilitiesList = valueInput.read("abilities", Codec.list(Codec.STRING)).orElse(Collections.emptyList());
 
@@ -177,6 +358,20 @@ public class PlayerMixin implements IPlayerMixin {
             }
             catch(IllegalArgumentException e) {
                 Splatoon.LOGGER.warn("{} Tried to load unknown ability '{}'", player.getName(), abilityId);
+            }
+        }
+
+        String classString = valueInput.getStringOr("class", "none");
+        if(!classString.equals("") && !classString.equals("none"))
+        {
+            try {
+                SplatoonClasses.SplatoonClass klass = SplatoonClasses.SplatoonClass.valueOf(classString);
+
+                setClass(klass);
+            }
+            catch(IllegalArgumentException e)
+            {
+                Splatoon.LOGGER.warn("{} Attempted to load unknown class {}", player.getName(), classString);
             }
         }
     }

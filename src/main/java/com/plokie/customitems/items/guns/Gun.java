@@ -63,23 +63,6 @@ public class Gun extends ICustomItem {
             burstRemaining.put(player, new BurstRemain(player.tickCount, burst));
         }
 
-//        Level level = player.level();
-//        for(int i=0; i<burst; i++)
-//        {
-//
-//            int scheduleForTick = level.getServer().getTickCount() + (5 * (i+1));
-//
-//            Splatoon.LOGGER.info("schedule burst for tick {} while on tick {}", scheduleForTick, level.getServer().getTickCount());
-//
-//            Objects.requireNonNull(level.getServer()).schedule(
-//                    new TickTask(scheduleForTick, ()->{
-//                        Splatoon.LOGGER.info("burst on tick {}", level.getServer().getTickCount());
-//                        shootAll(player);
-//                    }
-//                )
-//            );
-//        }
-
     }
 
     void shootAll(Player player)
@@ -120,7 +103,10 @@ public class Gun extends ICustomItem {
         Vec3 playerPos = player.getEyePosition();
         Vec3 forward = player.getForward();
 
-        Vec3 spawnPos = new Vec3(playerPos.x + (forward.x * 1f), (playerPos.y - 0.15f) + (forward.y * 1f), playerPos.z + (forward.z * 1f));
+
+        float forwardMult = 0.5f;
+
+        Vec3 spawnPos = new Vec3(playerPos.x + (forward.x * forwardMult), (playerPos.y - 0.15f) + (forward.y * forwardMult), playerPos.z + (forward.z * forwardMult));
 
         float spreadSegmentSize = (float) (accuracy / this.getProjectilesPerShot());
 
