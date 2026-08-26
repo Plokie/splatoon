@@ -1,6 +1,7 @@
 package com.plokie.classes.abilities;
 
 import com.plokie.Splatoon;
+import com.plokie.helpers.ScheduleEvent;
 import com.plokie.helpers.items.Enchantments;
 import com.plokie.interfaces.IPlayerMixin;
 import com.plokie.interfaces.IProjectile;
@@ -56,14 +57,14 @@ public class Hook extends Ability {
 
         Level level = player.level();
 
-        Objects.requireNonNull(level.getServer()).schedule(
-                new TickTask(level.getServer().getTickCount() + 1, ()->{
-                    AABB area = new AABB(player.getOnPos()).inflate(2.0);
+        ScheduleEvent.schedule(
+            1, server->{
+                AABB area = new AABB(player.getOnPos()).inflate(4.0);
 
-                    level.getEntitiesOfClass(ThrownTrident.class, area).forEach(trident -> {
-                        ((IProjectile)trident).setPlayerOwner(player);
-                    });
-                })
+                level.getEntitiesOfClass(ThrownTrident.class, area).forEach(trident -> {
+                    ((IProjectile)trident).setPlayerOwner(player);
+                });
+            }
         );
     }
 

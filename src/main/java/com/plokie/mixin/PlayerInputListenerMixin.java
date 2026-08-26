@@ -17,9 +17,12 @@ public class PlayerInputListenerMixin {
 
     @Shadow public ServerPlayer player;
 
+
     @Inject(method="handlePlayerInput", at = @At("HEAD"))
     void handlePlayerInput(ServerboundPlayerInputPacket serverboundPlayerInputPacket, CallbackInfo ci)
     {
+//        ((ServerGamePacketListenerImpl)(Object)this);
+
         Input input = serverboundPlayerInputPacket.input();
 
         ((IPlayerMixin)(Player)player).setInputPacket(input);

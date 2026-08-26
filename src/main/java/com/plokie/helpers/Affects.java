@@ -98,6 +98,21 @@ public class Affects {
         entity.hurtServer((ServerLevel)entity.level(), source, amount);
     }
 
+    public static void setAttributeModifier(LivingEntity entity, String attribute, AttributeModifier modifier)
+    {
+        Optional<Holder.Reference<Attribute>> optAttrib = BuiltInRegistries.ATTRIBUTE.get(ResourceLocation.withDefaultNamespace(attribute));
+
+        if(optAttrib.isEmpty()) return;
+
+        Holder.Reference<Attribute> attrib = optAttrib.get();
+
+        AttributeInstance attributeInstance = entity.getAttribute(attrib);
+
+        if(attributeInstance == null) return;
+
+        attributeInstance.addOrReplacePermanentModifier(modifier);
+    }
+
     public static void setAttributeModifier(LivingEntity entity, String attribute, String modifierName, double value, AttributeModifier.Operation operation)
     {
         AttributeModifier modifier = new AttributeModifier(
@@ -132,5 +147,20 @@ public class Affects {
         if(attributeInstance == null) return;
 
         attributeInstance.removeModifier(ResourceLocation.withDefaultNamespace(modifierName));
+    }
+
+    public static void removeAttributeModifier(LivingEntity entity, String attribute, AttributeModifier modifier)
+    {
+        Optional<Holder.Reference<Attribute>> optAttrib = BuiltInRegistries.ATTRIBUTE.get(ResourceLocation.withDefaultNamespace(attribute));
+
+        if(optAttrib.isEmpty()) return;
+
+        Holder.Reference<Attribute> attrib = optAttrib.get();
+
+        AttributeInstance attributeInstance = entity.getAttribute(attrib);
+
+        if(attributeInstance == null) return;
+
+        attributeInstance.removeModifier(modifier);
     }
 }

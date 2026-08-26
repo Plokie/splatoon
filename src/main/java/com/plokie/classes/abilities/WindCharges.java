@@ -29,7 +29,7 @@ public class WindCharges extends Ability {
 
             item.set(
                 DataComponents.USE_COOLDOWN,
-                new UseCooldown(0.0f)
+                new UseCooldown(0.1f)
             );
 
             return item;

@@ -42,7 +42,7 @@ public class WindChargeMixin {
                             new BlockPos(2,2,2),
                             new BlockPos(-2,-2,-2),
                             playerTeam.getGroundBlock(),
-                            BlockTags.CONCRETE_POWDER
+                            Splatoon.Tags.GROUND_BLOCKS
                     );
 
                     numReplaced += Fill.replace(
@@ -51,7 +51,7 @@ public class WindChargeMixin {
                             new BlockPos(2,2,2),
                             new BlockPos(-2,-2,-2),
                             playerTeam.getWallBlock(),
-                            BlockTags.WOOL
+                            Splatoon.Tags.WALL_BLOCKS
                     );
                 }
             }

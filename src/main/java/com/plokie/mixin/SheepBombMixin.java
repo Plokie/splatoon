@@ -1,6 +1,7 @@
 package com.plokie.mixin;
 
 import com.mojang.math.Transformation;
+import com.plokie.Splatoon;
 import com.plokie.helpers.Affects;
 import com.plokie.helpers.Effects;
 import com.plokie.helpers.Fill;
@@ -185,7 +186,7 @@ public class SheepBombMixin implements IProjectile {
                                 new BlockPos(3,3,3),
                                 new BlockPos(-3,-3,-3),
                                 playerTeam.getGroundBlock(),
-                                BlockTags.CONCRETE_POWDER
+                                Splatoon.Tags.GROUND_BLOCKS
                         );
 
                         numReplaced += Fill.replace(
@@ -194,7 +195,7 @@ public class SheepBombMixin implements IProjectile {
                                 new BlockPos(3,3,3),
                                 new BlockPos(-3,-3,-3),
                                 playerTeam.getWallBlock(),
-                                BlockTags.WOOL
+                                Splatoon.Tags.WALL_BLOCKS
                         );
                     }
                 }

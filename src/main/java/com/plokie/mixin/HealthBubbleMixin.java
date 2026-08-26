@@ -1,6 +1,7 @@
 package com.plokie.mixin;
 
 import com.mojang.math.Transformation;
+import com.plokie.Splatoon;
 import com.plokie.helpers.Fill;
 import com.plokie.helpers.Helpers;
 import com.plokie.helpers.Teams;
@@ -162,7 +163,7 @@ public class HealthBubbleMixin implements IProjectile {
                     new BlockPos(2,2,2),
                     new BlockPos(-2,-2,-2),
                     groundBlock,
-                    BlockTags.CONCRETE_POWDER
+                    Splatoon.Tags.GROUND_BLOCKS
             );
         }
 

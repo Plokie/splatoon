@@ -1,5 +1,6 @@
 package com.plokie.mixin;
 
+import com.plokie.Splatoon;
 import com.plokie.customitems.CustomItem;
 import com.plokie.customitems.items.guns.Gun;
 import com.plokie.helpers.Affects;
@@ -78,7 +79,7 @@ public class GunProjectileMixin implements IGunProjectileMixin {
                 new BlockPos(gun.getInkSpread(),1,gun.getInkSpread()),
                 new BlockPos(-gun.getInkSpread(),-1,-gun.getInkSpread()),
                 playerTeam.getGroundBlock(),
-                BlockTags.CONCRETE_POWDER
+                Splatoon.Tags.GROUND_BLOCKS
         );
 
         numReplaced += Fill.replace(
@@ -87,7 +88,7 @@ public class GunProjectileMixin implements IGunProjectileMixin {
                 new BlockPos(gun.getInkSpread(),1,gun.getInkSpread()),
                 new BlockPos(-gun.getInkSpread(),-1,-gun.getInkSpread()),
                 playerTeam.getWallBlock(),
-                BlockTags.WOOL
+                Splatoon.Tags.WALL_BLOCKS
         );
     }
 

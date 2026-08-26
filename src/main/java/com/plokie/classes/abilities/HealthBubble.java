@@ -1,6 +1,7 @@
 package com.plokie.classes.abilities;
 
 import com.plokie.Splatoon;
+import com.plokie.helpers.ScheduleEvent;
 import com.plokie.helpers.Teams;
 import com.plokie.interfaces.IPlayerMixin;
 import com.plokie.interfaces.IPlayerTeamMixin;
@@ -128,14 +129,14 @@ public class HealthBubble extends Ability {
 
         Level level = player.level();
 
-        Objects.requireNonNull(level.getServer()).schedule(
-                new TickTask(level.getServer().getTickCount() + 1, ()->{
-                    AABB area = new AABB(hitResult.getBlockPos()).inflate(2.0);
+        ScheduleEvent.schedule(
+            1, server->{
+                AABB area = new AABB(hitResult.getBlockPos()).inflate(2.0);
 
-                    level.getEntitiesOfClass(Shulker.class, area).forEach(shulker -> {
-                        ((IProjectile)shulker).setPlayerOwner(player);
-                    });
-                })
+                level.getEntitiesOfClass(Shulker.class, area).forEach(shulker -> {
+                    ((IProjectile)shulker).setPlayerOwner(player);
+                });
+            }
         );
     }
 

@@ -47,7 +47,7 @@ public class FocusApple extends Ability {
 
             //Consumable consumable = new Consumable(0.0f, ItemUseAnimation.EAT, SoundEvents.GENERIC_EAT, true, consumeEffectList);
 
-            Consumable consumable = Consumable.builder().consumeSeconds(0.0f).build();
+            Consumable consumable = Consumable.builder().consumeSeconds(0.01f).build();
 
             item.set(
                     DataComponents.CONSUMABLE,

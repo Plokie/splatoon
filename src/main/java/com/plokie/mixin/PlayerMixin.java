@@ -12,12 +12,14 @@ import com.plokie.helpers.Teams;
 import com.plokie.interfaces.IPlayerMixin;
 import com.plokie.interfaces.IPlayerTeamMixin;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Holder;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.game.ServerboundPlayerInputPacket;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.monster.Zombie;
@@ -74,6 +76,17 @@ public class PlayerMixin implements IPlayerMixin {
 
                 idx++;
             }
+
+            for(Map.Entry<String, AttributeModifier> entry : splatoonClass.definition.attributes.entrySet())
+            {
+//                Affects.removeAttributeModifier(player, entry.getKey(), entry.getValue().id().getPath());
+                Affects.removeAttributeModifier(player, entry.getKey(), entry.getValue());
+            }
+
+            for(Map.Entry<Holder<MobEffect>, Integer> entry : splatoonClass.definition.effects.entrySet())
+            {
+                Effects.clearPotionEffect(player, entry.getKey());
+            }
         }
 
         splatoonClass = klass;
@@ -86,9 +99,23 @@ public class PlayerMixin implements IPlayerMixin {
             {
                 grantAbility(abilityEnum.Construct());
             });
+
+            for(Map.Entry<String, AttributeModifier> entry : splatoonClass.definition.attributes.entrySet())
+            {
+                Affects.setAttributeModifier(player, entry.getKey(), entry.getValue());
+            }
+
+            for(Map.Entry<Holder<MobEffect>, Integer> entry : splatoonClass.definition.effects.entrySet())
+            {
+                //Effects.givePotionEffect(player, entry.getKey(), 9999, entry.getValue(), true);
+                // this crashes the server if the player isnt fully connected, so lets queue it for application
+                classEffectQueue.add(entry);
+            }
         }
 
     }
+
+    @Unique List<Map.Entry<Holder<MobEffect>, Integer>> classEffectQueue = new ArrayList<>();
 
     @Unique private List<Ability> abilities = new ArrayList<Ability>();
 
@@ -119,6 +146,17 @@ public class PlayerMixin implements IPlayerMixin {
         ServerLevel level = (ServerLevel)player.level();
 
         if(level.isClientSide()) return;
+
+        if(!classEffectQueue.isEmpty())
+        {
+            Effects.givePotionEffect(player, MobEffects.INSTANT_HEALTH, 1, 200, true);
+
+            for(Map.Entry<Holder<MobEffect>, Integer> entry : classEffectQueue)
+            {
+                Effects.givePotionEffect(player, entry.getKey(), 99999, entry.getValue(), true);
+            }
+            classEffectQueue.clear();
+        }
 
         Arrays.stream(CustomItem.values()).forEach(item -> {
             if(player.getItemInHand(player.getUsedItemHand()).getItemName().equals(item.getItem().getItemName()))
@@ -152,31 +190,40 @@ public class PlayerMixin implements IPlayerMixin {
 
             if(player.isCrouching())
             {
-                BlockPos playerPos = player.getOnPos();
+                BlockPos playerPos = player.getBlockPosBelowThatAffectsMyMovement();
 
                 for(int y=-2; y<=-1; y++)
                 {
-                    BlockPos groundCheckPos = new BlockPos(playerPos.getX(), playerPos.getY() + y, playerPos.getZ());
+                    BlockPos groundCheckPos = new BlockPos(playerPos.getX(), playerPos.getY() + y + 1, playerPos.getZ());
                     BlockState checkGroundBlock = level.getBlockState(groundCheckPos);
                     if(checkGroundBlock.getBlock() == groundBlock) {
                         inInk = true;
                     }
                 }
 
-                for(int x=-1; x<=1; x++)
+                if(!player.onGround())
                 {
-                    for(int z=-1; z<=1; z++)
+                    for(int x=-1; x<=1; x++)
                     {
-                        BlockPos wallCheckPos = new BlockPos(playerPos.getX() + x, playerPos.getY() + 1, playerPos.getZ() + z);
-
-                        BlockState checkWallBlock = level.getBlockState(wallCheckPos);
-                        if(checkWallBlock.getBlock() == groundBlock || checkWallBlock.getBlock() == wallBlock)
+                        for(int z=-1; z<=1; z++)
                         {
-                            inInk = true;
-                            onWall = true;
+                            BlockPos wallCheckPos = new BlockPos(playerPos.getX() + x, playerPos.getY(), playerPos.getZ() + z);
+
+                            BlockState checkWallBlock = level.getBlockState(wallCheckPos);
+
+                            boolean nextToBlock = false;
+                            nextToBlock |= checkWallBlock.getBlock() == groundBlock;
+                            nextToBlock |= checkWallBlock.getBlock() == wallBlock;
+
+                            if(nextToBlock)
+                            {
+                                inInk = true;
+                                onWall = true;
+                            }
                         }
                     }
                 }
+
             }
         }
 
@@ -205,7 +252,7 @@ public class PlayerMixin implements IPlayerMixin {
             }
             else {
                 Effects.clearPotionEffect(player, MobEffects.SLOW_FALLING);
-                Effects.clearPotionEffect(player, MobEffects.LEVITATION);
+                //Effects.clearPotionEffect(player, MobEffects.LEVITATION);
             }
         }
         else {
@@ -221,6 +268,13 @@ public class PlayerMixin implements IPlayerMixin {
             Affects.setAttributeModifier(player, "scale", "inkscale", -0.75, AttributeModifier.Operation.ADD_MULTIPLIED_BASE);
             Affects.setAttributeModifier(player, "sneaking_speed", "inkspeed", 0.7, AttributeModifier.Operation.ADD_VALUE);
             Affects.setAttributeModifier(player, "movement_speed", "inkspeed", 1.0, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
+
+            ItemStack airItem = new ItemStack(Items.AIR);
+            for(int i = 0; i<9; i++)
+            {
+                player.getInventory().setItem(i, airItem);
+            }
+            //player.containerMenu.broadcastChanges();
         }
         else if(!inInk && wasInInk)
         {
@@ -256,6 +310,7 @@ public class PlayerMixin implements IPlayerMixin {
                     if(!player.getInventory().getItem(slotIdx).getItemName().equals(baseItem.getItemName()))
                     {
                         player.getInventory().setItem(slotIdx, baseItem);
+                        //player.containerMenu.broadcastChanges();
                     }
 
                     idx++;
@@ -302,6 +357,7 @@ public class PlayerMixin implements IPlayerMixin {
 
             idx++;
         }
+        //player.containerMenu.broadcastChanges();
 
     }
 

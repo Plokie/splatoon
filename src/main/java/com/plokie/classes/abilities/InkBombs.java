@@ -1,6 +1,7 @@
 package com.plokie.classes.abilities;
 
 import com.plokie.Splatoon;
+import com.plokie.helpers.ScheduleEvent;
 import com.plokie.helpers.items.Enchantments;
 import com.plokie.helpers.Teams;
 import com.plokie.interfaces.IPlayerMixin;
@@ -156,17 +157,15 @@ public class InkBombs extends Ability {
 
         Level level = player.level();
 
-        Objects.requireNonNull(level.getServer()).schedule(
-                new TickTask(level.getServer().getTickCount() + 1, ()->{
-                    //Splatoon.LOGGER.info("\tTick task {}", player.getName());
-                    AABB area = new AABB(hitResult.getBlockPos()).inflate(2.0);
+        ScheduleEvent.schedule(1, server->{
+                //Splatoon.LOGGER.info("\tTick task {}", player.getName());
+                AABB area = new AABB(hitResult.getBlockPos()).inflate(2.0);
 
-                    level.getEntitiesOfClass(Sheep.class, area).forEach(sheep -> {
-                        //Splatoon.LOGGER.info("\tFound sheep {}", sheep.getName());
-                        ((IProjectile)sheep).setPlayerOwner(player);
-                    });
-                }
-            )
+                level.getEntitiesOfClass(Sheep.class, area).forEach(sheep -> {
+                    //Splatoon.LOGGER.info("\tFound sheep {}", sheep.getName());
+                    ((IProjectile)sheep).setPlayerOwner(player);
+                });
+            }
         );
     }
 

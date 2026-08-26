@@ -102,7 +102,7 @@ public abstract class SmokeCloudMixin {
                             new BlockPos(2,2,2),
                             new BlockPos(-2,-2,-2),
                             groundBlock,
-                            BlockTags.CONCRETE_POWDER
+                            Splatoon.Tags.GROUND_BLOCKS
                     );
                 }
 

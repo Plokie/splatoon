@@ -1,6 +1,7 @@
 package com.plokie.classes.abilities;
 
 import com.plokie.Splatoon;
+import com.plokie.helpers.ScheduleEvent;
 import com.plokie.interfaces.IPlayerMixin;
 import com.plokie.interfaces.IProjectile;
 import net.fabricmc.fabric.api.event.player.UseItemCallback;
@@ -75,16 +76,16 @@ public class SmokeGrenade extends Ability {
 
         Level level = player.level();
 
-        Objects.requireNonNull(level.getServer()).schedule(
-                new TickTask(level.getServer().getTickCount() + 1, ()->{
-                    Splatoon.LOGGER.info("\tTick task {}", player.getName());
-                    AABB area = new AABB(player.getOnPos()).inflate(2.0);
+        ScheduleEvent.schedule(
+            1, server->{
+                Splatoon.LOGGER.info("\tTick task {}", player.getName());
+                AABB area = new AABB(player.getOnPos()).inflate(4.0);
 
-                    level.getEntitiesOfClass(ThrownLingeringPotion.class, area).forEach(potion -> {
-                        ((IProjectile)potion).setPlayerOwner(player);
-                    });
-                }
-                )
+                level.getEntitiesOfClass(ThrownLingeringPotion.class, area).forEach(potion -> {
+                    ((IProjectile)potion).setPlayerOwner(player);
+                });
+            }
+
         );
     }
 

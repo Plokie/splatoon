@@ -121,7 +121,12 @@ public class Gun extends ICustomItem {
         Vec3 shootForward = Vec3.directionFromRotation(rotVec);
 
         snowball.setPos(spawnPos);
-        Vec3 shootForce = new Vec3(shootForward.x * 0.5f, shootForward.y * 0.5f, shootForward.z * 0.5f);
+
+        Vec3 playerVel = player.getDeltaMovement();
+        //playerVel = Vec3.ZERO;
+        playerVel = new Vec3(playerVel.x, 0, playerVel.z);
+
+        Vec3 shootForce = new Vec3((shootForward.x * 0.5f) + playerVel.x, (shootForward.y * 0.5f) + playerVel.y, (shootForward.z * 0.5f) + playerVel.z);
         snowball.setDeltaMovement(shootForce);
 
         player.level().playSound(
