@@ -4,11 +4,12 @@
   "compatibilityLevel": "JAVA_21",
   "mixins": [
     "ExampleZombieMixin",
+    "GunProjectileMixin",
+    "HealthBubbleMixin",
     "LingeringPotionMixin",
     "PlayerMixin",
     "PlayerTeamMixin",
     "SheepBombMixin",
-    "HealthBubbleMixin",
     "SmokeCloudMixin",
     "SplashPotionMixin",
     "TeamCommandMixin",

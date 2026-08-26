@@ -67,4 +67,26 @@ public class Affects {
 
         return numHurtEntities;
     }
+
+    public static void hurtEntity(LivingEntity entity, float amount)
+    {
+        hurtEntity(entity, amount, null, DamageTypes.GENERIC);
+    }
+
+    public static void hurtEntity(LivingEntity entity, float amount, Entity damagedBy, ResourceKey<DamageType> damageType)
+    {
+        Holder<DamageType> damageTypeHolder = Splatoon.SERVER.registryAccess().lookupOrThrow(Registries.DAMAGE_TYPE).getOrThrow(damageType);
+
+        DamageSource source;
+
+        if(damagedBy == null)
+        {
+            source = new DamageSource(damageTypeHolder);
+        }
+        else {
+            source = new DamageSource(damageTypeHolder, damagedBy);
+        }
+
+        entity.hurtServer((ServerLevel)entity.level(), source, amount);
+    }
 }

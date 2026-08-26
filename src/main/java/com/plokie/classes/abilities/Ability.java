@@ -1,5 +1,6 @@
 package com.plokie.classes.abilities;
 
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
@@ -18,22 +19,26 @@ public class Ability {
     int count = 1;
 
     Function<Player, ItemStack> createItemFunc;
-    Item item;
+    ItemStack item;
 
     public void onGranted(Player player, int abilityIndex)
     {
         count = maxCount;
 
-        item = createItemFunc.apply(player).getItem();
+        item = createItemFunc.apply(player);
     }
 
     public void onRevoked(Player player, int abilityIndex)
     {
-        int slot = abilityIndex + 2;
-        ItemStack currentItem = player.getInventory().getItem(slot);
-        if(!currentItem.is(Items.AIR)) {
-            ItemStack customItem = new ItemStack(Items.AIR);
-            player.getInventory().setItem(slot, customItem);
+        if(abilityIndex >= 0) {
+            int slot = abilityIndex + 2;
+
+            ItemStack currentItem = player.getInventory().getItem(slot);
+            if(!currentItem.is(Items.AIR)) {
+                ItemStack customItem = new ItemStack(Items.AIR);
+                player.getInventory().setItem(slot, customItem);
+            }
+
         }
     }
 
@@ -68,10 +73,16 @@ public class Ability {
             if(!currentItem.is(Items.BARRIER) || currentItem.getCount() != secondsLeft) {
                 ItemStack customItem = new ItemStack(Items.BARRIER);
                 customItem.setCount(secondsLeft);
+                if(item != null) {
+                    customItem.set(
+                            DataComponents.ITEM_NAME,
+                            item.getItemName()
+                    );
+                }
                 player.getInventory().setItem(slot, customItem);
             }
         }
-        else if(!currentItem.is(item) || currentItem.getCount() != count)
+        else if(!currentItem.is(item.getItem()) || currentItem.getCount() != count)
         {
             ItemStack customItem = createItemFunc.apply(player);
             customItem.setCount(count);

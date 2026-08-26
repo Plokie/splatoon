@@ -46,6 +46,8 @@ public class AbilityManager {
             return constructor.get();
         }
 
+        public String getID()  { return this.getClass().getSimpleName(); }
+
         @Override
         public String getSerializedName() {
             return this.name;
@@ -124,9 +126,12 @@ public class AbilityManager {
                                                                         String abilityValue = StringArgumentType.getString(ctx, "abilityName");
                                                                         if(abilityValue.equals("all"))
                                                                         {
+                                                                            //ability.getClass().getSimpleName()
+                                                                            ((IPlayerMixin)(Player)target).revokeAllAbilities();
+
                                                                             for(Ability ability : new java.util.ArrayList<>(((IPlayerMixin)(Player)target).getAbilities()))
                                                                             {
-                                                                                ((IPlayerMixin)(Player)target).revokeAbility(ability.getClass().getSimpleName());
+
                                                                             }
                                                                             return 1;
                                                                         }

@@ -7,25 +7,33 @@ import com.plokie.interfaces.IPlayerMixin;
 import com.plokie.interfaces.IPlayerTeamMixin;
 import com.plokie.interfaces.IProjectile;
 import net.fabricmc.fabric.api.event.player.UseBlockCallback;
+import net.minecraft.advancements.critereon.BlockPredicate;
 import net.minecraft.core.component.DataComponents;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.StringTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.TickTask;
+import net.minecraft.tags.BlockTags;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.animal.sheep.Sheep;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.AdventureModePredicate;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.BlockTypes;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 
+import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 
 public class InkBombs extends Ability {
     private static boolean isStaticInitialised = false;
@@ -48,6 +56,16 @@ public class InkBombs extends Ability {
             item.set(
                     DataComponents.ITEM_MODEL,
                     ResourceLocation.fromNamespaceAndPath("minecraft", "tnt")
+            );
+
+//            BlockPredicate blockPredicate = BlockPredicate.Builder.block().of(BuiltInRegistries.BLOCK, BlockTags.CONCRETE_POWDER).build();
+            BlockPredicate blockPredicate = BlockPredicate.Builder.block().build();
+
+            AdventureModePredicate canPlaceOn = new AdventureModePredicate(List.of(blockPredicate));
+
+            item.set(
+                    DataComponents.CAN_PLACE_ON,
+                    canPlaceOn
             );
 
 
@@ -140,11 +158,11 @@ public class InkBombs extends Ability {
 
         Objects.requireNonNull(level.getServer()).schedule(
                 new TickTask(level.getServer().getTickCount() + 1, ()->{
-                    Splatoon.LOGGER.info("\tTick task {}", player.getName());
+                    //Splatoon.LOGGER.info("\tTick task {}", player.getName());
                     AABB area = new AABB(hitResult.getBlockPos()).inflate(2.0);
 
                     level.getEntitiesOfClass(Sheep.class, area).forEach(sheep -> {
-                        Splatoon.LOGGER.info("\tFound sheep {}", sheep.getName());
+                        //Splatoon.LOGGER.info("\tFound sheep {}", sheep.getName());
                         ((IProjectile)sheep).setPlayerOwner(player);
                     });
                 }

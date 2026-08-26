@@ -1,8 +1,10 @@
 package com.plokie;
 
+import com.plokie.classes.SplatoonClasses;
 import com.plokie.classes.abilities.AbilityManager;
 import com.plokie.commands.PingCommand;
 
+import com.plokie.customitems.CustomItemManager;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
@@ -26,6 +28,8 @@ public class Splatoon implements ModInitializer {
 	public static MinecraftServer SERVER = null;
 
 	AbilityManager abilityManager;
+	SplatoonClasses classManager;
+	CustomItemManager customItemManager;
 
 	@Override
 	public void onInitialize() {
@@ -37,6 +41,8 @@ public class Splatoon implements ModInitializer {
 		});
 
 		this.abilityManager = new AbilityManager();
+		this.customItemManager = new CustomItemManager();
+		this.classManager = new SplatoonClasses();
 
 		CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
 			dispatcher.register(Commands.literal("ping").executes(PingCommand::execute));

@@ -6,7 +6,9 @@ import com.plokie.interfaces.IPlayerMixin;
 import com.plokie.interfaces.IPlayerTeamMixin;
 import com.plokie.interfaces.IProjectile;
 import net.fabricmc.fabric.api.event.player.UseBlockCallback;
+import net.minecraft.advancements.critereon.BlockPredicate;
 import net.minecraft.core.component.DataComponents;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.StringTag;
@@ -18,6 +20,7 @@ import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.animal.sheep.Sheep;
 import net.minecraft.world.entity.monster.Shulker;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.AdventureModePredicate;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -27,6 +30,7 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 
 import javax.xml.crypto.Data;
+import java.util.List;
 import java.util.Objects;
 
 public class HealthBubble extends Ability {
@@ -45,6 +49,21 @@ public class HealthBubble extends Ability {
                     Component.literal("Health Bubble")
             );
 
+            BlockPredicate blockPredicate = BlockPredicate.Builder.block().build();
+
+            IPlayerTeamMixin playerTeam = Teams.getTeamMixinFromPlayer(player);
+//            if(playerTeam != null)
+//            {
+//                blockPredicate = BlockPredicate.Builder.block().of(BuiltInRegistries.BLOCK, playerTeam.getGroundBlock()).build();
+//            }
+
+            AdventureModePredicate canPlaceOn = new AdventureModePredicate(List.of(blockPredicate));
+
+            item.set(
+                    DataComponents.CAN_PLACE_ON,
+                    canPlaceOn
+            );
+
 //            item.set(
 //                    Data.ITEM_MODEL,
 //                    ResourceLocation.fromNamespaceAndPath("splatoon","health_bubble")
@@ -53,7 +72,6 @@ public class HealthBubble extends Ability {
             CompoundTag entityNbt = new CompoundTag();
             entityNbt.putString("id", "minecraft:shulker");
 
-            IPlayerTeamMixin playerTeam = Teams.getTeamMixinFromPlayer(player);
             if(playerTeam != null) {
                 entityNbt.putByte("Color", playerTeam.getTeamColourByte());
             }

@@ -2,14 +2,18 @@ package com.plokie.mixin;
 
 import com.mojang.serialization.Codec;
 import com.plokie.Splatoon;
+import com.plokie.classes.SplatoonClasses;
 import com.plokie.classes.abilities.Ability;
 import com.plokie.classes.abilities.AbilityManager;
+import com.plokie.customitems.CustomItem;
 import com.plokie.interfaces.IPlayerMixin;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.monster.Zombie;
 import net.minecraft.world.entity.player.Player;
 
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.BlockHitResult;
@@ -19,15 +23,38 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 import java.util.stream.Stream;
 
 @Mixin(Player.class)
 public class PlayerMixin implements IPlayerMixin {
     @Unique private Player player;
+
+    @Unique
+    SplatoonClasses.SplatoonClass splatoonClass = null;
+
+    @Override
+    public void setClass(SplatoonClasses.SplatoonClass klass) {
+        splatoonClass = klass;
+
+        revokeAllAbilities();
+
+        if(splatoonClass != null)
+        {
+            splatoonClass.abilities.forEach(abilityId->{
+                try {
+                    AbilityManager.AbilityEnum abilityEnum = AbilityManager.AbilityEnum.valueOf(abilityId);
+
+                    grantAbility(abilityEnum.Construct());
+                }
+                catch(IllegalArgumentException e)
+                {
+                    Splatoon.LOGGER.warn("Classes wants to add unrecongised ability '{}'", abilityId);
+                }
+            });
+        }
+    }
+
     @Unique private List<Ability> abilities = new ArrayList<Ability>();
 
     @Override
@@ -45,6 +72,13 @@ public class PlayerMixin implements IPlayerMixin {
     private void onTick(CallbackInfo ci) {
 
         if(player.level().isClientSide()) return;
+
+        Arrays.stream(CustomItem.values()).forEach(item -> {
+            if(player.getItemInHand(player.getUsedItemHand()).getItemName().equals(item.getItem().getItemName()))
+            {
+                item.getItemDefinition().getItemInterface().whileHeld(player);
+            }
+        });
 
         int idx = 0;
         for(Ability ability : abilities) {
@@ -75,6 +109,23 @@ public class PlayerMixin implements IPlayerMixin {
             idx++;
         }
         //abilities.removeIf(ability -> ability.getClass().getSimpleName().equals(abilityId));
+    }
+
+    @Override
+    public void revokeAllAbilities()
+    {
+        ItemStack air = new ItemStack(Items.AIR);
+
+        int idx = 0;
+        for(Ability ability : new ArrayList<>(abilities)) {
+            ability.onRevoked(player, -1);
+            abilities.remove(ability);
+
+            player.getInventory().setItem(idx + 2, air);
+
+            idx++;
+        }
+
     }
 
     @Override
