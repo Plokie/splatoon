@@ -7,5 +7,7 @@ public class Shotgun extends Gun {
         this.damage = 3;
         this.accuracy = 80.0f;
         this.projectilesPerShot = 10;
+
+        this.inkUsage = 1.0f / 10.0f;
     }
 }

@@ -6,5 +6,7 @@ public class Revolver extends Gun{
         this.usageRate = 10;
         this.damage = 12;
         this.accuracy = 5f;
+
+        this.inkUsage = 1.0f / 7.0f;
     }
 }

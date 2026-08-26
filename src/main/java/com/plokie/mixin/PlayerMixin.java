@@ -14,8 +14,10 @@ import com.plokie.interfaces.IPlayerTeamMixin;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.protocol.game.ClientboundSetExperiencePacket;
 import net.minecraft.network.protocol.game.ServerboundPlayerInputPacket;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
@@ -35,6 +37,7 @@ import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.BlockHitResult;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -45,14 +48,23 @@ import java.util.stream.Stream;
 
 @Mixin(Player.class)
 public class PlayerMixin implements IPlayerMixin {
+    @Shadow
+    public float experienceProgress;
+    @Shadow
+    public int experienceLevel;
     @Unique private Player player;
 
     @Unique private Input input = new Input(false, false, false, false, false, false, false);
+    @Unique private Input oldInput = new Input(false, false, false, false, false, false, false);
     @Override
     public void setInputPacket(Input input)
     {
         this.input = input;
     }
+    @Override
+    public Input getInput() { return this.input; }
+    @Override
+    public Input getPreviousInput() { return this.oldInput; }
 
     @Unique
     SplatoonClasses.SplatoonClass splatoonClass = null;
@@ -126,6 +138,24 @@ public class PlayerMixin implements IPlayerMixin {
     @Unique boolean inInk = false;
     @Unique boolean onWall = false;
     @Unique int timeNotInInk = 0;
+
+    @Override public boolean isInInk() { return inInk; }
+
+    @Unique float ink = 0.6f;
+    @Override
+    public void changeInk(float delta) {
+        ink += delta;
+        if(ink > 1.0f) ink = 1.0f;
+        else if(ink < 0.0f) ink = 0.0f;
+
+        player.experienceProgress = ink;
+        ((ServerPlayer)player).connection.send(new ClientboundSetExperiencePacket(
+           player.experienceProgress,
+           player.totalExperience,
+           player.experienceLevel
+        ));
+    }
+    @Override public float getInk() { return ink; }
 
 
     @Override
@@ -227,8 +257,19 @@ public class PlayerMixin implements IPlayerMixin {
             }
         }
 
+
+
+
+
         if(inInk)
         {
+            changeInk(0.022f);
+
+            //Splatoon.LOGGER.info("xpprog{} xplvl{}", experienceProgress, experienceLevel);
+
+//            experienceProgress = ink;
+
+
             timeNotInInk=0;
 
             if(player.tickCount % 7 == 0)
@@ -288,14 +329,14 @@ public class PlayerMixin implements IPlayerMixin {
             player.setInvisible(false);
         }
 
+        int idx = 0;
+        for(Ability ability : abilities) {
+            ability.tick(player, idx);
+            idx++;
+        }
+
         if(!inInk)
         {
-            int idx = 0;
-            for(Ability ability : abilities) {
-                ability.tick(player, idx);
-                idx++;
-            }
-
             if(splatoonClass != null)
             {
                 idx=0;
@@ -317,6 +358,8 @@ public class PlayerMixin implements IPlayerMixin {
                 }
             }
         }
+
+        this.oldInput = this.input;
     }
 
     @Override

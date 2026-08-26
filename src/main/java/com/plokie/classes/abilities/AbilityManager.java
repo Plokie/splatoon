@@ -29,6 +29,7 @@ public class AbilityManager {
         WindCharges("Wind Charges", WindCharges::new),
         HealthBubble("Health Bubble", HealthBubble::new),
         HealthPotions("Health Potions", HealthPotions::new),
+        SuperJump("Super Jump", SuperJump::new),
         SmokeGrenade("Smoke Grenade", SmokeGrenade::new),
         FocusApple("Focus Apple", FocusApple::new);
 

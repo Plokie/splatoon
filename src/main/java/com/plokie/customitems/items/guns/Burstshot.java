@@ -7,5 +7,7 @@ public class Burstshot extends Gun {
         this.damage = 4;
         this.accuracy = 10.0f;
         this.burst = 2;
+
+        this.inkUsage = 1.0f / 30.0f;
     }
 }

@@ -1,5 +1,6 @@
 package com.plokie.classes.abilities;
 
+import com.plokie.interfaces.IPlayerMixin;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
@@ -18,6 +19,8 @@ public class Ability {
 
     int rechargeTimer = -1;
     int count = 1;
+
+    boolean hideWhileInInk = true;
 
     Function<Player, ItemStack> createItemFunc;
     ItemStack item;
@@ -69,29 +72,38 @@ public class Ability {
 
         ItemStack currentItem = player.getInventory().getItem(slot);
 
-        if(count == 0)
-        {
-            int secondsLeft = (int)Math.ceil((rechargeTime - rechargeTimer) / 20.0);
+        IPlayerMixin playerMixin = (IPlayerMixin) player;
 
-            if(!currentItem.is(Items.BARRIER) || currentItem.getCount() != secondsLeft) {
-                ItemStack customItem = new ItemStack(Items.BARRIER);
-                customItem.setCount(secondsLeft);
-                if(item != null) {
-                    customItem.set(
-                            DataComponents.ITEM_NAME,
-                            item.getItemName()
-                    );
+        boolean doGive = true;
+        if(hideWhileInInk && playerMixin.isInInk()) doGive = false;
+        if(count == 0) doGive = true;
+
+        if(doGive)
+        {
+            if(count == 0)
+            {
+                int secondsLeft = (int)Math.ceil((rechargeTime - rechargeTimer) / 20.0);
+
+                if(!currentItem.is(Items.BARRIER) || currentItem.getCount() != secondsLeft) {
+                    ItemStack customItem = new ItemStack(Items.BARRIER);
+                    customItem.setCount(secondsLeft);
+                    if(item != null) {
+                        customItem.set(
+                                DataComponents.ITEM_NAME,
+                                item.getItemName()
+                        );
+                    }
+                    player.getInventory().setItem(slot, customItem);
+                    //player.containerMenu.broadcastChanges();
                 }
+            }
+            else if(!currentItem.is(item.getItem()) || currentItem.getCount() != count)
+            {
+                ItemStack customItem = createItemFunc.apply(player);
+                customItem.setCount(count);
                 player.getInventory().setItem(slot, customItem);
                 //player.containerMenu.broadcastChanges();
             }
-        }
-        else if(!currentItem.is(item.getItem()) || currentItem.getCount() != count)
-        {
-            ItemStack customItem = createItemFunc.apply(player);
-            customItem.setCount(count);
-            player.getInventory().setItem(slot, customItem);
-            //player.containerMenu.broadcastChanges();
         }
 
         if(rechargeTime >= 0) { // if the ability recharges over time

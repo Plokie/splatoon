@@ -20,4 +20,10 @@ public interface IPlayerMixin {
     void setClass(SplatoonClasses.SplatoonClass klass);
 
     void setInputPacket(Input input);
+    Input getInput();
+    Input getPreviousInput();
+
+    float getInk();
+    void changeInk(float delta);
+    boolean isInInk();
 }

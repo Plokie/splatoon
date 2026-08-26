@@ -5,6 +5,7 @@ import com.plokie.customitems.CustomItem;
 import com.plokie.customitems.ICustomItem;
 import com.plokie.helpers.Teams;
 import com.plokie.interfaces.IGunProjectileMixin;
+import com.plokie.interfaces.IPlayerMixin;
 import com.plokie.interfaces.IPlayerTeamMixin;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.TickTask;
@@ -28,7 +29,10 @@ import java.util.Objects;
 
 public class Gun extends ICustomItem {
     protected int damage = 1;
-    protected int inkUsage = 1;
+
+    protected float inkUsage = 0.1f;
+    protected float inkReplenish = 0.1f;
+
     protected float accuracy = 1.0f;
     protected int projectilesPerShot = 1;
     protected int burst = 0;
@@ -67,6 +71,10 @@ public class Gun extends ICustomItem {
 
     void shootAll(Player player)
     {
+        if(((IPlayerMixin)player).getInk() <= 0.0f) return;
+
+        ((IPlayerMixin)player).changeInk(-this.inkUsage);
+
         for(int i=0; i<projectilesPerShot; i++)
         {
             shoot(player, i);

@@ -7,5 +7,7 @@ public class Dualies extends Gun {
         this.damage = 1;
         this.accuracy = 10.0f;
         this.inkSpread = 0;
+
+        this.inkUsage = 1.0f / 50.0f;
     }
 }
