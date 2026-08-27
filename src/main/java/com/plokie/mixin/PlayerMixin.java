@@ -26,6 +26,7 @@ import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.monster.Zombie;
 import net.minecraft.world.entity.player.Input;
+import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 
 import net.minecraft.world.item.ItemStack;
@@ -36,6 +37,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.BlockHitResult;
+import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
@@ -52,6 +54,9 @@ public class PlayerMixin implements IPlayerMixin {
     public float experienceProgress;
     @Shadow
     public int experienceLevel;
+    @Shadow
+    @Final
+    private Inventory inventory;
     @Unique private Player player;
 
     @Unique private Input input = new Input(false, false, false, false, false, false, false);
@@ -65,6 +70,18 @@ public class PlayerMixin implements IPlayerMixin {
     public Input getInput() { return this.input; }
     @Override
     public Input getPreviousInput() { return this.oldInput; }
+
+    boolean punchedThisTick = false;
+
+    @Override
+    public void setPunched() {
+        punchedThisTick = true;
+    }
+
+    @Override public boolean punchedThisTick()
+    {
+        return punchedThisTick;
+    }
 
     @Unique
     SplatoonClasses.SplatoonClass splatoonClass = null;
@@ -140,6 +157,7 @@ public class PlayerMixin implements IPlayerMixin {
     @Unique int timeNotInInk = 0;
 
     @Override public boolean isInInk() { return inInk; }
+    @Override public boolean isInInkOnWall() { return onWall; }
 
     @Unique float ink = 0.6f;
     @Override
@@ -188,8 +206,9 @@ public class PlayerMixin implements IPlayerMixin {
             classEffectQueue.clear();
         }
 
+        ItemStack itemInHand = player.getItemInHand(player.getUsedItemHand());
         Arrays.stream(CustomItem.values()).forEach(item -> {
-            if(player.getItemInHand(player.getUsedItemHand()).getItemName().equals(item.getItem().getItemName()))
+            if(itemInHand.getItemName().equals(item.getItem().getItemName()))
             {
                 item.getItemDefinition().getItemInterface().whileHeld(player);
             }
@@ -300,6 +319,42 @@ public class PlayerMixin implements IPlayerMixin {
             timeNotInInk++;
             Effects.clearPotionEffect(player, MobEffects.SLOW_FALLING);
             Effects.clearPotionEffect(player, MobEffects.LEVITATION);
+
+            if(splatoonClass != null)
+            {
+                ItemStack airItem = new ItemStack(Items.AIR);
+                for(int i=0;i<9;i++)
+                {
+                    boolean doSetAir = true;
+
+                    if(i < splatoonClass.definition.customItems.size() )
+                    {
+                        doSetAir = false;
+                    }
+
+                    if(i - 2 < splatoonClass.definition.abilities.size() )
+                    {
+                        doSetAir = false;
+                    }
+
+                    if(i - (splatoonClass.definition.abilities.size() - 2) < splatoonClass.definition.customItems.size() + 2)
+                    {
+                        doSetAir = false;
+                    }
+
+                    if(doSetAir)
+                    {
+                        if(
+                                !player.getInventory().getItem(i).is(Items.AIR)
+                                &&
+                                !player.getInventory().getItem(i).is(Items.WARPED_FUNGUS_ON_A_STICK)
+                        )
+                        {
+                            player.getInventory().setItem(i, airItem);
+                        }
+                    }
+                }
+            }
         }
 
         if(inInk && !wasInInk)
@@ -350,8 +405,8 @@ public class PlayerMixin implements IPlayerMixin {
 
                     if(!player.getInventory().getItem(slotIdx).getItemName().equals(baseItem.getItemName()))
                     {
-                        player.getInventory().setItem(slotIdx, baseItem);
-                        //player.containerMenu.broadcastChanges();
+                        player.getInventory().setItem(slotIdx, baseItem.copy());
+                        player.containerMenu.broadcastChanges();
                     }
 
                     idx++;
@@ -360,6 +415,11 @@ public class PlayerMixin implements IPlayerMixin {
         }
 
         this.oldInput = this.input;
+//        if(this.punchedThisTick)
+//        {
+//            Splatoon.LOGGER.info("{} Reset punched flag", level.getServer().getTickCount());
+//        }
+        this.punchedThisTick = false;
     }
 
     @Override

@@ -13,15 +13,14 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.tags.BlockTags;
+import net.minecraft.world.DifficultyInstance;
 import net.minecraft.world.damagesource.DamageTypes;
-import net.minecraft.world.entity.Display;
-import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.EntitySpawnReason;
-import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.animal.sheep.Sheep;
 
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.ServerLevelAccessor;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.ValueInput;
@@ -32,6 +31,7 @@ import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import java.util.List;
 import java.util.Optional;
@@ -78,24 +78,24 @@ public class SheepBombMixin implements IProjectile {
         }
     }
 
-
-    @Inject(method = "<init>", at = @At("TAIL"))
-    private void onInit(CallbackInfo ci) {
-        sheep = (Sheep)(Object)this;
+    @Inject(method = "finalizeSpawn", at = @At("TAIL"))
+    void onSpawned(ServerLevelAccessor serverLevelAccessor, DifficultyInstance difficultyInstance, EntitySpawnReason entitySpawnReason, SpawnGroupData spawnGroupData, CallbackInfoReturnable<SpawnGroupData> cir)
+    {
         if(sheep == null) return;
+        //if(!sheep.getTags().contains("InkBomb")) return;
 
         Level level = sheep.level();
 
         sheep.setInvisible(true);
         sheep.setSilent(true);
 
-        if(level.isClientSide()) return;
-
-        //if(!sheep.getTags().contains("InkBomb")) return;
-
         {
             Display.BlockDisplay tntBlock = EntityType.BLOCK_DISPLAY.create(level, EntitySpawnReason.SPAWN_ITEM_USE);
             if(tntBlock == null) return;
+
+            tntBlock.setPos(sheep.getEyePosition());
+
+            Splatoon.LOGGER.info("{} tnt disp pos", tntBlock.getEyePosition());
 
             BlockState blockState = Blocks.TNT.defaultBlockState();
             tntBlock.setBlockState(blockState);
@@ -112,8 +112,13 @@ public class SheepBombMixin implements IProjectile {
 
             tntBlock.startRiding(sheep, true);
         }
+    }
 
 
+    @Inject(method = "<init>", at = @At("TAIL"))
+    private void onInit(CallbackInfo ci) {
+        sheep = (Sheep)(Object)this;
+        if(sheep == null) return;
     }
 
     @Inject(method = "aiStep", at = @At("TAIL"))
@@ -138,6 +143,8 @@ public class SheepBombMixin implements IProjectile {
 
                 Display.BlockDisplay woolBlock = EntityType.BLOCK_DISPLAY.create(sheep.level(), EntitySpawnReason.SPAWN_ITEM_USE);
                 if(woolBlock == null) return;
+
+                woolBlock.setPos(sheep.getEyePosition());
 
                 BlockState blockState = playerTeam.getWallBlock().defaultBlockState();
                 woolBlock.setBlockState(blockState);

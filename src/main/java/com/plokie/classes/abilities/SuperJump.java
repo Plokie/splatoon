@@ -1,6 +1,7 @@
 package com.plokie.classes.abilities;
 
 import com.plokie.Splatoon;
+import com.plokie.customitems.items.guns.SniperGun;
 import com.plokie.interfaces.IPlayerMixin;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.component.DataComponents;
@@ -15,6 +16,7 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.Vec3;
 
 public class SuperJump extends Ability {
+    boolean alreadyDashed = false;
 
     public SuperJump()
     {
@@ -41,7 +43,7 @@ public class SuperJump extends Ability {
 
         if(count > 0)
         {
-            if(playerMixin.isInInk() && playerMixin.getInput().jump())
+            if(playerMixin.isInInk() && playerMixin.getInput().jump() && !playerMixin.isInInkOnWall())
             {
                 Vec3 velocity = player.getDeltaMovement();
                 velocity = new Vec3(velocity.x, velocity.y + 1.1f, velocity.z);
@@ -67,15 +69,14 @@ public class SuperJump extends Ability {
 
         if(player.onGround())
         {
-            // hack, use unused arrow count as flag for "already dashed"
-            player.setArrowCount(0);
+            alreadyDashed = false;
         }
 
         if(
                 !playerMixin.getPreviousInput().shift() && playerMixin.getInput().shift()
                 && !player.onGround()
                 && highInAir
-                && player.getArrowCount() == 0
+                && !alreadyDashed
         )
         {
             Vec3 forward = player.getForward();
@@ -91,7 +92,7 @@ public class SuperJump extends Ability {
 
             player.setDeltaMovement(velocity);
 
-            player.setArrowCount(1);
+            alreadyDashed = true;
 
             ((ServerPlayer)player).connection.send(new ClientboundSetEntityMotionPacket(player));
         }

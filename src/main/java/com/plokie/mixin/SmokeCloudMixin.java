@@ -54,15 +54,18 @@ public abstract class SmokeCloudMixin {
         if(level.isClientSide()) return;
 
         level.getPlayers(player->true).forEach(player->{
-            level.sendParticles(player,
-                    ParticleTypes.EXPLOSION_EMITTER,
-                    true, // unknown? Something to do with distance
-                    true, // Force render
-                    self.position().x, self.position().y, self.position().z,
-                    1,
-                    0.0, 0.0, 0.0,
-                    0.0
-            );
+            if(player != getOwner())
+            {
+                level.sendParticles(player,
+                        ParticleTypes.EXPLOSION_EMITTER,
+                        true, // unknown? Something to do with distance
+                        true, // Force render
+                        self.position().x, self.position().y, self.position().z,
+                        1,
+                        0.0, 0.0, 0.0,
+                        0.0
+                );
+            }
         });
 
         Holder<DamageType> damageTypeHolder = Splatoon.SERVER.registryAccess().lookupOrThrow(Registries.DAMAGE_TYPE).getOrThrow(DamageTypes.MAGIC);

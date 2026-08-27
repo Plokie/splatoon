@@ -6,6 +6,7 @@ import com.plokie.classes.SplatoonClasses;
 import com.plokie.interfaces.IPlayerMixin;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import net.fabricmc.fabric.api.event.player.AttackEntityCallback;
 import net.fabricmc.fabric.api.event.player.UseItemCallback;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.SharedSuggestionProvider;
@@ -18,6 +19,7 @@ import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 
 import java.util.*;
 
@@ -29,9 +31,43 @@ public class CustomItemManager {
     }
     Map<Player, ExtraCustomItemTick> extraItemUsageTicks = new HashMap<>();
 
+    Map<CustomItem, List<Player>> isPlayerHolding = new HashMap<>();
+
     public CustomItemManager()
     {
         ServerTickEvents.END_SERVER_TICK.register((server)->{
+            server.getPlayerList().getPlayers().forEach(player -> {
+                Arrays.stream(CustomItem.values()).forEach(item -> {
+                    ItemStack itemInHand = player.getItemInHand(player.getUsedItemHand());
+
+                    List<Player> playersHolding = isPlayerHolding.get(item);
+                    if(playersHolding == null)
+                    {
+                        isPlayerHolding.put(item, new ArrayList<>());
+                        playersHolding = isPlayerHolding.get(item);
+                    }
+
+                    if(itemInHand.getItemName().equals(item.getItem().getItemName()))
+                    {
+                        //item.getItemDefinition().getItemInterface().whileHeld(player);
+
+                        if(!playersHolding.contains(player)  )
+                        {
+                            playersHolding.add(player);
+                            item.getItemDefinition().getItemInterface().onStartHeld(player);
+                        }
+                    }
+                    else
+                    {
+                        if(playersHolding.contains(player))
+                        {
+                            item.getItemDefinition().getItemInterface().onEndHeld(player);
+                            playersHolding.remove(player);
+                        }
+                    }
+                });
+            });
+
             for(Map.Entry<Player, ExtraCustomItemTick> entry : new HashMap<>(extraItemUsageTicks).entrySet())
             {
                 Player player = entry.getKey();
@@ -84,6 +120,16 @@ public class CustomItemManager {
                             extraItemUsageTicks.put(player, itemTick);
                         }
                     }
+                }
+            });
+
+            return InteractionResult.PASS;
+        });
+
+        AttackEntityCallback.EVENT.register((player, level, hand, entity, hitResult)->{
+            Arrays.stream(CustomItem.values()).forEach(item -> {
+                if (player.getItemInHand(hand).getItemName().equals(item.getItem().getItemName())) {
+                    item.getItemDefinition().getItemInterface().onAttackHit(player, entity);
                 }
             });
 

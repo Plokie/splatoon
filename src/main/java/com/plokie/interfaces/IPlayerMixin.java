@@ -23,7 +23,12 @@ public interface IPlayerMixin {
     Input getInput();
     Input getPreviousInput();
 
+    void setPunched();
+    boolean punchedThisTick();
+
     float getInk();
     void changeInk(float delta);
     boolean isInInk();
+
+    boolean isInInkOnWall();
 }

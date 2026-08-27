@@ -37,6 +37,10 @@ public class PlayerTeamMixin implements IPlayerTeamMixin {
     {
         //Splatoon.LOGGER.info("Requested {} get data", this.name);
         TeamSaveData teamSaveData = Splatoon.SERVER.overworld().getDataStorage().get(TeamSaveData.TYPE);
+        if(teamSaveData == null)
+        {
+            teamSaveData = Splatoon.SERVER.overworld().getDataStorage().computeIfAbsent(TeamSaveData.TYPE);
+        }
         assert teamSaveData != null;
         TeamData data = teamSaveData.getTeamData(this.name);
 
@@ -50,6 +54,10 @@ public class PlayerTeamMixin implements IPlayerTeamMixin {
     {
         //Splatoon.LOGGER.info("Requested {} set data field", this.name);
         TeamSaveData teamSaveData = Splatoon.SERVER.overworld().getDataStorage().get(TeamSaveData.TYPE);
+        if(teamSaveData == null)
+        {
+            teamSaveData = Splatoon.SERVER.overworld().getDataStorage().computeIfAbsent(TeamSaveData.TYPE);
+        }
         assert teamSaveData != null;
         TeamData data = teamSaveData.getTeamData(this.name);
 
