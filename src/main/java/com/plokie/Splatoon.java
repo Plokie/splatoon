@@ -6,6 +6,7 @@ import com.plokie.commands.PingCommand;
 
 import com.plokie.customitems.CustomItemManager;
 import com.plokie.helpers.ScheduleEvent;
+import com.plokie.management.GameFlowManager;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
@@ -45,6 +46,7 @@ public class Splatoon implements ModInitializer {
 	SplatoonClasses classManager;
 	CustomItemManager customItemManager;
 	ScheduleEvent scheduleEvent;
+	GameFlowManager gameFlowManager;
 
 	@Override
 	public void onInitialize() {
@@ -59,6 +61,7 @@ public class Splatoon implements ModInitializer {
 		this.abilityManager = new AbilityManager();
 		this.customItemManager = new CustomItemManager();
 		this.classManager = new SplatoonClasses();
+		this.gameFlowManager = new GameFlowManager();
 
 		CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
 			dispatcher.register(Commands.literal("ping").executes(PingCommand::execute));
