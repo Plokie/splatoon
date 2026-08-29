@@ -43,7 +43,8 @@ public class SuperJump extends Ability {
 
         if(count > 0)
         {
-            if(playerMixin.isInInk() && playerMixin.getInput().jump() && !playerMixin.isInInkOnWall())
+            // && !playerMixin.isInInkOnWall()
+            if(playerMixin.isInInk() && playerMixin.getInput().jump())
             {
                 Vec3 velocity = player.getDeltaMovement();
                 velocity = new Vec3(velocity.x, velocity.y + 1.1f, velocity.z);

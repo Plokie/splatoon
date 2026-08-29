@@ -13,6 +13,7 @@ import com.plokie.interfaces.IPlayerMixin;
 import com.plokie.interfaces.IPlayerTeamMixin;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.game.ClientboundSetExperiencePacket;
 import net.minecraft.network.protocol.game.ServerboundPlayerInputPacket;
@@ -23,6 +24,7 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.monster.Zombie;
 import net.minecraft.world.entity.player.Input;
@@ -31,6 +33,7 @@ import net.minecraft.world.entity.player.Player;
 
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.component.DyedItemColor;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
@@ -84,10 +87,22 @@ public class PlayerMixin implements IPlayerMixin {
     }
 
     @Unique
-    SplatoonClasses.SplatoonClass splatoonClass = null;
+    SplatoonClasses.SplatoonClass splatoonClass;
+
+    @Override
+    public SplatoonClasses.SplatoonClass getSplatoonClass()
+    {
+        return splatoonClass;
+    }
 
     @Override
     public void setClass(SplatoonClasses.SplatoonClass klass) {
+
+//        Splatoon.LOGGER.info("set class called from:\n");
+//        for(var trace : Thread.currentThread().getStackTrace())
+//        {
+//            Splatoon.LOGGER.info("\t{}:{}", trace.getFileName(), trace.getMethodName());
+//        }
 
         if(splatoonClass != null)
         {
@@ -119,6 +134,8 @@ public class PlayerMixin implements IPlayerMixin {
         }
 
         splatoonClass = klass;
+
+        inInk = false;
 
         revokeAllAbilities();
 
@@ -158,8 +175,9 @@ public class PlayerMixin implements IPlayerMixin {
 
     @Override public boolean isInInk() { return inInk; }
     @Override public boolean isInInkOnWall() { return onWall; }
+    @Override public int getTimeNotInInk() { return timeNotInInk; }
 
-    @Unique float ink = 0.6f;
+    @Unique float ink = 1.0f;
     @Override
     public void changeInk(float delta) {
         ink += delta;
@@ -190,6 +208,10 @@ public class PlayerMixin implements IPlayerMixin {
 
     @Inject(method = "tick", at = @At("TAIL"))
     private void onTick(CallbackInfo ci) {
+
+        if(timeNotInInk == 10 || player.tickCount == 10) {
+            changeInk(getInk());
+        }
 
         ServerLevel level = (ServerLevel)player.level();
 
@@ -229,10 +251,22 @@ public class PlayerMixin implements IPlayerMixin {
             }
         }
 
+        if(this.playerTeam != null)
+        {
+            if(!player.getItemBySlot(EquipmentSlot.CHEST).is(Items.LEATHER_CHESTPLATE))
+            {
+                ItemStack chestplate = new ItemStack(Items.LEATHER_CHESTPLATE);
+                chestplate.set(DataComponents.DYED_COLOR, new DyedItemColor(this.playerTeam.getTeamColourInt()));
+//                chestplate.set(DataComponents.ATTRIBUTE_MODIFIERS,)
+                player.setItemSlot(EquipmentSlot.CHEST, chestplate);
+            }
+        }
+
 
         boolean wasInInk = inInk;
 
-        if(groundBlock != null && wallBlock != null && splatoonClass != null)
+
+        if(groundBlock != null && wallBlock != null)
         {
             inInk = false;
             onWall = false;
@@ -316,6 +350,11 @@ public class PlayerMixin implements IPlayerMixin {
             }
         }
         else {
+            Affects.removeAttributeModifier(player, "scale", "inkscale");
+            Affects.removeAttributeModifier(player, "sneaking_speed", "inkspeed");
+            Affects.removeAttributeModifier(player, "movement_speed", "inkspeed");
+            Effects.clearPotionEffect(player, MobEffects.INVISIBILITY);
+
             timeNotInInk++;
             Effects.clearPotionEffect(player, MobEffects.SLOW_FALLING);
             Effects.clearPotionEffect(player, MobEffects.LEVITATION);
@@ -389,6 +428,7 @@ public class PlayerMixin implements IPlayerMixin {
             ability.tick(player, idx);
             idx++;
         }
+
 
         if(!inInk)
         {

@@ -5,10 +5,15 @@ import com.plokie.classes.abilities.AbilityManager;
 import com.plokie.commands.PingCommand;
 
 import com.plokie.customitems.CustomItemManager;
+import com.plokie.helpers.CommandBuilder;
 import com.plokie.helpers.ScheduleEvent;
+import com.plokie.interfaces.IPlayerMixin;
 import com.plokie.management.GameFlowManager;
+import com.plokie.management.SkirmishManager;
+import com.plokie.management.maps.GamemodeMaps;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
+import net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.minecraft.commands.Commands;
 import net.minecraft.core.registries.Registries;
@@ -42,11 +47,12 @@ public class Splatoon implements ModInitializer {
 
 	public static MinecraftServer SERVER = null;
 
-	AbilityManager abilityManager;
-	SplatoonClasses classManager;
-	CustomItemManager customItemManager;
-	ScheduleEvent scheduleEvent;
-	GameFlowManager gameFlowManager;
+	AbilityManager abilityManager = null;
+	SplatoonClasses classManager = null;
+	CustomItemManager customItemManager = null;
+	SkirmishManager skirmishManager = null;
+	ScheduleEvent scheduleEvent = null;
+	public static GameFlowManager gameFlowManager = null;
 
 	@Override
 	public void onInitialize() {
@@ -57,14 +63,31 @@ public class Splatoon implements ModInitializer {
 			SERVER = null;
 		});
 
+		ServerPlayerEvents.COPY_FROM.register((oldPlayer, newPlayer, alive) -> {
+			IPlayerMixin oldPlayerMixin = (IPlayerMixin)oldPlayer;
+			IPlayerMixin newPlayerMixin = (IPlayerMixin)newPlayer;
+
+			newPlayerMixin.setClass(oldPlayerMixin.getSplatoonClass());
+		});
+
 		this.scheduleEvent = new ScheduleEvent();
 		this.abilityManager = new AbilityManager();
 		this.customItemManager = new CustomItemManager();
 		this.classManager = new SplatoonClasses();
-		this.gameFlowManager = new GameFlowManager();
+		gameFlowManager = new GameFlowManager();
+		this.skirmishManager = new SkirmishManager();
 
 		CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
 			dispatcher.register(Commands.literal("ping").executes(PingCommand::execute));
+		});
+
+		CommandBuilder.command("warp").subcommand("hub").executes(ctx->{
+			//ctx.getStack().getSource().getEntity().teleportTo();
+			return "Teleporting...";
+		});
+
+		CommandBuilder.command("warp").subcommand("to").argumentEnum("map_id", GamemodeMaps.class).executes(ctx->{
+			return "Teleporting...";
 		});
 
 		LOGGER.info("Splatoon plugin :)");

@@ -6,6 +6,7 @@ import com.plokie.helpers.Helpers;
 import com.plokie.helpers.Teams;
 import com.plokie.interfaces.IPlayerTeamMixin;
 import com.plokie.management.GameFlowManager;
+import com.plokie.management.maps.GamemodeMaps;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.game.ClientboundSetSubtitleTextPacket;
@@ -27,6 +28,8 @@ public class TurfWar extends Gamemode {
         intro.add("Ink the most turf before the timer runs out");
         intro.add("Whichever team inks the most turf, wins!");
         intro.add("Don't get too caught up with kills! Ink wins the game!");
+
+        maps.add(GamemodeMaps.UrchinUnderpass);
     }
 
     @Override

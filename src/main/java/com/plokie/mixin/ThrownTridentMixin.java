@@ -103,13 +103,30 @@ public class ThrownTridentMixin implements IProjectile {
 
     void hitGround()
     {
-        ThrownTrident self = (ThrownTrident)(Object)this;
+        AbstractArrow selfArrow = (AbstractArrow) (Object)this;
+
+        if(!(selfArrow instanceof ThrownTrident)) return;
+        //if(!((Object)this instanceof ThrownTrident)) return;
+
+        ThrownTrident self = (ThrownTrident)selfArrow;
 
         Level level = self.level();
 
         Effects.explosionEffect(level, self.getOnPos());
 
-        Player player = level.getPlayerByUUID(playerOwnerUUID);
+        if(playerOwnerUUID == null) {
+            Splatoon.LOGGER.warn("Faulty trident with no player owner UUID");
+            return;
+        }
+        if(self.getOwner() == null) {
+            Splatoon.LOGGER.warn("Faulty trident with no owner");
+            return;
+        }
+
+        if(!(self.getOwner() instanceof Player)) return;
+
+//        Player player = level.getPlayerByUUID(playerOwnerUUID);
+        Player player = (Player)self.getOwner();
         if(player != null) {
             IPlayerTeamMixin playerTeam = Teams.getTeamMixinFromPlayer(player);
             if(playerTeam!=null)

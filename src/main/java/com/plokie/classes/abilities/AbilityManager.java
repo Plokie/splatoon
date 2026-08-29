@@ -96,6 +96,7 @@ public class AbilityManager {
                                                                         }
 
                                                                     })
+                                                                    .requires(source -> source.hasPermission(2))
                                                     )
                                     )
                             )
@@ -163,6 +164,7 @@ public class AbilityManager {
 
 
                                                                     })
+                                                                    .requires(source -> source.hasPermission(2))
                                                     )
                                     )
                             )

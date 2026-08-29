@@ -85,8 +85,8 @@ public class GunProjectileMixin implements IGunProjectileMixin {
         numReplaced += Fill.replace(
                 level,
                 snowball.getOnPos(),
-                new BlockPos(gun.getInkSpread(),1,gun.getInkSpread()),
-                new BlockPos(-gun.getInkSpread(),-1,-gun.getInkSpread()),
+                new BlockPos(1,1,1),
+                new BlockPos(-1,-1,-1),
                 playerTeam.getWallBlock(),
                 Splatoon.Tags.WALL_BLOCKS
         );

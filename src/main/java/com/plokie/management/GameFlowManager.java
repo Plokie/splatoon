@@ -2,25 +2,30 @@ package com.plokie.management;
 
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.plokie.Splatoon;
+import com.plokie.classes.SplatoonClasses;
 import com.plokie.helpers.CommandBuilder;
+import com.plokie.helpers.Fill;
 import com.plokie.helpers.Helpers;
+import com.plokie.helpers.ScheduleEvent;
 import com.plokie.interfaces.IPlayerMixin;
 import com.plokie.management.gamemodes.Gamemode;
 import com.plokie.management.gamemodes.Gamemodes;
 import com.plokie.management.maps.GamemodeMap;
 import com.plokie.management.maps.GamemodeMaps;
+import com.plokie.management.maps.UrchinUnderpass;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import net.minecraft.commands.CommandSource;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.core.Holder;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.protocol.game.ClientboundSetSubtitleTextPacket;
-import net.minecraft.network.protocol.game.ClientboundSetTitleTextPacket;
-import net.minecraft.network.protocol.game.ClientboundSoundPacket;
-import net.minecraft.network.protocol.game.ClientboundStopSoundPacket;
+import net.minecraft.network.protocol.game.*;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.bossevents.CustomBossEvent;
+import net.minecraft.server.commands.ForceLoadCommand;
+import net.minecraft.server.level.ColumnPos;
 import net.minecraft.server.level.ServerBossEvent;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -28,14 +33,22 @@ import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.BossEvent;
+import net.minecraft.world.entity.Display;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec2;
 import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.scores.Team;
 
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.*;
 
 public class GameFlowManager {
@@ -66,6 +79,18 @@ public class GameFlowManager {
         }
     }
 
+    List<TeamSelector> teamSelectors = new ArrayList<>();
+
+    public TeamSelector getTeamSelectorAt(BlockPos pos) {
+        for(TeamSelector teamSelector : teamSelectors)
+        {
+            if(teamSelector.blockPos.equals(pos)) {
+                return teamSelector;
+            }
+        }
+        return null;
+    }
+
     Gamemode currentGamemode = null;
     GameState currentGameState = GameState.NONE;
     GamemodeMap currentMap = null;
@@ -85,6 +110,14 @@ public class GameFlowManager {
     void setPlayerTeam(Player player, int teamIndex) {
         removePlayerTeam(player);
         players.get(teamIndex).add(player.getUUID());
+
+        for(TeamSelector teamSelector : teamSelectors) {
+            if(teamSelector.selectedTeam == null) continue;
+            if(teamSelector.teamIndex == teamIndex)
+            {
+                player.getScoreboard().addPlayerToTeam(player.getScoreboardName(), teamSelector.selectedTeam);
+            }
+        }
     }
 
     void removePlayerTeam(Player player) {
@@ -171,24 +204,27 @@ public class GameFlowManager {
 
     void PlaySong(String soundPath)
     {
-        for(Player player : getGamersIncludingSpectators())
-        {
-            ServerPlayer serverPlayer = (ServerPlayer)player;
-
-            serverPlayer.connection.send(new ClientboundStopSoundPacket(null, SoundSource.MUSIC));
-
-            if(soundPath != "")
+        ScheduleEvent.schedule(1, server->{
+            for(Player player : getGamersIncludingSpectators())
             {
-                serverPlayer.connection.send(new ClientboundSoundPacket(
-                        Holder.direct(SoundEvent.createVariableRangeEvent(ResourceLocation.fromNamespaceAndPath("splatoon", soundPath))),
-                        SoundSource.MUSIC,
-                        0, 0, 0,
-                        1.0f,
-                        1.0f,
-                        player.getRandom().nextLong()
-                ));
+                ServerPlayer serverPlayer = (ServerPlayer)player;
+
+                serverPlayer.connection.send(new ClientboundStopSoundPacket(null, SoundSource.MUSIC));
+
+                if(soundPath != "")
+                {
+                    serverPlayer.connection.send(new ClientboundSoundPacket(
+                            Holder.direct(SoundEvent.createVariableRangeEvent(ResourceLocation.fromNamespaceAndPath("splatoon", soundPath))),
+                            SoundSource.MUSIC,
+                            0, 0, 0,
+                            1.0f,
+                            1.0f,
+                            player.getRandom().nextLong()
+                    ));
+                }
             }
-        }
+        });
+
     }
 
     Vec3 hubSpawn = new Vec3(-131, 103, -146);
@@ -209,12 +245,112 @@ public class GameFlowManager {
         return bar;
     }
 
-    BlockPos readyUpZone = new BlockPos(-136, 103, -160);
-    BlockPos readyUpZoneSize = new BlockPos(10, 10, 5);
+    public final BlockPos readyUpZone = new BlockPos(-136, 103, -160);
+    public final BlockPos readyUpZoneSize = new BlockPos(10, 5, 5);
+
+    boolean setGamemode(Gamemodes gamemode)
+    {
+        return setGamemode(gamemode.getGamemode());
+    }
+
+    boolean setGamemode(Gamemode gamemode)
+    {
+        if(this.currentGameState == GameState.NONE)
+        {
+            this.currentGamemode = gamemode;
+
+            teamSelectors.clear();
+            teamSelectors.add(new TeamSelector(new BlockPos(-122, 88, -127), TeamSelector.Type.OwnTeam, -1));
+
+            AABB mapAabb = new AABB(readyUpZone).inflate(25.0);
+
+            Splatoon.SERVER.overworld().getEntitiesOfClass(Display.TextDisplay.class, mapAabb).forEach(textDisplay -> {
+                if(textDisplay.getTags().contains("MapName")) {
+                    textDisplay.setText(Component.literal("Random"));
+                }
+            });
+
+            for(int i=0; i<this.currentGamemode.getMaps().size(); i++)
+            {
+                GamemodeMaps map = this.currentGamemode.getMaps().get(i);
+                for(Display.TextDisplay textDisplay : Splatoon.SERVER.overworld().getEntitiesOfClass(Display.TextDisplay.class, mapAabb))
+                {
+                    if(textDisplay.getTags().contains("MapName" + String.valueOf(i)))
+                    {
+                        textDisplay.setText(Component.literal(map.getName().replace(" ", "\n")));
+                    }
+                }
+            }
+
+            Fill.replace(Splatoon.SERVER.overworld(), readyUpZone, readyUpZone.offset(readyUpZoneSize).offset(0, 0, 1), Blocks.AIR);
+            Fill.replace(
+                    Splatoon.SERVER.overworld(),
+                    readyUpZone.offset(0, 0, -1),
+                    readyUpZone.offset(readyUpZoneSize.getX(), readyUpZoneSize.getY(), -1),
+                    Blocks.BLACK_CONCRETE
+            );
+
+            int zoneSegmentWidth = (int)Math.ceil(readyUpZoneSize.getX() / (float)currentGamemode.getNumTeams());
+            BlockPos segmentSize = new BlockPos(zoneSegmentWidth, readyUpZoneSize.getY(), readyUpZoneSize.getZ());
+
+            BlockState button = Blocks.POLISHED_BLACKSTONE_BUTTON.defaultBlockState().setValue(BlockStateProperties.HORIZONTAL_FACING, Direction.SOUTH);
+
+            for(int i=0; i < currentGamemode.getNumTeams(); i++) {
+
+                BlockPos segmentPos = new BlockPos(readyUpZone.getX() + (zoneSegmentWidth * i), readyUpZone.getY(), readyUpZone.getZ());
+                BlockPos halfSegmentSize = new BlockPos((int) Math.floor(segmentSize.getX() * 0.5f), (int) Math.floor(segmentSize.getY() * 0.5f), (int) Math.floor(segmentSize.getZ() * 0.5f));
+
+                Fill.replace(
+                        Splatoon.SERVER.overworld(),
+                        new BlockPos(
+                                readyUpZone.getX() + ((i+1)*segmentSize.getX()) + i,
+                                readyUpZone.getY(),
+                                readyUpZone.getZ()
+                        ),
+                        new BlockPos(
+                                readyUpZone.getX() + ((i+1)*segmentSize.getX()) + i,
+                                readyUpZone.getY() + readyUpZoneSize.getY(),
+                                readyUpZone.getZ() + readyUpZoneSize.getZ() + 1
+                        ),
+                        Blocks.BLACK_CONCRETE
+                );
+
+                BlockPos barrelPos = new BlockPos(
+                        readyUpZone.getX() + (i*segmentSize.getX()) + (halfSegmentSize.getX()) + i,
+                        readyUpZone.getY() + (1),
+                        readyUpZone.getZ() + (-1)
+                );
+
+
+
+                Fill.replace(Splatoon.SERVER.overworld(), barrelPos, barrelPos, Blocks.BARREL);
+                //Fill.replace(Splatoon.SERVER.overworld(), barrelPos.offset(0,1,0), barrelPos.offset(0, 1, 0), Blocks.WAXED_COPPER_BULB);
+                Splatoon.SERVER.overworld().setBlockAndUpdate(barrelPos.offset(0,1,1), button);
+
+                Splatoon.SERVER.overworld().setBlockAndUpdate(barrelPos.offset(0,1,0), Blocks.WAXED_COPPER_BULB.defaultBlockState());
+
+                teamSelectors.add(new TeamSelector(barrelPos, TeamSelector.Type.TeamSlot, i));
+
+            }
+
+            return true;
+        }
+        return false;
+    }
+
+    boolean setMap(GamemodeMaps map) {
+        if(this.currentGameState == GameState.NONE)
+        {
+            this.currentMap = map.getMap();
+            return true;
+        }
+        return false;
+    }
 
 
     public GameFlowManager()
     {
+//        this.currentGamemode = Gamemodes.TurfWar.getGamemode();
         ServerTickEvents.START_SERVER_TICK.register(this::tick);
 
         classSelectSpawns.put(0, new Vec3(-135.5,94,-157.5));
@@ -277,14 +413,63 @@ public class GameFlowManager {
                 }
         ).register();
 
-        CommandBuilder.command("gameflow").subcommand("set").subcommand("map").argumentEnum("map", GamemodeMaps.class).executes(
+        CommandBuilder.command("gameflow").subcommand("set").subcommand("map").subcommand("enum").argumentEnum("map", GamemodeMaps.class).executes(
                 ctx->{
                     try {
                         GamemodeMaps mapEnum = ctx.getArgumentEnum("map", GamemodeMaps.class);
-                        this.currentMap = mapEnum.getMap();
-                        return "Set map to " + mapEnum;
+                        if(setMap(mapEnum)) {
+                            return "Set map to " + mapEnum.getName();
+                        }
+                        else {
+                            return "! Cannot change map while a game is in progress";
+                        }
                     }
                     catch(IllegalArgumentException ignored) { return "! Unrecognised map";}
+                }
+        ).register();
+
+        CommandBuilder.command("gameflow").subcommand("set").subcommand("map").subcommand("index").argumentInteger("map_index").executes(
+                ctx->{
+                    if(currentGamemode == null) return "! No gamemode selected";
+                    int index = ctx.getArgumentInteger("map_index");
+                    if(index < currentGamemode.getMaps().size())
+                    {
+                        if(setMap(currentGamemode.getMaps().get(index)))
+                        {
+                            return "Set map to "+ currentGamemode.getMaps().get(index).getName();
+                        }
+                        else
+                        {
+                            return "! Cannot change map while a game is in progress";
+                        }
+                    }
+                    else {
+                        index = (int)(Math.random() * (double)currentGamemode.getMaps().size());
+                        GamemodeMaps map = currentGamemode.getMaps().get(index);
+                        if(setMap(map))
+                        {
+                            return "Invalid map index, setting to a random map: " + map.getName();
+                        }
+                        else {
+                            return "! Cannot change map while a game is in progress";
+                        }
+                    }
+                }
+        ).register();
+
+        CommandBuilder.command("gameflow").subcommand("set").subcommand("map").subcommand("random").executes(
+                ctx->{
+                    if(currentGamemode == null) return "! No gamemode selected";
+                    if(currentGamemode.getMaps().isEmpty()) return "! No maps in this gamemode";
+                    int index = (int)(Math.random() * (double)currentGamemode.getMaps().size());
+                    GamemodeMaps map = currentGamemode.getMaps().get(index);
+                    if(setMap(map))
+                    {
+                        return "Chose random map " + map.getName();
+                    }
+                    else {
+                        return "! Cannot change map while a game is in progress";
+                    }
                 }
         ).register();
 
@@ -292,8 +477,12 @@ public class GameFlowManager {
             ctx->{
                 try {
                     Gamemodes gamemodeEnum = ctx.getArgumentEnum("gamemode", Gamemodes.class);
-                    currentGamemode = gamemodeEnum.getGamemode();
-                    return "Set gamemode to " + gamemodeEnum.toString();
+                    if(setGamemode(gamemodeEnum)) {
+                        return "Set gamemode to " + gamemodeEnum.getName();
+                    }
+                    else {
+                        return "! Cannot change gamemode while a game is in progress";
+                    }
                 }
                 catch(IllegalArgumentException ignored) { return "! Unrecognised gamemode";}
             }
@@ -323,6 +512,115 @@ public class GameFlowManager {
                     } catch(CommandSyntaxException ignored) { return "! Unrecognised target";}
                 }
         ).register();
+
+        CommandBuilder.command("gameflow").subcommand("get").subcommand("team_players").argumentInteger("team_index").subcommand("team").executes(
+                ctx->{
+                    String returnMessage = "";
+                    for(Player player : getTeamPlayers(ctx.getArgumentInteger("team_index"))) {
+                        returnMessage += player.getName().getString() + ",";
+                    }
+                    return returnMessage;
+                }
+        ).register();
+
+        CommandBuilder.command("gameflow").subcommand("get").subcommand("all_players").executes(
+                ctx->{
+                    String returnMessage = "";
+                    for(Player player : getTeamPlayers()) {
+                        returnMessage += player.getName().getString() + ",";
+                    }
+                    return returnMessage;
+                }
+        ).register();
+
+        CommandBuilder.command("gameflow").subcommand("get").subcommand("spectators").executes(
+                ctx->{
+                    String returnMessage = "";
+                    for(Player player : getSpectators()) {
+                        returnMessage += player.getName().getString() + ",";
+                    }
+                    return returnMessage;
+                }
+        ).register();
+
+        CommandBuilder.command("gameflow").subcommand("get").subcommand("all_players_and_spectators").executes(
+                ctx->{
+                    String returnMessage = "";
+                    for(Player player : getGamersIncludingSpectators()) {
+                        returnMessage += player.getName().getString() + ",";
+                    }
+                    return returnMessage;
+                }
+        ).register();
+
+        CommandBuilder.command("gameflow").subcommand("get").subcommand("current_map").executes(
+                ctx->{
+                    String returnMessage = "No map selected";
+                    if(currentMap != null) returnMessage = currentMap.getClass().getSimpleName();
+                    return returnMessage;
+                }
+        ).register();
+
+        CommandBuilder.command("gameflow").subcommand("get").subcommand("current_gamemode").executes(
+                ctx->{
+                    String returnMessage = "No map selected";
+                    if(currentGamemode != null) returnMessage = currentGamemode.getClass().getSimpleName();
+                    return returnMessage;
+                }
+        ).register();
+
+        CommandBuilder.command("gameflow").subcommand("get").subcommand("current_gamestate").executes(
+                ctx->{
+                    String returnMessage = "! Uhh no game state?";
+                    if(currentGameState != null) returnMessage = "Current game state is "+currentGameState.toString();
+                    return returnMessage;
+                }
+        ).register();
+
+        CommandBuilder.command("gameflow").subcommand("is").subcommand("current_gamemode").argumentEnum("gamemode", Gamemodes.class).executes(
+                ctx->{
+                    try {
+                        Gamemodes gamemodeEnum = ctx.getArgumentEnum("gamemode", Gamemodes.class);
+                        String returnMessage = "! Current gamemode is not " + gamemodeEnum.toString();
+                        if(currentGamemode != null && currentGamemode.toEnum() == gamemodeEnum) returnMessage = "Current gamemode is "+gamemodeEnum.toString();
+                        return returnMessage;
+
+                    }
+                    catch(IllegalArgumentException ignored) { return "! Unrecognised gamemode";}
+                }
+        ).register();
+
+        CommandBuilder.command("gameflow").subcommand("is").subcommand("current_map").subcommand("enum").argumentEnum("map", GamemodeMaps.class).executes(
+                ctx->{
+                    try {
+                        GamemodeMaps mapEnum = ctx.getArgumentEnum("map", GamemodeMaps.class);
+                        String returnMessage = "! Current map is not " + mapEnum.toString();
+                        if(currentMap != null && currentMap.toEnum() == mapEnum) returnMessage = "Current map is "+mapEnum.toString();
+                        return returnMessage;
+
+                    }
+                    catch(IllegalArgumentException ignored) {
+                        String arg = ctx.getArgumentString("map");
+                        return "! Unrecognised map " + arg;
+                    }
+                }
+        ).register();
+
+        CommandBuilder.command("gameflow").subcommand("is").subcommand("current_map").subcommand("index").argumentInteger("gamemode_map_index").executes(
+                ctx->{
+                    if(currentGamemode == null) return "! No gamemode selected";
+                    if(currentMap == null) return "! No map selected";
+                    int mapIndex = ctx.getArgumentInteger("gamemode_map_index");
+                    if(mapIndex < currentGamemode.getMaps().size())
+                    {
+                        if(currentGamemode.getMaps().get(mapIndex) == currentMap.toEnum())
+                        {
+                            return "Gamemode map index " + mapIndex + " ("+currentMap.toEnum()+") is currently active";
+                        }
+                    }
+                    return "! Gamemode map index " + mapIndex + " is not currently active";
+                }
+        ).register();
     }
 
     public void setGameState(GameState gameState)
@@ -339,23 +637,50 @@ public class GameFlowManager {
         {
             if(this.currentGameState == GameState.INTRO)
             {
+//                CommandSourceStack dummySource = new CommandSourceStack(
+//                        CommandSource.NULL,
+//                        Vec3.ZERO,
+//                        Vec2.ZERO,
+//                        Splatoon.SERVER.overworld(),
+//                        4,
+//                        "DummySource",
+//                        Component.literal("Dummy"),
+//                        Splatoon.SERVER,
+//                        null
+//                );
+//                try {
+//                    ColumnPos a = new ColumnPos((int)this.currentMap.mapCorner.x, (int)this.currentMap.mapCorner.y);
+//                    ColumnPos b = new ColumnPos((int)(this.currentMap.mapCorner.x + this.currentMap.mapSize.x), (int)(this.currentMap.mapCorner.y + this.currentMap.mapSize.y));
+//
+//                    Method method = ForceLoadCommand.class.getDeclaredMethod("changeForceLoad", CommandSourceStack.class, ColumnPos.class, ColumnPos.class, boolean.class);
+//                    method.setAccessible(true);
+//                    try {
+//                        int result = (int)method.invoke(dummySource, a, b, true);
+//                    } catch (Exception e) {
+//                        Splatoon.LOGGER.error("Forceload invokation error occured: {}", e.getMessage());
+//                    }
+//                }
+//                catch(NoSuchMethodException e) {
+//                    Splatoon.LOGGER.error("Could not get force load method");
+//                }
+
                 PlaySong("music.opening.match_start");
 
                 int zoneSegmentWidth = (int)Math.ceil(readyUpZoneSize.getX() / (float)currentGamemode.getNumTeams());
                 for(int i=0; i < currentGamemode.getNumTeams(); i++) {
+
                     BlockPos segmentPos = new BlockPos(readyUpZone.getX() + (zoneSegmentWidth * i), readyUpZone.getY(), readyUpZone.getZ());
                     BlockPos segmentSize = new BlockPos(zoneSegmentWidth, readyUpZoneSize.getY(), readyUpZoneSize.getZ());
+                    BlockPos halfSegmentSize = new BlockPos((int)(segmentSize.getX() * 0.5f), (int)(segmentSize.getY() * 0.5f), (int)(segmentSize.getZ() * 0.5f));
 
-                    AABB aabb = new AABB(segmentPos);
-                    aabb.setMinX(segmentPos.getX());
-                    aabb.setMinY(segmentPos.getY());
-                    aabb.setMinZ(segmentPos.getZ());
-                    aabb.setMaxX(segmentPos.getX() + segmentSize.getX());
-                    aabb.setMaxY(segmentPos.getY() + segmentSize.getY());
-                    aabb.setMaxZ(segmentPos.getZ() + segmentSize.getZ());
+                    AABB aabb = new AABB(new BlockPos(segmentPos.getX() + halfSegmentSize.getX(), segmentPos.getY() + halfSegmentSize.getY(),  segmentPos.getZ() + halfSegmentSize.getZ()));
+                    aabb = aabb.inflate(halfSegmentSize.getX(), halfSegmentSize.getY(), halfSegmentSize.getZ());
+
+                    Splatoon.LOGGER.info("Setup team members {}, min: {} max: {}", i, aabb.getMinPosition(), aabb.getMaxPosition());
 
                     for(Player player : Splatoon.SERVER.overworld().getEntitiesOfClass(Player.class, aabb))
                     {
+                        Splatoon.LOGGER.info("\t Player {}", player.getName().toString());
                         setPlayerTeam(player, i);
                     };
                 }
@@ -421,6 +746,31 @@ public class GameFlowManager {
                 for(int i=0; i < currentGamemode.getNumTeams(); i++) {
                     Vec3 teamSpawn = currentMap.teamSpawns.get(i);
                     for(Player player : getTeamPlayers(i)) {
+                        List<String> removeTags = new ArrayList<>();
+                        for(String tag : player.getTags())
+                        {
+                            if(tag.endsWith("Pick")) {
+//                                String klass = tag.substring(0, tag.length() - 4);
+                                String klass = tag.replace("Pick", "");
+                                Splatoon.LOGGER.info("XPICK {}", klass);
+
+                                try {
+                                    SplatoonClasses.SplatoonClass pickClass = SplatoonClasses.SplatoonClass.valueOf(klass);
+                                    ((IPlayerMixin)player).setClass(pickClass);
+                                }
+                                catch(Exception e)
+                                {
+                                    Splatoon.LOGGER.warn("Unknown pick tag {}", tag);
+                                }
+
+                                removeTags.add(tag);
+                            }
+                        }
+                        // avoids concurrentmodificationexception
+                        for(String tag : removeTags) {
+                            player.removeTag(tag);
+                        }
+
                         player.teleportTo(teamSpawn.x, teamSpawn.y, teamSpawn.z);
 
                         ServerPlayer.RespawnConfig respawnConfig = new ServerPlayer.RespawnConfig(ServerLevel.OVERWORLD, Helpers.toBlockPos(teamSpawn), 0.0f, true);
@@ -430,6 +780,11 @@ public class GameFlowManager {
             }
             if(this.currentGameState == GameState.RESULTS)
             {
+                for(Player player : getTeamPlayers())
+                {
+                    ((IPlayerMixin)player).setClass(null);
+                }
+
                 PlaySong("");
 
                 Vec3 resultsPos = this.currentMap.resultsPosition;
@@ -451,6 +806,8 @@ public class GameFlowManager {
                     ((ServerPlayer)player).setRespawnPosition(respawnConfig, false);
                 }
                 clearActivePlayers();
+
+                setGamemode(getCurrentGamemode().toEnum());
             }
         }
 
@@ -458,6 +815,11 @@ public class GameFlowManager {
 
     void tick(MinecraftServer server)
     {
+        if(server.getTickCount() == 10) {
+            setGamemode(Gamemodes.TurfWar);
+            setMap(GamemodeMaps.UrchinUnderpass);
+        }
+
         if(currentGamemode != null && currentMap != null)
         {
             getTimerBossbar().setProgress(timer / (float)GameState.getDuration(currentGameState, currentGamemode.toEnum()));
@@ -532,6 +894,7 @@ public class GameFlowManager {
                     for(Player player : getGamersIncludingSpectators())
                     {
                         player.snapTo(resultsPos.x, resultsPos.y, resultsPos.z, resultsRot.x, resultsRot.y);
+                        player.teleportTo(resultsPos.x, resultsPos.y, resultsPos.z);
                     }
                 }
                 else if(this.currentGameState == GameState.GAME_TIME)
@@ -568,6 +931,12 @@ public class GameFlowManager {
             Boolean ready = readyState.get(i);
             if(ready == null) return false;
             if(!ready) return false;
+        }
+
+        for(TeamSelector teamSelector : teamSelectors) {
+            if(teamSelector.type != TeamSelector.Type.TeamSlot) continue;
+
+            if(teamSelector.selectedTeam == null) return false;
         }
 
         return true;

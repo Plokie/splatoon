@@ -16,6 +16,7 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
+import net.minecraft.world.entity.animal.sheep.Sheep;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
@@ -66,6 +67,8 @@ public class Affects {
 
         for(LivingEntity entity : level.getEntitiesOfClass(LivingEntity.class, aabb))
         {
+            if(entity instanceof Sheep) continue;
+
             if(entity.distanceToSqr(new Vec3(pos.x, pos.y, pos.z)) < radius*radius)
             {
                 entity.hurtServer((ServerLevel)level, source, amount);

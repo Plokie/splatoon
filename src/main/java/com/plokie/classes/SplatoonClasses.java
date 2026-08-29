@@ -5,7 +5,9 @@ import com.plokie.Splatoon;
 import com.plokie.classes.abilities.Ability;
 import com.plokie.classes.abilities.AbilityManager;
 import com.plokie.customitems.CustomItem;
+import com.plokie.helpers.CommandBuilder;
 import com.plokie.interfaces.IPlayerMixin;
+import com.plokie.interfaces.IPlayerTeamMixin;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.SharedSuggestionProvider;
@@ -33,6 +35,7 @@ public class SplatoonClasses {
                 .ability(AbilityManager.AbilityEnum.CleansingGrenade)
                 .ability(AbilityManager.AbilityEnum.InkBombs)
                 .attribute("scale", 0.3, AttributeModifier.Operation.ADD_VALUE)
+                .attribute("step_height", 0.6, AttributeModifier.Operation.ADD_VALUE)
                 .effect(MobEffects.HEALTH_BOOST, 4)
         .build()),
         Roller("Roller", SplatoonClassDefinition.Builder.start()
@@ -40,6 +43,7 @@ public class SplatoonClasses {
                 .customItem(CustomItem.Shotgun)
                 .ability(AbilityManager.AbilityEnum.Hook)
                 .attribute("scale", 0.3, AttributeModifier.Operation.ADD_VALUE)
+                .attribute("step_height", 0.6, AttributeModifier.Operation.ADD_VALUE)
                 .effect(MobEffects.HEALTH_BOOST, 4)
         .build()),
         Scout("Scout", SplatoonClassDefinition.Builder.start()
@@ -48,6 +52,7 @@ public class SplatoonClasses {
                 .ability(AbilityManager.AbilityEnum.EnderPearl)
                 .ability(AbilityManager.AbilityEnum.WindCharges)
                 .attribute("scale", 0.1, AttributeModifier.Operation.ADD_VALUE)
+                .attribute("step_height", 0.6, AttributeModifier.Operation.ADD_VALUE)
                 .attribute("gravity", 0.8, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL)
                 .attribute("jump_strength", 0.8, AttributeModifier.Operation.ADD_MULTIPLIED_BASE)
                 .attribute("movement_speed", 0.8, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL)
@@ -60,6 +65,7 @@ public class SplatoonClasses {
                 .ability(AbilityManager.AbilityEnum.HealthBubble)
                 .ability(AbilityManager.AbilityEnum.HealthPotions)
                 .attribute("scale", 0.3, AttributeModifier.Operation.ADD_VALUE)
+                .attribute("step_height", 0.6, AttributeModifier.Operation.ADD_VALUE)
                 .effect(MobEffects.HEALTH_BOOST, 9)
         .build()),
         Jumper("Jumper", SplatoonClassDefinition.Builder.start()
@@ -68,6 +74,7 @@ public class SplatoonClasses {
                 .ability(AbilityManager.AbilityEnum.WindCharges)
                 .ability(AbilityManager.AbilityEnum.SuperJump)
                 .attribute("scale", 0.3, AttributeModifier.Operation.ADD_VALUE)
+                .attribute("step_height", 0.6, AttributeModifier.Operation.ADD_VALUE)
                 .effect(MobEffects.HEALTH_BOOST, 4)
                 .effect(MobEffects.HASTE, 5)
         .build()),
@@ -77,6 +84,7 @@ public class SplatoonClasses {
                 .ability(AbilityManager.AbilityEnum.FocusApple)
                 .ability(AbilityManager.AbilityEnum.SmokeGrenade)
                 .attribute("scale", 0.3, AttributeModifier.Operation.ADD_VALUE)
+                .attribute("step_height", 0.6, AttributeModifier.Operation.ADD_VALUE)
                 .effect(MobEffects.HEALTH_BOOST, 4)
         .build());
 
@@ -161,6 +169,23 @@ public class SplatoonClasses {
 
     public SplatoonClasses()
     {
+        CommandBuilder.command("class").subcommand("get").argumentPlayer("player").executes(ctx->{
+            try {
+                ServerPlayer player = ctx.getArgumentPlayer("player");
+                IPlayerMixin playerMixin = (IPlayerMixin)player;
+                SplatoonClass klass = playerMixin.getSplatoonClass();
+                if(klass == null) {
+                    return player.getName().getString() + " does not have a class";
+                }
+                else {
+                    return player.getName().getString() + " has class "+klass.getName();
+                }
+            }
+            catch(Exception e) {
+                return "! Invalid target";
+            }
+        }).register();
+
         CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
             dispatcher.register(
                     Commands.literal("class")
@@ -219,6 +244,7 @@ public class SplatoonClasses {
 
 
                                                                     })
+                                                                    .requires(source -> source.hasPermission(2))
                                                     )
                                     )
                             )

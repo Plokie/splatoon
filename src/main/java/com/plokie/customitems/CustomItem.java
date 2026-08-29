@@ -1,6 +1,7 @@
 package com.plokie.customitems;
 
 import com.plokie.customitems.items.InkRoller;
+import com.plokie.customitems.items.JumperMace;
 import com.plokie.customitems.items.guns.*;
 import com.plokie.helpers.items.Enchantments;
 import net.minecraft.core.component.DataComponents;
@@ -47,6 +48,7 @@ public enum CustomItem {
                     .name("Mace")
                     .enchant("wind_burst", 3)
                     .enchant("density", 3)
+                    .behaviour(new JumperMace())
             .build()
     ),
     SniperSword(
@@ -110,7 +112,6 @@ public enum CustomItem {
                     .item(Items.BRUSH)
                     .name("Knockback Brush")
                     .enchant("knockback", 5)
-                    .behaviour(new SniperGun())
             .build()
     );
 

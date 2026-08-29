@@ -18,6 +18,7 @@ public interface IPlayerMixin {
     void onUseAbilityItem(String abilityId, Player player, InteractionHand hand);
 
     void setClass(SplatoonClasses.SplatoonClass klass);
+    SplatoonClasses.SplatoonClass getSplatoonClass();
 
     void setInputPacket(Input input);
     Input getInput();
@@ -26,6 +27,7 @@ public interface IPlayerMixin {
     void setPunched();
     boolean punchedThisTick();
 
+    int getTimeNotInInk();
     float getInk();
     void changeInk(float delta);
     boolean isInInk();

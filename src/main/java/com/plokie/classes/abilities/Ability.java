@@ -51,7 +51,9 @@ public class Ability {
     public void onUse()
     {
         count--;
-        rechargeTimer = 0;
+        if(rechargeTimer <= -1) {
+            rechargeTimer = 0;
+        }
     }
 
     public void onUseBlock(Player player, InteractionHand hand, BlockHitResult hitResult, int abilityIndex)

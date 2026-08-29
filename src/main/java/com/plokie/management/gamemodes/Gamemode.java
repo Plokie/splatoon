@@ -1,6 +1,7 @@
 package com.plokie.management.gamemodes;
 
 import com.plokie.management.GameFlowManager;
+import com.plokie.management.maps.GamemodeMaps;
 import net.minecraft.server.MinecraftServer;
 
 import java.util.ArrayList;
@@ -15,6 +16,9 @@ public abstract class Gamemode {
 
     protected List<String> intro = new ArrayList<>();
     public List<String> getIntroText() { return intro; }
+    protected List<GamemodeMaps> maps = new ArrayList<>();
+    public List<GamemodeMaps> getMaps() { return maps; }
+
 
     public Gamemodes toEnum()
     {

@@ -60,6 +60,10 @@ public class Gun extends ICustomItem {
     @Override
     public void onUse(Player player)
     {
+        if(((IPlayerMixin)player).getTimeNotInInk() < 10) {
+            return;
+        }
+
         shootAll(player);//item.getItemDefinition().getItemInterface().onUse(player)
 
         if(burst > 0)
@@ -134,7 +138,12 @@ public class Gun extends ICustomItem {
         //playerVel = Vec3.ZERO;
         playerVel = new Vec3(playerVel.x, 0, playerVel.z);
 
-        Vec3 shootForce = new Vec3((shootForward.x * 0.5f) + playerVel.x, (shootForward.y * 0.5f) + playerVel.y, (shootForward.z * 0.5f) + playerVel.z);
+        snowball.setNoGravity(true);
+
+        float shootForceFl = 1.0f;
+        float verticalBoostVel = 1.35f;
+
+        Vec3 shootForce = new Vec3((shootForward.x * shootForceFl) + playerVel.x, ((shootForward.y * shootForceFl) + playerVel.y) * verticalBoostVel, (shootForward.z * shootForceFl) + playerVel.z);
         snowball.setDeltaMovement(shootForce);
 
         player.level().playSound(

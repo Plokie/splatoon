@@ -3,14 +3,17 @@ package com.plokie.management.gamemodes;
 import java.util.function.Supplier;
 
 public enum Gamemodes {
-    TurfWar(com.plokie.management.gamemodes.TurfWar::new);
+    TurfWar("Turf War", com.plokie.management.gamemodes.TurfWar::new);
 
+    final String name;
     final Gamemode gamemode;
 
+    public String getName() { return name; }
     public Gamemode getGamemode() { return gamemode; }
 
-    Gamemodes(Supplier<Gamemode> gamemodeConstructor)
+    Gamemodes(String name, Supplier<Gamemode> gamemodeConstructor)
     {
+        this.name = name;
         gamemode = gamemodeConstructor.get();
     }
 

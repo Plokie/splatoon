@@ -125,6 +125,8 @@ public class SheepBombMixin implements IProjectile {
     private void onTick(CallbackInfo ci) {
         if(sheep.level().isClientSide()) return;
 
+        if(playerOwnerUUID == null) return;
+
         if(!sheep.getTags().contains("InkBomb")) return;
 
         if(!initialisedTeam)

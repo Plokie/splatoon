@@ -74,6 +74,7 @@ public class InkBombs extends Ability {
 
             CompoundTag entityNbt = new CompoundTag();
             entityNbt.putString("id", "minecraft:sheep");
+            entityNbt.putFloat("Health", 150.0f);
 
             IPlayerTeamMixin playerTeam = Teams.getTeamMixinFromPlayer(player);
             if(playerTeam != null) {
@@ -87,6 +88,11 @@ public class InkBombs extends Ability {
                 movementSpeed.putString("id", "minecraft:movement_speed");
                 movementSpeed.putDouble("base", -10.0d);
                 attributesList.add(movementSpeed);
+
+                CompoundTag maxHealth = new CompoundTag();
+                maxHealth.putString("id", "minecraft:max_health");
+                maxHealth.putDouble("base", 150.0d);
+                attributesList.add(maxHealth);
 
                 entityNbt.put("attributes", attributesList);
             }

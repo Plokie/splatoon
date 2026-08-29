@@ -1,14 +1,17 @@
 package com.plokie.management.maps;
 
 public enum GamemodeMaps {
-    UrchinUnderpass(new UrchinUnderpass());
+    UrchinUnderpass("Urchin Underpass", new UrchinUnderpass());
 
+    final String name;
     final GamemodeMap map;
 
+    public String getName() { return name;}
     public GamemodeMap getMap() { return map; }
 
-    GamemodeMaps(GamemodeMap map)
+    GamemodeMaps(String name, GamemodeMap map)
     {
+        this.name = name;
         this.map = map;
     }
 }

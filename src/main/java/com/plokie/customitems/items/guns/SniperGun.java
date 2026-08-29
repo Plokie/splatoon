@@ -15,10 +15,7 @@ import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.particles.DustParticleOptions;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
-import net.minecraft.network.protocol.game.ClientboundClearTitlesPacket;
-import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
-import net.minecraft.network.protocol.game.ClientboundSetSubtitleTextPacket;
-import net.minecraft.network.protocol.game.ClientboundSetTitleTextPacket;
+import net.minecraft.network.protocol.game.*;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -103,6 +100,9 @@ public class SniperGun extends ICustomItem {
         {
             ServerLevel level = (ServerLevel)player.level();
 
+
+
+
             if(!player.getItemBySlot(EquipmentSlot.HEAD).is(Items.CARVED_PUMPKIN))
             {
                 ItemStack item = new ItemStack(Items.CARVED_PUMPKIN);
@@ -121,15 +121,35 @@ public class SniperGun extends ICustomItem {
             int sniperCharge = timeScoping / 10;
             int chargeIndex = timeScoping % 10;
 
-            float reach = 30.0f;
+            float reach = 50.0f;
             if(sniperCharge >= 3)
             {
-                reach = 80.0f;
+                reach = 150.0f;
             }
 
-            if(chargeIndex == 0 || timeScoping == 2 || timeScoping == 3)
+            if(sniperCharge >= 1 && playerMixin.getInk() > 0.0f)
             {
                 Affects.setAttributeModifier(player, "entity_interaction_range", "scoping", reach - 5.0f, AttributeModifier.Operation.ADD_VALUE);
+            }
+            else {
+                Affects.removeAttributeModifier(player, "entity_interaction_range", "scoping");
+            }
+
+            // 20 blocks, idk, false = ignore fluids
+            HitResult hit = player.pick(300.0, 0.0f, false);
+            if(hit.getType() == HitResult.Type.BLOCK)
+            {
+                double distance = Math.sqrt(hit.distanceTo(player));
+
+                MutableComponent textCom = Component.literal(String.valueOf((int)Math.round(distance)));
+                if(distance < reach) {
+                    textCom = textCom.withStyle(ChatFormatting.GREEN);
+                }
+                else {
+                    textCom = textCom.withStyle(ChatFormatting.RED);
+                }
+
+                serverPlayer.connection.send(new ClientboundSetActionBarTextPacket(textCom));
             }
 
 
@@ -172,12 +192,14 @@ public class SniperGun extends ICustomItem {
             inputMove(player, input.forward(), 0.0f);
             inputMove(player, input.backward(), 180.0f);
 
-            if(playerMixin.punchedThisTick() && sniperCharge > 0)
+            if(playerMixin.punchedThisTick() && sniperCharge > 0 && playerMixin.getInk() > 0.0f)
             {
                 setTempInt(player, 1);
                 Vec3 eyePos = player.getEyePosition();
 
                 //Splatoon.LOGGER.info("Punched");
+
+                playerMixin.changeInk(-0.133f);
 
                 level.playSound(
                         null, // everyone
@@ -234,6 +256,10 @@ public class SniperGun extends ICustomItem {
 
             }
         }
+        else {
+            setTempInt(player, 1);
+            Affects.removeAttributeModifier(player, "entity_interaction_range", "scoping");
+        }
     }
 
     @Override
@@ -245,9 +271,11 @@ public class SniperGun extends ICustomItem {
         int sniperCharge = timeScoping / 10;
         if(sniperCharge > 5) sniperCharge = 5;
 
-        setTempInt(player, 1);
+        //setTempInt(player, 1);
 
-        if(isScoping && sniperCharge >= 1)
+        IPlayerMixin playerMixin = (IPlayerMixin)player;
+
+        if(isScoping && sniperCharge >= 1 && playerMixin.getInk() > 0.0f)
         {
             if(hitEntity instanceof LivingEntity entity)
             {
@@ -261,10 +289,10 @@ public class SniperGun extends ICustomItem {
 
                 float damage = switch (sniperCharge) {
                     case 1 -> 1;
-                    case 2 -> 2;
-                    case 3 -> 6;
-                    case 4 -> 14;
-                    case 5 -> 18;
+                    case 2 -> 5;
+                    case 3 -> 10;
+                    case 4 -> 15;
+                    case 5 -> 20;
                     default -> 0;
                 };
 

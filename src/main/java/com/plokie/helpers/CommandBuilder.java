@@ -1,5 +1,6 @@
 package com.plokie.helpers;
 
+import com.mojang.brigadier.Command;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.ArgumentBuilder;
@@ -7,6 +8,7 @@ import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
 import com.mojang.brigadier.tree.CommandNode;
 import com.mojang.brigadier.tree.LiteralCommandNode;
 import com.mojang.datafixers.types.Func;
@@ -73,12 +75,14 @@ public class CommandBuilder {
         public enum Type {
             Subcommand,
             Argument,
-            Execute
+            Execute,
+            Permission
         }
         public String name;
         public Type type;
         public Supplier<ArgumentBuilder<CommandSourceStack, ?>> argumentSupplier = null;
         public Function<ExecuteContext, String> callback = null;
+        public Function<CommandSourceStack, Boolean> permissionCallback = null;
 
         CommandStackNode(Type type)
         {
@@ -89,6 +93,13 @@ public class CommandBuilder {
             CommandStackNode node = new CommandStackNode(Type.Execute);
             node.callback = callback;
             node.name = "executes";
+            return node;
+        }
+
+        public static CommandStackNode permission(Function<CommandSourceStack, Boolean> callback) {
+            CommandStackNode node = new CommandStackNode(Type.Permission);
+            node.permissionCallback = callback;
+            node.name = "permissionCb";
             return node;
         }
 
@@ -216,6 +227,12 @@ public class CommandBuilder {
         return this;
     }
 
+    public CommandBuilder permission(Function<CommandSourceStack, Boolean> permissionCallback)
+    {
+        commandStackQueue.add(CommandStackNode.permission(permissionCallback));
+        return this;
+    }
+
     public void register()
     {
 //        LiteralArgumentBuilder<CommandSourceStack> command;
@@ -228,6 +245,7 @@ public class CommandBuilder {
 
         var lambdaContext = new Object() {
             Function<ExecuteContext, String> pendingExecuteCallback = null;
+            Function<CommandSourceStack, Boolean> permissionCallback = null;
         };
 
         while(!commandStackQueue.empty())
@@ -259,22 +277,37 @@ public class CommandBuilder {
             {
                 lambdaContext.pendingExecuteCallback = top.callback;
             }
+            else if(top.type == CommandStackNode.Type.Permission)
+            {
+                lambdaContext.permissionCallback = top.permissionCallback;
+            }
 
             if(top.type == CommandStackNode.Type.Argument || top.type == CommandStackNode.Type.Subcommand)
             {
                 if(lambdaContext.pendingExecuteCallback != null) {
                     topCommand = topCommand.executes((ctx->{
                         String responseMessage = lambdaContext.pendingExecuteCallback.apply(new ExecuteContext(ctx));
+
+                        boolean hasPermission = true;
+                        if(lambdaContext.permissionCallback == null) {
+                            hasPermission = ctx.getSource().hasPermission(2);
+                        }
+                        else {
+                            hasPermission = lambdaContext.permissionCallback.apply(ctx.getSource());
+                        }
+
                         boolean failed = responseMessage.startsWith("!");
                         if(failed) {
                             ctx.getSource().sendFailure(
                                     Component.literal(responseMessage)
                             );
+                            throw new SimpleCommandExceptionType(Component.literal(responseMessage)).create();
+
                         }
                         else {
                             ctx.getSource().sendSuccess(()->Component.literal(responseMessage), true);
+                            return Command.SINGLE_SUCCESS;
                         }
-                        return failed ? 0 : 1;
                     }));
 
                     //lambdaContext.pendingExecuteCallback = null;
