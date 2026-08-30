@@ -3,13 +3,29 @@ package com.plokie.customitems;
 import com.plokie.customitems.items.InkRoller;
 import com.plokie.customitems.items.JumperMace;
 import com.plokie.customitems.items.guns.*;
+import com.plokie.helpers.Teams;
 import com.plokie.helpers.items.Enchantments;
+import com.plokie.interfaces.IPlayerTeamMixin;
+import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.component.DyedItemColor;
+import net.minecraft.world.scores.PlayerTeam;
+import org.jetbrains.annotations.Nullable;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
+import java.util.function.Function;
 
 public enum CustomItem {
     StandardSword(
@@ -113,6 +129,27 @@ public enum CustomItem {
                     .name("Knockback Brush")
                     .enchant("knockback", 5)
             .build()
+    ),
+    Shield(
+            Builder
+                    .item(Items.SHIELD)
+                    .name("Shield")
+                    .dataCallback((player, item)->{
+                        IPlayerTeamMixin team = Teams.getTeamMixinFromPlayer(player);
+                        if(team == null) return;
+                        PlayerTeam playerTeam = (PlayerTeam)team;
+                        String name = playerTeam.getName().toUpperCase();
+                        try {
+                            DyeColor col = DyeColor.valueOf(name);
+                            item.set(DataComponents.BASE_COLOR, col);
+                        }
+                        catch(Exception e)
+                        {
+
+                        }
+
+                    })
+            .build()
     );
 
 
@@ -128,11 +165,13 @@ public enum CustomItem {
         return this.itemInstance.baseItem;
     }
     public CustomItemDefinition getItemDefinition() { return this.itemInstance; }
+    public List<BiConsumer<Player, ItemStack>> getDataCallbacks() { return this.itemInstance.dataCallbacks; }
 
     public static class Builder
     {
         ItemStack baseItem;
         ICustomItem itemInterface = null;
+        List<BiConsumer<Player, ItemStack>> dataCallbacks = new ArrayList<>();
 
         public static CustomItem.Builder item(Item item)
         {
@@ -170,9 +209,15 @@ public enum CustomItem {
             return this;
         }
 
+        public Builder dataCallback(BiConsumer<Player, ItemStack> callback)
+        {
+            dataCallbacks.add(callback);
+            return this;
+        }
+
         public CustomItemDefinition build()
         {
-            return new CustomItemDefinition(baseItem, itemInterface);
+            return new CustomItemDefinition(baseItem, itemInterface, this.dataCallbacks);
         }
 
     }

@@ -29,6 +29,7 @@ public interface IPlayerMixin {
 
     int getTimeNotInInk();
     float getInk();
+    void setInk(float value);
     void changeInk(float delta);
     boolean isInInk();
 

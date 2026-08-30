@@ -3,14 +3,12 @@ package com.plokie.customitems.items.guns;
 import com.plokie.Splatoon;
 import com.plokie.customitems.CustomItem;
 import com.plokie.customitems.ICustomItem;
-import com.plokie.helpers.Affects;
-import com.plokie.helpers.Fill;
-import com.plokie.helpers.Helpers;
-import com.plokie.helpers.Teams;
+import com.plokie.helpers.*;
 import com.plokie.interfaces.IPlayerMixin;
 import com.plokie.interfaces.IPlayerTeamMixin;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Holder;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.particles.DustParticleOptions;
 import net.minecraft.network.chat.Component;
@@ -19,6 +17,7 @@ import net.minecraft.network.protocol.game.*;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
@@ -33,6 +32,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.component.Tool;
+import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.EntityHitResult;
@@ -90,10 +90,10 @@ public class SniperGun extends ICustomItem {
 
     @Override
     public void whileHeld(Player player) {
-        boolean isScoping = getTempInt(player)>0;
         IPlayerMixin playerMixin = ((IPlayerMixin)player);
         Input input = playerMixin.getInput();
         ServerPlayer serverPlayer = (ServerPlayer)player;
+        boolean isScoping = getTempInt(player)>0 && (playerMixin.getInk()>0.0f);
 
 
         if(isScoping)
@@ -135,11 +135,14 @@ public class SniperGun extends ICustomItem {
                 Affects.removeAttributeModifier(player, "entity_interaction_range", "scoping");
             }
 
-            // 20 blocks, idk, false = ignore fluids
-            HitResult hit = player.pick(300.0, 0.0f, false);
+            // 300 blocks, idk, false = ignore fluids
+            double distance = 300.0;
+            HitResult hit = player.pick(distance, 0.0f, false);
+            //Splatoon.LOGGER.info("hit type {}", hit.getType());
+
             if(hit.getType() == HitResult.Type.BLOCK)
             {
-                double distance = Math.sqrt(hit.distanceTo(player));
+                distance = Math.sqrt(hit.distanceTo(player));
 
                 MutableComponent textCom = Component.literal(String.valueOf((int)Math.round(distance)));
                 if(distance < reach) {
@@ -194,12 +197,24 @@ public class SniperGun extends ICustomItem {
 
             if(playerMixin.punchedThisTick() && sniperCharge > 0 && playerMixin.getInk() > 0.0f)
             {
-                setTempInt(player, 1);
+                ScheduleEvent.schedule(1, server -> {
+                    setTempInt(player, 1);
+
+                    if(player.hasEffect(MobEffects.REGENERATION))
+                    {
+                        playerMixin.changeInk(-0.133f * 0.5f);
+                    }
+                    else {
+                        playerMixin.changeInk(-0.133f);
+                    }
+
+                    if(playerMixin.getInk() <= 0.0f) {
+                        scope(player);
+                    }
+                });
                 Vec3 eyePos = player.getEyePosition();
 
                 //Splatoon.LOGGER.info("Punched");
-
-                playerMixin.changeInk(-0.133f);
 
                 level.playSound(
                         null, // everyone
@@ -219,7 +234,7 @@ public class SniperGun extends ICustomItem {
                     //Block wallBlock = playerTeam.getWallBlock();
                     DustParticleOptions dustParticleOptions = new DustParticleOptions(dustCol, 1);
 
-                    for(float i=0; i < reach; i+=0.5f)
+                    for(float i=0; i < distance; i+=0.5f)
                     {
                         Vec3 pos = new Vec3(
                                 eyePos.x + (forward.x * i),
@@ -257,7 +272,6 @@ public class SniperGun extends ICustomItem {
             }
         }
         else {
-            setTempInt(player, 1);
             Affects.removeAttributeModifier(player, "entity_interaction_range", "scoping");
         }
     }
@@ -290,22 +304,43 @@ public class SniperGun extends ICustomItem {
                 float damage = switch (sniperCharge) {
                     case 1 -> 1;
                     case 2 -> 5;
-                    case 3 -> 10;
-                    case 4 -> 15;
-                    case 5 -> 20;
+                    case 3 -> 11;
+                    case 4 -> 17;
+                    case 5 -> 25;
                     default -> 0;
                 };
 
+                entity.invulnerableTime = 0;
+                entity.setInvulnerable(false);
+
+
+//                ScheduleEvent.schedule(5, server->{
+//                    //entity.heal(-damage);
+//                    entity.setHealth(entity.getHealth() - damage);
+//                });
+//                entity.heal(-damage);
                 Affects.hurtEntity(entity, damage, player, DamageTypes.ARROW);
 
-                level.playSound(
-                        player,
-                        player.getEyePosition().x, player.getEyePosition().y, player.getEyePosition().z,
-                        SoundEvents.EXPERIENCE_ORB_PICKUP,
-                        SoundSource.HOSTILE,
-                        0.6f, // volume
-                        1.0f // pitch
-                );
+                Vec3 ppos = player.getEyePosition();
+
+                ((ServerPlayer)player).connection.send(new ClientboundSoundPacket(
+                        Holder.direct(SoundEvents.EXPERIENCE_ORB_PICKUP),
+                        //Holder.direct(SoundEvent.createVariableRangeEvent(ResourceLocation.fromNamespaceAndPath("splatoon", soundPath))),
+                        SoundSource.MUSIC,
+                        ppos.x, ppos.y, ppos.z,
+                        1.0f,
+                        1.0f,
+                        player.getRandom().nextLong()
+                ));
+
+//                level.playSound(
+//                        player,
+//                        player.getEyePosition().x, player.getEyePosition().y, player.getEyePosition().z,
+//                        SoundEvents.EXPERIENCE_ORB_PICKUP,
+//                        SoundSource.HOSTILE,
+//                        0.6f, // volume
+//                        1.0f // pitch
+//                );
 
                 int numReplaced = Fill.replace(
                         level, entity.getOnPos(),
@@ -347,11 +382,14 @@ public class SniperGun extends ICustomItem {
 
     void scope(Player player)
     {
-        boolean isScoping = getTempInt(player)==1;
+        IPlayerMixin playerMixin = (IPlayerMixin)player;
+        boolean isScoping = getTempInt(player)==1 && (playerMixin.getInk()>0.0f);
         //Splatoon.LOGGER.info("is scoping {}", isScoping);
 
         if(isScoping)
         {
+            player.setItemSlot(EquipmentSlot.FEET, player.getItemBySlot(EquipmentSlot.HEAD));
+
             ItemStack item = new ItemStack(Items.CARVED_PUMPKIN);
             player.setItemSlot(EquipmentSlot.HEAD, item);
             Affects.setAttributeModifier(player, "movement_speed", "scoping", -1.0, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
@@ -380,8 +418,14 @@ public class SniperGun extends ICustomItem {
         }
         else
         {
-            ItemStack item = new ItemStack(Items.AIR);
-            player.setItemSlot(EquipmentSlot.HEAD, item);
+            if(player.getItemBySlot(EquipmentSlot.HEAD).is(Items.CARVED_PUMPKIN))
+            {
+                player.setItemSlot(EquipmentSlot.HEAD, player.getItemBySlot(EquipmentSlot.FEET));
+            }
+
+            ItemStack airItem = new ItemStack(Items.AIR);
+            player.setItemSlot(EquipmentSlot.FEET, airItem);
+
             Affects.removeAttributeModifier(player, "movement_speed", "scoping");
             Affects.removeAttributeModifier(player, "entity_interaction_range", "scoping");
 

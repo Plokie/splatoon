@@ -24,9 +24,9 @@ public class Splattershot extends Gun {
     public Splattershot()
     {
         this.usageRate = 2;
-        this.damage = 3;
-        this.accuracy = 35.0f;
+        this.damage = 6;
+        this.accuracy = 27.5f;
 
-        this.inkUsage = 1.0f / 50.0f;
+        this.inkUsage = 1.0f / 70.0f;
     }
 }

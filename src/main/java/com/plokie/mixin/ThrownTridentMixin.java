@@ -52,10 +52,13 @@ public class ThrownTridentMixin implements IProjectile {
     private void onHitEntity(EntityHitResult entityHitResult, CallbackInfo ci) {
         AbstractArrow self = (AbstractArrow) (Object)this;
 
+        Splatoon.LOGGER.info("Hit entity {}", entityHitResult.getEntity().getName());
+
         if(!(self instanceof ThrownTrident)) return;
 
         if(!hasHit)
         {
+            Splatoon.LOGGER.info("Hit entity {}", entityHitResult.getEntity().getName());
             hitGround();
         }
     }
@@ -69,6 +72,7 @@ public class ThrownTridentMixin implements IProjectile {
 
         if(!hasHit)
         {
+            Splatoon.LOGGER.info("Hit ground");
             hitGround();
         }
     }
@@ -90,6 +94,15 @@ public class ThrownTridentMixin implements IProjectile {
                 ((IPlayerMixin)player).onUseAbilityItem("Hook", player, player.getUsedItemHand());
             }
             hasSetup = true;
+        }
+
+        if(!hasHit)
+        {
+            for (LivingEntity entity : self.level().getEntitiesOfClass(LivingEntity.class, new AABB(self.getOnPos()).inflate(1.0))) {
+                if(entity == self.getOwner()) continue;
+
+                hitGround();
+            }
         }
 
         if(hasHit && hookedEntity != null)
@@ -156,6 +169,8 @@ public class ThrownTridentMixin implements IProjectile {
             AABB aabb = new AABB(self.getOnPos()).inflate(3.5);
             for(LivingEntity entity : level.getEntitiesOfClass(LivingEntity.class, aabb))
             {
+                if(entity == player) continue;
+
                 float distance = entity.distanceTo(self);
 
                 if(distance < 3.5f)
@@ -174,6 +189,10 @@ public class ThrownTridentMixin implements IProjectile {
             if(nearestEntity != null)
             {
                 hookedEntity = nearestEntity;
+            }
+            if(nearestEntity == null)
+            {
+                Splatoon.LOGGER.info("Trident couldnt find nearest entity");
             }
         }
 

@@ -25,6 +25,7 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
+import net.minecraft.world.phys.AABB;
 import org.joml.Vector3f;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
@@ -128,6 +129,13 @@ public class SheepBombMixin implements IProjectile {
         if(playerOwnerUUID == null) return;
 
         if(!sheep.getTags().contains("InkBomb")) return;
+
+        AABB aabb = new AABB(sheep.getOnPos()).inflate(3.0);
+        sheep.level().getEntitiesOfClass(Sheep.class, aabb).forEach(otherSheep->{
+            if(otherSheep.isBaby()) {
+                otherSheep.discard();
+            }
+        });
 
         if(!initialisedTeam)
         {

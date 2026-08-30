@@ -22,6 +22,7 @@ import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import org.w3c.dom.Attr;
 
 import java.util.*;
@@ -62,6 +63,7 @@ public class SplatoonClasses {
         Support("Support", SplatoonClassDefinition.Builder.start()
                 .customItem(CustomItem.SupportAxe)
                 .customItem(CustomItem.Burstshot)
+                //.offhand(CustomItem.Shield)
                 .ability(AbilityManager.AbilityEnum.HealthBubble)
                 .ability(AbilityManager.AbilityEnum.HealthPotions)
                 .attribute("scale", 0.3, AttributeModifier.Operation.ADD_VALUE)
@@ -106,21 +108,25 @@ public class SplatoonClasses {
     {
         public final List<AbilityManager.AbilityEnum> abilities;
         public final List<CustomItem> customItems;
+        public final CustomItem offhandItem;
         public final Map<String, AttributeModifier> attributes;
         public final Map<Holder<MobEffect>, Integer> effects;
 
-        public SplatoonClassDefinition(List<AbilityManager.AbilityEnum> abilities, List<CustomItem> customItems, Map<String, AttributeModifier> attributes, Map<Holder<MobEffect>, Integer> effects)
+        public SplatoonClassDefinition(List<AbilityManager.AbilityEnum> abilities, List<CustomItem> customItems, Map<String, AttributeModifier> attributes, Map<Holder<MobEffect>, Integer> effects, CustomItem offhandItem)
         {
             this.abilities = abilities;
             this.customItems = customItems;
             this.attributes = attributes;
             this.effects = effects;
+
+            this.offhandItem = offhandItem;
         }
 
         public static class Builder
         {
             List<AbilityManager.AbilityEnum> abilities = new ArrayList<>();
             List<CustomItem> customItems = new ArrayList<>();
+            CustomItem offhandItem = null;
             Map<String, AttributeModifier> attributes = new HashMap<>();
             Map<Holder<MobEffect>, Integer> effects = new HashMap<>();
 
@@ -160,9 +166,15 @@ public class SplatoonClasses {
                 return this;
             }
 
+            public Builder offhand(CustomItem customItem)
+            {
+                offhandItem = customItem;
+                return this;
+            }
+
             public SplatoonClassDefinition build()
             {
-                return new SplatoonClassDefinition(abilities, customItems, attributes, effects);
+                return new SplatoonClassDefinition(abilities, customItems, attributes, effects, offhandItem);
             }
         }
     }

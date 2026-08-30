@@ -14,9 +14,12 @@ import com.plokie.interfaces.IPlayerTeamMixin;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.component.DataComponents;
+import net.minecraft.core.particles.BlockParticleOption;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.game.ClientboundSetExperiencePacket;
 import net.minecraft.network.protocol.game.ServerboundPlayerInputPacket;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
@@ -25,7 +28,9 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.EquipmentSlotGroup;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
+import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.monster.Zombie;
 import net.minecraft.world.entity.player.Input;
 import net.minecraft.world.entity.player.Inventory;
@@ -34,12 +39,15 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.component.DyedItemColor;
+import net.minecraft.world.item.component.ItemAttributeModifiers;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.Vec3;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -49,6 +57,8 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.*;
+import java.util.function.BiConsumer;
+import java.util.function.Function;
 import java.util.stream.Stream;
 
 @Mixin(Player.class)
@@ -180,15 +190,19 @@ public class PlayerMixin implements IPlayerMixin {
     @Unique float ink = 1.0f;
     @Override
     public void changeInk(float delta) {
-        ink += delta;
+        setInk(getInk() + delta);
+    }
+    @Override public void setInk(float value)
+    {
+        ink = value;
         if(ink > 1.0f) ink = 1.0f;
         else if(ink < 0.0f) ink = 0.0f;
 
         player.experienceProgress = ink;
         ((ServerPlayer)player).connection.send(new ClientboundSetExperiencePacket(
-           player.experienceProgress,
-           player.totalExperience,
-           player.experienceLevel
+                player.experienceProgress,
+                player.totalExperience,
+                player.experienceLevel
         ));
     }
     @Override public float getInk() { return ink; }
@@ -210,7 +224,7 @@ public class PlayerMixin implements IPlayerMixin {
     private void onTick(CallbackInfo ci) {
 
         if(timeNotInInk == 10 || player.tickCount == 10) {
-            changeInk(getInk());
+            setInk(getInk());
         }
 
         ServerLevel level = (ServerLevel)player.level();
@@ -257,7 +271,20 @@ public class PlayerMixin implements IPlayerMixin {
             {
                 ItemStack chestplate = new ItemStack(Items.LEATHER_CHESTPLATE);
                 chestplate.set(DataComponents.DYED_COLOR, new DyedItemColor(this.playerTeam.getTeamColourInt()));
-//                chestplate.set(DataComponents.ATTRIBUTE_MODIFIERS,)
+
+                AttributeModifier modifier = new AttributeModifier(
+                        ResourceLocation.withDefaultNamespace("armor"),
+                        0.0,
+                        AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL
+                );
+
+                ItemAttributeModifiers attributeModifiers = new ItemAttributeModifiers(
+                        List.of(
+                                new ItemAttributeModifiers.Entry(Attributes.ARMOR, modifier, EquipmentSlotGroup.CHEST)
+                        )
+                );
+                chestplate.set(DataComponents.ATTRIBUTE_MODIFIERS, attributeModifiers);
+
                 player.setItemSlot(EquipmentSlot.CHEST, chestplate);
             }
         }
@@ -316,6 +343,21 @@ public class PlayerMixin implements IPlayerMixin {
 
         if(inInk)
         {
+            if(groundBlock != null)
+            {
+                BlockParticleOption option = new BlockParticleOption(ParticleTypes.BLOCK, groundBlock.defaultBlockState());
+
+                Vec3 pos = player.getEyePosition();
+
+                level.sendParticles(
+                        option,
+                        pos.x, pos.y, pos.z,
+                        1, // count
+                        0.25, 0.0, 0.25, // delta
+                        1.0 // speed
+                );
+            }
+
             changeInk(0.022f);
 
             //Splatoon.LOGGER.info("xpprog{} xplvl{}", experienceProgress, experienceLevel);
@@ -445,11 +487,37 @@ public class PlayerMixin implements IPlayerMixin {
 
                     if(!player.getInventory().getItem(slotIdx).getItemName().equals(baseItem.getItemName()))
                     {
-                        player.getInventory().setItem(slotIdx, baseItem.copy());
+                        ItemStack newItem = baseItem.copy();
+                        for(BiConsumer<Player, ItemStack> dataCallbacks : customItem.getDataCallbacks())
+                        {
+                            dataCallbacks.accept(player, newItem);
+                        }
+
+                        player.getInventory().setItem(slotIdx, newItem);
                         player.containerMenu.broadcastChanges();
                     }
 
                     idx++;
+                }
+
+                ItemStack offhandItem;
+                if(splatoonClass.definition.offhandItem == null) {
+                    offhandItem = new ItemStack(Items.AIR);
+                }
+                else if(player.getItemBySlot(EquipmentSlot.MAINHAND).is(Items.CARROT_ON_A_STICK))
+                {
+                    offhandItem = new ItemStack(Items.AIR);
+                }
+                else {
+                    offhandItem = splatoonClass.definition.offhandItem.getItem().copy();
+                    for(BiConsumer<Player, ItemStack> dataCallbacks : splatoonClass.definition.offhandItem.getDataCallbacks())
+                    {
+                        dataCallbacks.accept(player, offhandItem);
+                    }
+                }
+                if(!player.getItemBySlot(EquipmentSlot.OFFHAND).is(offhandItem.getItem()))
+                {
+                    player.setItemSlot(EquipmentSlot.OFFHAND, offhandItem);
                 }
             }
         }

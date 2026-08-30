@@ -2,17 +2,24 @@ package com.plokie.classes.abilities;
 
 import com.plokie.Splatoon;
 import com.plokie.customitems.items.guns.SniperGun;
+import com.plokie.helpers.Affects;
+import com.plokie.helpers.Teams;
 import com.plokie.interfaces.IPlayerMixin;
+import com.plokie.interfaces.IPlayerTeamMixin;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.tags.BlockTags;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 
 public class SuperJump extends Ability {
@@ -38,8 +45,40 @@ public class SuperJump extends Ability {
     }
 
     @Override
+    public void onRevoked(Player player, int abilitiyIndex)
+    {
+        Affects.removeAttributeModifier(player, "movement_speed", "jumperslow");
+        Affects.removeAttributeModifier(player, "jump_strength", "jumperslow");
+
+        super.onRevoked(player, abilitiyIndex);
+    }
+
+    public void setHasDashed(boolean value)
+    {
+        this.alreadyDashed = value;
+    }
+
+    @Override
     public void tick(Player player, int abilityIndex) {
         IPlayerMixin playerMixin = (IPlayerMixin)player;
+
+        IPlayerTeamMixin playerTeam = Teams.getTeamMixinFromPlayer(player);
+        if(playerTeam != null)
+        {
+            BlockPos supportingBlockPos = player.getBlockPosBelowThatAffectsMyMovement();
+            BlockState supportingBlock = player.level().getBlockState(supportingBlockPos);
+            if(player.onGround() && supportingBlock.is(BlockTags.CONCRETE_POWDER) && !supportingBlock.is(playerTeam.getGroundBlock()))
+            {
+                Affects.setAttributeModifier(player, "movement_speed", "jumperslow", -0.5, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
+                Affects.setAttributeModifier(player, "jump_strength", "jumperslow", -0.7, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
+            }
+            else
+            {
+                Affects.removeAttributeModifier(player, "movement_speed", "jumperslow");
+                Affects.removeAttributeModifier(player, "jump_strength", "jumperslow");
+            }
+        }
+
 
         if(count > 0)
         {

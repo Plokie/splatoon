@@ -49,7 +49,7 @@ public class InkRoller extends ICustomItem {
 
         Vec2 tempRot = new Vec2(rot.x, rot.y - 90.0f);
         Vec3 left = Vec3.directionFromRotation(tempRot);
-        temp = 3.0f;
+        temp = 4.0f;
         left = new Vec3(left.x * temp, left.y * temp, left.z * temp);
 
         tempRot = new Vec2(rot.x, rot.y + 90.0f);
@@ -59,6 +59,7 @@ public class InkRoller extends ICustomItem {
         Vec3 eyePos = player.getEyePosition();
 
         Block groundBlock = team.getGroundBlock();
+        Block wallBlock = team.getWallBlock();
 
         for(int height = -3; height <= 3; height++)
         {
@@ -76,9 +77,10 @@ public class InkRoller extends ICustomItem {
 
             BlockGetter.traverseBlocks(bl, tr, null, (context, currentPos)->{
                 int filled = Fill.replace((ServerLevel)player.level(), currentPos, currentPos, groundBlock, Splatoon.Tags.GROUND_BLOCKS);
+                filled += Fill.replace((ServerLevel)player.level(), currentPos, currentPos, wallBlock, Splatoon.Tags.WALL_BLOCKS);
 
                 if(filled > 0) {
-                    playerMixin.changeInk(-0.0033f);
+                    playerMixin.changeInk(-0.002f);
                 }
 
                 return null;

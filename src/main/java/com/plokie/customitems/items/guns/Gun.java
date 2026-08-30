@@ -136,12 +136,12 @@ public class Gun extends ICustomItem {
 
         Vec3 playerVel = player.getDeltaMovement();
         //playerVel = Vec3.ZERO;
-        playerVel = new Vec3(playerVel.x, 0, playerVel.z);
+        playerVel = new Vec3(playerVel.x * 1.5, 0.2, playerVel.z * 1.5);
 
         snowball.setNoGravity(true);
 
-        float shootForceFl = 1.0f;
-        float verticalBoostVel = 1.35f;
+        float shootForceFl = 1.3f;
+        float verticalBoostVel = 1.0f;
 
         Vec3 shootForce = new Vec3((shootForward.x * shootForceFl) + playerVel.x, ((shootForward.y * shootForceFl) + playerVel.y) * verticalBoostVel, (shootForward.z * shootForceFl) + playerVel.z);
         snowball.setDeltaMovement(shootForce);

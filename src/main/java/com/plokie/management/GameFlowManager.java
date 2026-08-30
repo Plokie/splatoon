@@ -211,7 +211,7 @@ public class GameFlowManager {
 
                 serverPlayer.connection.send(new ClientboundStopSoundPacket(null, SoundSource.MUSIC));
 
-                if(soundPath != "")
+                if(!soundPath.equals(""))
                 {
                     serverPlayer.connection.send(new ClientboundSoundPacket(
                             Holder.direct(SoundEvent.createVariableRangeEvent(ResourceLocation.fromNamespaceAndPath("splatoon", soundPath))),
