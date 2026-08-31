@@ -28,7 +28,7 @@ import java.util.Map;
 import java.util.Objects;
 
 public class Gun extends ICustomItem {
-    protected int damage = 1;
+    protected float damage = 1;
 
     protected float inkUsage = 0.1f;
     protected float inkReplenish = 0.1f;
@@ -38,7 +38,7 @@ public class Gun extends ICustomItem {
     protected int burst = 0;
     protected int inkSpread = 1;
 
-    public int getDamage() { return damage; }
+    public float getDamage() { return damage; }
     public float getAccuracy() { return accuracy; }
     public int getProjectilesPerShot() { return projectilesPerShot; }
     public int getInkSpread() { return inkSpread; }

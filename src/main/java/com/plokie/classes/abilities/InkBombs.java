@@ -1,6 +1,7 @@
 package com.plokie.classes.abilities;
 
 import com.plokie.Splatoon;
+import com.plokie.helpers.Affects;
 import com.plokie.helpers.ScheduleEvent;
 import com.plokie.helpers.items.Enchantments;
 import com.plokie.helpers.Teams;
@@ -20,6 +21,7 @@ import net.minecraft.server.TickTask;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.animal.sheep.Sheep;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.AdventureModePredicate;
@@ -178,6 +180,17 @@ public class InkBombs extends Ability {
     @Override
     public void tick(Player player, int abilityIndex)
     {
+        for (Player otherPlayer : player.level().getEntitiesOfClass(Player.class, new AABB(player.getOnPos()).inflate(200.0))) {
+            if(otherPlayer == player) continue;
+
+            if(otherPlayer.distanceTo(player) <= 5.0) {
+                Affects.setAttributeModifier(otherPlayer, "knockback_resistance", "bomberknockback", 100.0, AttributeModifier.Operation.ADD_VALUE);
+            }
+            else {
+                Affects.removeAttributeModifier(otherPlayer, "knockback_resistance", "bomberknockback");
+            }
+        }
+
         if(!isStaticInitialised)
         {
             staticInitialise();

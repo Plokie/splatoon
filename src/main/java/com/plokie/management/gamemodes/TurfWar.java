@@ -6,6 +6,7 @@ import com.plokie.helpers.Helpers;
 import com.plokie.helpers.Teams;
 import com.plokie.interfaces.IPlayerTeamMixin;
 import com.plokie.management.GameFlowManager;
+import com.plokie.management.maps.GamemodeMap;
 import com.plokie.management.maps.GamemodeMaps;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
@@ -30,6 +31,8 @@ public class TurfWar extends Gamemode {
         intro.add("Don't get too caught up with kills! Ink wins the game!");
 
         maps.add(GamemodeMaps.UrchinUnderpass);
+        maps.add(GamemodeMaps.MorayTowers);
+        maps.add(GamemodeMaps.Cyberscape);
     }
 
     @Override
@@ -41,6 +44,8 @@ public class TurfWar extends Gamemode {
     @Override
     public void onGameStateChange(GameFlowManager gameFlowManager, GameFlowManager.GameState gameState)
     {
+        super.onGameStateChange(gameFlowManager, gameState);
+
         if(gameState == GameFlowManager.GameState.INTRO)
         { // init
             teamScores.clear();
@@ -62,7 +67,6 @@ public class TurfWar extends Gamemode {
         }
     }
 
-    int clearIndex = 0;
     Map<Integer, Integer> teamScores = new HashMap<>();
 
     @Override
@@ -70,8 +74,9 @@ public class TurfWar extends Gamemode {
     {
         if(gameFlowManager.getCurrentGameState() == GameFlowManager.GameState.RESULTS)
         {
-            if(clearIndex <= gameFlowManager.getCurrentMap().mapSize.x)
-            {
+            GamemodeMap map = gameFlowManager.getCurrentMap();
+
+            clearStepMap(()->{
                 for(int teamIdx=0; teamIdx < gameFlowManager.getCurrentGamemode().getNumTeams(); teamIdx++)
                 {
                     List<Player> players = gameFlowManager.getTeamPlayers(teamIdx);
@@ -85,7 +90,7 @@ public class TurfWar extends Gamemode {
                             Helpers.toBlockPos(gameFlowManager.getCurrentMap().mapCorner),
                             new BlockPos(clearIndex,0,0),
                             new BlockPos(clearIndex,(int)gameFlowManager.getCurrentMap().mapSize.y,(int)gameFlowManager.getCurrentMap().mapSize.z),
-                            Blocks.CYAN_TERRACOTTA,
+                            map.groundBlock,
                             playerTeam.getGroundBlock()
                     );
 
@@ -94,7 +99,7 @@ public class TurfWar extends Gamemode {
                             Helpers.toBlockPos(gameFlowManager.getCurrentMap().mapCorner),
                             new BlockPos(clearIndex,0,0),
                             new BlockPos(clearIndex,(int)gameFlowManager.getCurrentMap().mapSize.y,(int)gameFlowManager.getCurrentMap().mapSize.z),
-                            Blocks.PALE_MOSS_BLOCK,
+                            map.wallBlock,
                             playerTeam.getWallBlock()
                     );
 
@@ -107,29 +112,8 @@ public class TurfWar extends Gamemode {
                     }
 
                 }
-
-                Fill.replace(
-                        Splatoon.SERVER.overworld(),
-                        Helpers.toBlockPos(gameFlowManager.getCurrentMap().mapCorner),
-                        new BlockPos(clearIndex,0,0),
-                        new BlockPos(clearIndex,(int)gameFlowManager.getCurrentMap().mapSize.y,(int)gameFlowManager.getCurrentMap().mapSize.z),
-                        Blocks.CYAN_TERRACOTTA,
-                        Splatoon.Tags.GROUND_BLOCKS
-                );
-
-                Fill.replace(
-                        Splatoon.SERVER.overworld(),
-                        Helpers.toBlockPos(gameFlowManager.getCurrentMap().mapCorner),
-                        new BlockPos(clearIndex,0,0),
-                        new BlockPos(clearIndex,(int)gameFlowManager.getCurrentMap().mapSize.y,(int)gameFlowManager.getCurrentMap().mapSize.z),
-                        Blocks.PALE_MOSS_BLOCK,
-                        Splatoon.Tags.WALL_BLOCKS
-                );
-
-                clearIndex++;
-            }
-            else if(clearIndex == (int)gameFlowManager.getCurrentMap().mapSize.x + 1)
-            {
+                return true;
+            }, ()->{
                 int highestScore = 0;
                 int teamHighestScore = 0;
                 for(int teamIdx=0; teamIdx < gameFlowManager.getCurrentGamemode().getNumTeams(); teamIdx++)
@@ -164,9 +148,8 @@ public class TurfWar extends Gamemode {
                     serverPlayer.connection.send(new ClientboundSetTitleTextPacket(Component.literal("Winning team: ").append(winningTeam)));
                 }
 
-                clearIndex++;
-            }
-
+                return true;
+            });
         }
     }
 }

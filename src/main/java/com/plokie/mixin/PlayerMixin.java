@@ -265,7 +265,7 @@ public class PlayerMixin implements IPlayerMixin {
             }
         }
 
-        if(this.playerTeam != null)
+        if(this.playerTeam != null && this.splatoonClass != null)
         {
             if(!player.getItemBySlot(EquipmentSlot.CHEST).is(Items.LEATHER_CHESTPLATE))
             {
@@ -286,6 +286,13 @@ public class PlayerMixin implements IPlayerMixin {
                 chestplate.set(DataComponents.ATTRIBUTE_MODIFIERS, attributeModifiers);
 
                 player.setItemSlot(EquipmentSlot.CHEST, chestplate);
+            }
+        }
+        else
+        {
+            if(!player.getItemBySlot(EquipmentSlot.CHEST).is(Items.AIR))
+            {
+                player.setItemSlot(EquipmentSlot.CHEST, new ItemStack(Items.AIR));
             }
         }
 
@@ -395,7 +402,7 @@ public class PlayerMixin implements IPlayerMixin {
             Affects.removeAttributeModifier(player, "scale", "inkscale");
             Affects.removeAttributeModifier(player, "sneaking_speed", "inkspeed");
             Affects.removeAttributeModifier(player, "movement_speed", "inkspeed");
-            Effects.clearPotionEffect(player, MobEffects.INVISIBILITY);
+            //Effects.clearPotionEffect(player, MobEffects.INVISIBILITY);
 
             timeNotInInk++;
             Effects.clearPotionEffect(player, MobEffects.SLOW_FALLING);

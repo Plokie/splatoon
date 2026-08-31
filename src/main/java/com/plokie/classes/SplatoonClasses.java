@@ -32,7 +32,7 @@ public class SplatoonClasses {
         Bomber("Bomber", SplatoonClassDefinition.Builder.start()
                 .customItem(CustomItem.StandardSword)
                 .customItem(CustomItem.Splattershot)
-                .customItem(CustomItem.KnockbackBrush)
+                //.customItem(CustomItem.KnockbackBrush)
                 .ability(AbilityManager.AbilityEnum.CleansingGrenade)
                 .ability(AbilityManager.AbilityEnum.InkBombs)
                 .attribute("scale", 0.3, AttributeModifier.Operation.ADD_VALUE)

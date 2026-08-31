@@ -21,6 +21,7 @@ import net.minecraft.resources.ResourceLocation;
 
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.tags.TagKey;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.block.Block;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -82,13 +83,27 @@ public class Splatoon implements ModInitializer {
 		});
 
 		CommandBuilder.command("warp").subcommand("hub").executes(ctx->{
-			//ctx.getStack().getSource().getEntity().teleportTo();
-			return "Teleporting...";
-		});
+			Entity source = ctx.getStack().getSource().getEntity();
+			if(source != null) {
+				ctx.getStack().getSource().getEntity().teleportTo(-130.5, 101, -97.5);
+				return "Teleporting to hub...";
+			}
+			return "! Command must be called by an entity";
+		}).register();
 
-		CommandBuilder.command("warp").subcommand("to").argumentEnum("map_id", GamemodeMaps.class).executes(ctx->{
-			return "Teleporting...";
-		});
+		CommandBuilder.command("warp").subcommand("map").argumentEnum("map_id", GamemodeMaps.class).executes(ctx->{
+			try {
+				GamemodeMaps map = ctx.getArgumentEnum("map_id", GamemodeMaps.class);
+				Entity source = ctx.getStack().getSource().getEntity();
+				if(source != null) {
+					source.teleportTo(map.getMap().spectatorZone.x, map.getMap().spectatorZone.y, map.getMap().spectatorZone.z);
+					return "Teleporting to " + map.getName() + "...";
+				}
+				return "! Command must be called by an entity";
+			} catch (IllegalArgumentException e) {
+                return "! Invalid map id";
+            }
+		}).register();
 
 		LOGGER.info("Splatoon plugin :)");
 	}

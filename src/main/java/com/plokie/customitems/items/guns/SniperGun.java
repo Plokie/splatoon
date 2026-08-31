@@ -234,7 +234,7 @@ public class SniperGun extends ICustomItem {
                     //Block wallBlock = playerTeam.getWallBlock();
                     DustParticleOptions dustParticleOptions = new DustParticleOptions(dustCol, 1);
 
-                    for(float i=0; i < distance; i+=0.5f)
+                    for(float i=0; i < Math.min(reach, distance); i+=0.5f)
                     {
                         Vec3 pos = new Vec3(
                                 eyePos.x + (forward.x * i),
@@ -250,22 +250,23 @@ public class SniperGun extends ICustomItem {
                                 10.0 // speed
                         );
 
-//                        Fill.replace()
-                        int numReplaced = Fill.replace(
-                                level, Helpers.toBlockPos(pos),
-                                new BlockPos(0,1,0),
-                                new BlockPos(0,-10,0),
-                                playerTeam.getGroundBlock(),
-                                Splatoon.Tags.GROUND_BLOCKS
-                        );
+                        if(sniperCharge >= 2) {
+                            int numReplaced = Fill.replace(
+                                    level, Helpers.toBlockPos(pos),
+                                    new BlockPos(0,1,0),
+                                    new BlockPos(0,-10,0),
+                                    playerTeam.getGroundBlock(),
+                                    Splatoon.Tags.GROUND_BLOCKS
+                            );
 
-                        numReplaced = Fill.replace(
-                                level, Helpers.toBlockPos(pos),
-                                new BlockPos(0,1,0),
-                                new BlockPos(0,-10,0),
-                                playerTeam.getWallBlock(),
-                                Splatoon.Tags.WALL_BLOCKS
-                        );
+                            numReplaced = Fill.replace(
+                                    level, Helpers.toBlockPos(pos),
+                                    new BlockPos(0,1,0),
+                                    new BlockPos(0,-10,0),
+                                    playerTeam.getWallBlock(),
+                                    Splatoon.Tags.WALL_BLOCKS
+                            );
+                        }
                     }
                 }
 

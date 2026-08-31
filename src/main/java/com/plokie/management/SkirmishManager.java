@@ -5,16 +5,38 @@ import com.plokie.Splatoon;
 import com.plokie.classes.SplatoonClasses;
 import com.plokie.helpers.CommandBuilder;
 import com.plokie.helpers.Helpers;
+import com.plokie.helpers.Teams;
 import com.plokie.interfaces.IPlayerMixin;
+import com.plokie.interfaces.IPlayerTeamMixin;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.scores.PlayerTeam;
 
 public class SkirmishManager {
 
     public SkirmishManager()
     {
+//        CommandBuilder.command("vanish").argumentPlayer("target").executes(
+//                ctx->{
+//                    try {
+//                        ServerPlayer player = ctx.getArgumentPlayer("target");
+//                        if(player.isInvisible()) {
+//                            player.setInvisible(false);
+//                            return "Unvanished " + player.getName();
+//                        }
+//                        else {
+//                            player.setInvisible(true);
+//                            return "Vanished " + player.getName();
+//                        }
+//                    }
+//                    catch(CommandSyntaxException e) {
+//                        return "! Unrecognised target";
+//                    }
+//                }
+//        ).register();
+
         CommandBuilder.command("skirmish").subcommand("enter").argumentPlayer("target").argumentString("class").executes(
                 ctx->{
                     try {
@@ -24,6 +46,17 @@ public class SkirmishManager {
                             ServerPlayer player = ctx.getArgumentPlayer("target");
                             IPlayerMixin playerMixin = (IPlayerMixin)player;
                             playerMixin.setClass(klass);
+
+                            IPlayerTeamMixin teamMixin = Teams.getTeamMixinFromPlayer(player);
+                            if(teamMixin == null) {
+                                PlayerTeam defaultTeam = player.level().getScoreboard().getPlayerTeam("lime");
+                                if(defaultTeam != null) {
+                                    player.level().getScoreboard().addPlayerToTeam(player.getScoreboardName(), defaultTeam);
+                                }
+                                else {
+                                    Splatoon.LOGGER.error("Failed to get default team to put player into");
+                                }
+                            }
 
                             Vec3 skirmishPos = new Vec3(1331, 110, 353);
 

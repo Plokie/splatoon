@@ -2,6 +2,7 @@ package com.plokie.customitems;
 
 import com.plokie.customitems.items.InkRoller;
 import com.plokie.customitems.items.JumperMace;
+import com.plokie.customitems.items.SpectateItem;
 import com.plokie.customitems.items.guns.*;
 import com.plokie.helpers.Teams;
 import com.plokie.helpers.items.Enchantments;
@@ -150,7 +151,17 @@ public enum CustomItem {
 
                     })
             .build()
-    );
+    ),
+    SpectateItem(
+            Builder
+                    .item(Items.WARPED_FUNGUS_ON_A_STICK)
+                    .name("Toggle spectating")
+                    .model(ResourceLocation.fromNamespaceAndPath("splatoon", "spectate"))
+                    .behaviour(new SpectateItem())
+            .build()
+    )
+
+    ;
 
 
     final CustomItemDefinition itemInstance;
@@ -166,6 +177,11 @@ public enum CustomItem {
     }
     public CustomItemDefinition getItemDefinition() { return this.itemInstance; }
     public List<BiConsumer<Player, ItemStack>> getDataCallbacks() { return this.itemInstance.dataCallbacks; }
+
+    public boolean is(ItemStack item)
+    {
+        return item.getItemName().equals(this.itemInstance.baseItem.getItemName());
+    }
 
     public static class Builder
     {

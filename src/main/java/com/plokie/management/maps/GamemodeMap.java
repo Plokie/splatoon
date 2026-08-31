@@ -2,6 +2,8 @@ package com.plokie.management.maps;
 
 import com.plokie.management.gamemodes.Gamemodes;
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.Vec2;
 import net.minecraft.world.phys.Vec3;
 
@@ -26,4 +28,7 @@ public class GamemodeMap {
     {
         return GamemodeMaps.valueOf(getClass().getSimpleName());
     }
+
+    public Block groundBlock = Blocks.CYAN_TERRACOTTA;
+    public Block wallBlock = Blocks.PALE_MOSS_BLOCK;
 }

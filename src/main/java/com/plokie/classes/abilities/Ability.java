@@ -8,6 +8,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.enchantment.ItemEnchantments;
 import net.minecraft.world.phys.BlockHitResult;
 
 import java.util.function.Function;
@@ -88,6 +89,12 @@ public class Ability {
 
                 if(!currentItem.is(Items.BARRIER) || currentItem.getCount() != secondsLeft) {
                     ItemStack customItem = new ItemStack(Items.BARRIER);
+
+                    if(item != null) {
+                        ItemEnchantments enchants =  item.get(DataComponents.ENCHANTMENTS);
+                        customItem.set(DataComponents.ENCHANTMENTS, enchants);
+                    }
+
                     customItem.setCount(secondsLeft);
                     if(item != null) {
                         customItem.set(

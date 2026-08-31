@@ -67,7 +67,15 @@ public class SuperJump extends Ability {
         {
             BlockPos supportingBlockPos = player.getBlockPosBelowThatAffectsMyMovement();
             BlockState supportingBlock = player.level().getBlockState(supportingBlockPos);
-            if(player.onGround() && supportingBlock.is(BlockTags.CONCRETE_POWDER) && !supportingBlock.is(playerTeam.getGroundBlock()))
+            if(
+                    player.onGround() &&
+                    supportingBlock.is(BlockTags.CONCRETE_POWDER) &&
+                    !supportingBlock.is(playerTeam.getGroundBlock()) &&
+                            (
+                                    Splatoon.gameFlowManager.getCurrentMap()==null ||
+                                    !supportingBlock.is(Splatoon.gameFlowManager.getCurrentMap().groundBlock)
+                            )
+            )
             {
                 Affects.setAttributeModifier(player, "movement_speed", "jumperslow", -0.5, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
                 Affects.setAttributeModifier(player, "jump_strength", "jumperslow", -0.7, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);

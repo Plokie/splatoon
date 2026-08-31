@@ -1,7 +1,10 @@
 package com.plokie.management.maps;
 
 public enum GamemodeMaps {
-    UrchinUnderpass("Urchin Underpass", new UrchinUnderpass());
+    UrchinUnderpass("Urchin Underpass", new UrchinUnderpass()),
+    MorayTowers("Moray Towers", new MorayTowers()),
+    Cyberscape("Cyberscape", new Cyberscape()),
+    Goldrush("Goldrush", new Goldrush());
 
     final String name;
     final GamemodeMap map;
