@@ -8,6 +8,7 @@ import com.plokie.interfaces.IPlayerTeamMixin;
 import com.plokie.management.GameFlowManager;
 import com.plokie.management.maps.GamemodeMap;
 import com.plokie.management.maps.GamemodeMaps;
+import com.plokie.moving_blocks.MovingBlocksEntity;
 import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
@@ -31,6 +32,16 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 public class Payload extends Gamemode {
+    static class PayloadInstance {
+        public final MovingBlocksEntity entity;
+        public int visitedIndex;
+
+        public PayloadInstance(MovingBlocksEntity entity, int visitedIndex)
+        {
+            this.entity = entity;
+            this.visitedIndex = visitedIndex;
+        }
+    }
 
     public Payload()
     {
@@ -50,7 +61,8 @@ public class Payload extends Gamemode {
     public int getNumTeams() { return 2; }
 
     List<Entity> route = new ArrayList<>();
-    List<Entity> payloads = new ArrayList<>();
+
+    List<PayloadInstance> payloads = new ArrayList<>();
 
     @Override
     public void onGameStateChange(GameFlowManager gameFlowManager, GameFlowManager.GameState gameState)
@@ -121,11 +133,20 @@ public class Payload extends Gamemode {
             // the payload spawns at the middle node
             int middleIndex = (int)Math.ceil(route.size() * 0.5f);
 
+            Entity middleNode = route.get(middleIndex);
+
+            MovingBlocksEntity movingBlocksEntity = MovingBlocksEntity.create(
+                    Splatoon.SERVER.overworld(),
+                    new BlockPos(1362, 129, 2473),
+                    new BlockPos(1366, 132, 2479),
+                    new Vec3(0, 2.5, 0),
+                    middleNode.getPosition(0.0f)
+            );
+
+            payloads.add(new PayloadInstance(movingBlocksEntity, middleIndex));
 
 
-            // payload keeps track of the most recent "visited" node index
-            // if team 0 is in control, the payload should travel up the list
-            // if team 1 is in control, the payload should move down the list
+
 
         }
 
@@ -141,25 +162,26 @@ public class Payload extends Gamemode {
 
         if(gameState == GameFlowManager.GameState.NONE)
         { // cleanup
-            for(Entity payload : payloads) {
+            for(PayloadInstance payload : payloads) {
 
-                killPassengersRecur(payload);
-                payload.discard();
+                payload.entity.discard();
             }
             payloads.clear();
         }
     }
 
-    void killPassengersRecur(Entity entity) {
-        for(Entity passenger : entity.getPassengers())
-        {
-            killPassengersRecur(passenger);
-            passenger.discard();
-        }
-    }
 
-    void payloadTick(Entity payload)
+
+
+    // payload keeps track of the most recent "visited" node index
+    // if team 0 is in control, the payload should travel up the list
+    // if team 1 is in control, the payload should move down the list
+    void payloadTick(PayloadInstance payload)
     {
+        Entity entity = payload.entity.rootEntity;
+
+        int currentIdx = payload.visitedIndex;
+
 
     }
 

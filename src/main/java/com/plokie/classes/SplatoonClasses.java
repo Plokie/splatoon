@@ -51,7 +51,7 @@ public class SplatoonClasses {
                 .customItem(CustomItem.ScoutSword)
                 .customItem(CustomItem.Dualies)
                 .ability(AbilityManager.AbilityEnum.EnderPearl)
-                .ability(AbilityManager.AbilityEnum.WindCharges)
+                .ability(AbilityManager.AbilityEnum.InkPuck)
                 .attribute("scale", 0.1, AttributeModifier.Operation.ADD_VALUE)
                 .attribute("step_height", 0.6, AttributeModifier.Operation.ADD_VALUE)
                 .attribute("gravity", 0.8, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL)

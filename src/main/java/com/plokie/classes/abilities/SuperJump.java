@@ -1,6 +1,7 @@
 package com.plokie.classes.abilities;
 
 import com.plokie.Splatoon;
+import com.plokie.customitems.CustomItem;
 import com.plokie.customitems.items.guns.SniperGun;
 import com.plokie.helpers.Affects;
 import com.plokie.helpers.Teams;
@@ -25,23 +26,15 @@ import net.minecraft.world.phys.Vec3;
 public class SuperJump extends Ability {
     boolean alreadyDashed = false;
 
-    public SuperJump()
+    public SuperJump(AbilityManager.AbilityEnum enumVal)
     {
+        super(enumVal);
+
         this.rechargeTime = (int)7.5 * 20;
         this.maxCount = 1;
 
         this.hideWhileInInk = false;
-
-        this.createItemFunc = player -> {
-            ItemStack item = new ItemStack(Items.FEATHER);
-
-            item.set(
-                    DataComponents.ITEM_NAME,
-                    Component.literal("Super jump")
-            );
-
-            return item;
-        };
+        this.item = CustomItem.SuperJumpIndicator;
     }
 
     @Override

@@ -20,10 +20,14 @@ import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.SharedSuggestionProvider;
 import net.minecraft.commands.arguments.EntityArgument;
+import net.minecraft.commands.arguments.coordinates.BlockPosArgument;
+import net.minecraft.commands.arguments.coordinates.Vec3Argument;
+import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.phys.Vec3;
 
 import java.util.*;
 import java.util.function.Consumer;
@@ -50,6 +54,14 @@ public class CommandBuilder {
 
         public String getArgumentString(String name) {
             return StringArgumentType.getString(stack, name);
+        }
+
+        public BlockPos getArgumentBlockPos(String name) {
+            return BlockPosArgument.getBlockPos(stack, name);
+        }
+
+        public Vec3 getArgumentVec3(String name) {
+            return Vec3Argument.getVec3(stack, name);
         }
 
         public <T extends Enum<T>> T getArgumentEnum(String name, Class<T> tEnum) throws IllegalArgumentException
@@ -139,6 +151,20 @@ public class CommandBuilder {
             node.argumentSupplier = ()->Commands.argument(name, EntityArgument.player());
             return node;
         }
+
+        public static CommandStackNode argumentBlockPos(String name) {
+            CommandStackNode node = new CommandStackNode(Type.Argument);
+            node.name = name;
+            node.argumentSupplier = ()->Commands.argument(name, BlockPosArgument.blockPos());
+            return node;
+        }
+
+        public static CommandStackNode argumentVec3(String name) {
+            CommandStackNode node = new CommandStackNode(Type.Argument);
+            node.name = name;
+            node.argumentSupplier = ()->Commands.argument(name, Vec3Argument.vec3());
+            return node;
+        }
     }
 
     Stack<CommandStackNode> commandStackQueue = new Stack<>();
@@ -175,6 +201,18 @@ public class CommandBuilder {
     {
         //commandStack = commandStack.then(Commands.argument(name, EntityArgument.player()));
         commandStackQueue.add(CommandStackNode.argumentPlayer(name));
+        return this;
+    }
+
+    public CommandBuilder argumentBlockPos(String name)
+    {
+        commandStackQueue.add(CommandStackNode.argumentBlockPos(name));
+        return this;
+    }
+
+    public CommandBuilder argumentVec3(String name)
+    {
+        commandStackQueue.add(CommandStackNode.argumentVec3(name));
         return this;
     }
 
@@ -296,18 +334,27 @@ public class CommandBuilder {
                             hasPermission = lambdaContext.permissionCallback.apply(ctx.getSource());
                         }
 
-                        boolean failed = responseMessage.startsWith("!");
-                        if(failed) {
+                        if(!hasPermission) {
                             ctx.getSource().sendFailure(
-                                    Component.literal(responseMessage)
+                                    Component.literal("! Insufficient permissions")
                             );
-                            throw new SimpleCommandExceptionType(Component.literal(responseMessage)).create();
-
+                            throw new SimpleCommandExceptionType(Component.literal("! Insufficient permissions")).create();
                         }
                         else {
-                            ctx.getSource().sendSuccess(()->Component.literal(responseMessage), true);
-                            return Command.SINGLE_SUCCESS;
+                            boolean failed = responseMessage.startsWith("!");
+                            if(failed) {
+                                ctx.getSource().sendFailure(
+                                        Component.literal(responseMessage)
+                                );
+                                throw new SimpleCommandExceptionType(Component.literal(responseMessage)).create();
+
+                            }
+                            else {
+                                ctx.getSource().sendSuccess(()->Component.literal(responseMessage), true);
+                                return Command.SINGLE_SUCCESS;
+                            }
                         }
+
                     }));
 
                     //lambdaContext.pendingExecuteCallback = null;

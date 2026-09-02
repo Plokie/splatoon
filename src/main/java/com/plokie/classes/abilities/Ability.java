@@ -1,5 +1,6 @@
 package com.plokie.classes.abilities;
 
+import com.plokie.customitems.CustomItem;
 import com.plokie.interfaces.IPlayerMixin;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.server.level.ServerPlayer;
@@ -15,22 +16,51 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 
 public class Ability {
+    public enum UsageTypeFlags {
+        Item(1), Block(2);
+        final int value;
+        UsageTypeFlags(int value) {
+            this.value = value;
+        }
+    }
+
+    final AbilityManager.AbilityEnum enumVal;
+
     int rechargeTime = -1;
     int maxCount = -1;
 
     int rechargeTimer = -1;
     int count = 1;
 
+    int usageTypeFlags = 0;
     boolean hideWhileInInk = true;
 
-    Function<Player, ItemStack> createItemFunc;
-    ItemStack item;
+    CustomItem item = CustomItem.Invalid;
+
+    public CustomItem getItem()
+    {
+        return item;
+    }
+
+    public AbilityManager.AbilityEnum getEnumValue() {
+        return enumVal;
+    }
+
+    Ability(AbilityManager.AbilityEnum enumVal){
+        this.enumVal = enumVal;
+    }
+    Ability(AbilityManager.AbilityEnum enumVal, CustomItem customItem, int usageTypeFlags, float rechargeTimeSeconds, int maxCount)
+    {
+        this.enumVal = enumVal;
+        this.item = customItem;
+        this.rechargeTime = (int)Math.floor(rechargeTimeSeconds * 20);
+        this.maxCount = maxCount;
+        this.usageTypeFlags = usageTypeFlags;
+    }
 
     public void onGranted(Player player, int abilityIndex)
     {
         count = maxCount;
-
-        item = createItemFunc.apply(player);
     }
 
     public void onRevoked(Player player, int abilityIndex)
@@ -59,12 +89,16 @@ public class Ability {
 
     public void onUseBlock(Player player, InteractionHand hand, BlockHitResult hitResult, int abilityIndex)
     {
-
+        if((this.usageTypeFlags & UsageTypeFlags.Block.value) != 0) {
+            onUse();
+        }
     }
 
     public void onUseItem(Player player, InteractionHand hand, int abilityIndex)
     {
-
+        if((this.usageTypeFlags & UsageTypeFlags.Item.value) != 0) {
+            onUse();
+        }
     }
 
 
@@ -91,24 +125,26 @@ public class Ability {
                     ItemStack customItem = new ItemStack(Items.BARRIER);
 
                     if(item != null) {
-                        ItemEnchantments enchants =  item.get(DataComponents.ENCHANTMENTS);
+                        customItem.set(
+                                DataComponents.ITEM_NAME,
+                                item.getItem().getItemName()
+                        );
+                    }
+
+                    if(item != null) {
+                        ItemEnchantments enchants =  item.getItem().get(DataComponents.ENCHANTMENTS);
                         customItem.set(DataComponents.ENCHANTMENTS, enchants);
                     }
 
                     customItem.setCount(secondsLeft);
-                    if(item != null) {
-                        customItem.set(
-                                DataComponents.ITEM_NAME,
-                                item.getItemName()
-                        );
-                    }
                     player.getInventory().setItem(slot, customItem);
                     //player.containerMenu.broadcastChanges();
                 }
             }
-            else if(!currentItem.is(item.getItem()) || currentItem.getCount() != count)
+            else if(!item.is(currentItem) || currentItem.getCount() != count)
             {
-                ItemStack customItem = createItemFunc.apply(player);
+//                ItemStack customItem = createItemFunc.apply(player);
+                ItemStack customItem = item.construct(player);
                 customItem.setCount(count);
                 player.getInventory().setItem(slot, customItem);
                 //player.containerMenu.broadcastChanges();

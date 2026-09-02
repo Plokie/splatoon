@@ -25,7 +25,7 @@ public class InkRoller extends ICustomItem {
     }
 
     @Override
-    public void onUse(Player player)
+    public void onUseItem(Player player)
     {
         IPlayerMixin playerMixin = (IPlayerMixin)player;
 

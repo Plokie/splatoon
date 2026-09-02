@@ -25,7 +25,7 @@ public class SpectateItem extends ICustomItem {
     }
 
     @Override
-    public void onUse(Player player)
+    public void onUseItem(Player player)
     {
         Splatoon.gameFlowManager.toggleSpectator((ServerPlayer)player);
     }

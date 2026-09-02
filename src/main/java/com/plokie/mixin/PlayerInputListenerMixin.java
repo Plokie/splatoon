@@ -28,7 +28,7 @@ public class PlayerInputListenerMixin {
 
         Input input = packet.input();
 
-        ((IPlayerMixin)(Player)player).setInputPacket(input);
+        ((IPlayerMixin)player).setInputPacket(input);
     }
 
     @Inject(method="handleAnimate", at = @At("HEAD"))
@@ -37,7 +37,7 @@ public class PlayerInputListenerMixin {
         if(packet.getHand() == InteractionHand.MAIN_HAND)
         {
             //Splatoon.LOGGER.info("{} animate punch", player.getName());
-            ((IPlayerMixin)(Player)player).setPunched();
+            ((IPlayerMixin)player).setPunched();
         }
     }
 

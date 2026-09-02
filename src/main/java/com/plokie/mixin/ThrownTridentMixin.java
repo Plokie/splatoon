@@ -1,6 +1,8 @@
 package com.plokie.mixin;
 
 import com.plokie.Splatoon;
+import com.plokie.classes.abilities.Ability;
+import com.plokie.classes.abilities.AbilityManager;
 import com.plokie.helpers.Affects;
 import com.plokie.helpers.Effects;
 import com.plokie.helpers.Fill;
@@ -34,8 +36,8 @@ import java.util.UUID;
 
 @Mixin(AbstractArrow.class)
 public class ThrownTridentMixin implements IProjectile {
-    @Unique
-    UUID playerOwnerUUID = null;
+    //@Unique
+    //UUID playerOwnerUUID = null;
 
     @Unique boolean hasHit = false;
     @Unique boolean hasSetup = false;
@@ -45,7 +47,7 @@ public class ThrownTridentMixin implements IProjectile {
     @Override
     public void setPlayerOwner(Player player)
     {
-        playerOwnerUUID = player.getUUID();
+
     }
 
     @Inject(method="onHitEntity", at = @At("TAIL"))
@@ -91,7 +93,15 @@ public class ThrownTridentMixin implements IProjectile {
             if(owner instanceof Player player)
             {
                 Splatoon.LOGGER.info("Trident thrown by player {}", owner.getName());
-                ((IPlayerMixin)player).onUseAbilityItem("Hook", player, player.getUsedItemHand());
+                //((IPlayerMixin)player).onUseAbilityItem("Hook", player, player.getUsedItemHand());
+                Ability ability = ((IPlayerMixin)player).getAbility(AbilityManager.AbilityEnum.Hook);
+                if(ability != null) {
+//                    ability.onUseItem(player, player.getUsedItemHand(), 0);
+                    ability.onUse();
+                }
+                else {
+                    Splatoon.LOGGER.warn("Couldnt find hook ability on player");
+                }
             }
             hasSetup = true;
         }
@@ -127,10 +137,6 @@ public class ThrownTridentMixin implements IProjectile {
 
         Effects.explosionEffect(level, self.getOnPos());
 
-        if(playerOwnerUUID == null) {
-            Splatoon.LOGGER.warn("Faulty trident with no player owner UUID");
-            return;
-        }
         if(self.getOwner() == null) {
             Splatoon.LOGGER.warn("Faulty trident with no owner");
             return;

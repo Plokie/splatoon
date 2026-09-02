@@ -11,6 +11,8 @@ import com.plokie.interfaces.IPlayerMixin;
 import com.plokie.management.GameFlowManager;
 import com.plokie.management.SkirmishManager;
 import com.plokie.management.maps.GamemodeMaps;
+import com.plokie.moving_blocks.MovingBlocksEntity;
+import com.plokie.moving_blocks.MovingBlocksEntityManager;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents;
@@ -53,6 +55,7 @@ public class Splatoon implements ModInitializer {
 	CustomItemManager customItemManager = null;
 	SkirmishManager skirmishManager = null;
 	ScheduleEvent scheduleEvent = null;
+	MovingBlocksEntityManager movingBlocksEntityManager = null;
 	public static GameFlowManager gameFlowManager = null;
 
 	@Override
@@ -77,6 +80,7 @@ public class Splatoon implements ModInitializer {
 		this.classManager = new SplatoonClasses();
 		gameFlowManager = new GameFlowManager();
 		this.skirmishManager = new SkirmishManager();
+		this.movingBlocksEntityManager = new MovingBlocksEntityManager();
 
 		CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
 			dispatcher.register(Commands.literal("ping").executes(PingCommand::execute));

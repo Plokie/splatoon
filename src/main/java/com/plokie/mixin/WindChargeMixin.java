@@ -28,7 +28,7 @@ public class WindChargeMixin {
     @Inject(method="onHitBlock", at=@At("TAIL"))
     void onHitBlock(CallbackInfo ci)
     {
-        Splatoon.LOGGER.info("EXPLODEEEEE");
+        //Splatoon.LOGGER.info("EXPLODEEEEE");
         AbstractWindCharge self = ((AbstractWindCharge)(Object)this);
         Level level = self.level();
         Entity owner = self.getOwner();

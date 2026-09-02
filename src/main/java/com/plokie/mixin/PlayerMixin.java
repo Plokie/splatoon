@@ -214,6 +214,17 @@ public class PlayerMixin implements IPlayerMixin {
         return abilities;
     }
 
+    @Override
+    public Ability getAbility(AbilityManager.AbilityEnum abilityEnum) {
+        for(Ability ability : abilities) {
+            if(ability.getEnumValue() == abilityEnum)
+            {
+                return ability;
+            }
+        }
+        return null;
+    }
+
     @Inject(method = "<init>", at = @At("TAIL"))
     private void onInit(CallbackInfo ci) {
         player = (Player)(Object)this;
@@ -577,34 +588,6 @@ public class PlayerMixin implements IPlayerMixin {
         }
         //player.containerMenu.broadcastChanges();
 
-    }
-
-    @Override
-    public void onUseAbilityBlock(String abilityId, Player player, InteractionHand hand, BlockHitResult hitResult) {
-        int idx = 0;
-        for(Ability ability : abilities.stream().toList()) {
-            //Splatoon.LOGGER.info("-{}|{}", ability.getClass().getSimpleName(), abilityId);
-            if(ability.getClass().getSimpleName().equals(abilityId))
-            {
-                ability.onUseBlock(player, hand, hitResult, idx);
-            }
-
-            idx++;
-        }
-    }
-
-    @Override
-    public void onUseAbilityItem(String abilityId, Player player, InteractionHand hand) {
-        int idx = 0;
-        for(Ability ability : abilities.stream().toList()) {
-            //Splatoon.LOGGER.info("-{}|{}", ability.getClass().getSimpleName(), abilityId);
-            if(ability.getClass().getSimpleName().equals(abilityId))
-            {
-                ability.onUseItem(player, hand, idx);
-            }
-
-            idx++;
-        }
     }
 
     @Inject(method="addAdditionalSaveData", at=@At("TAIL"))

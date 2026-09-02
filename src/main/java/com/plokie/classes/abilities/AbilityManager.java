@@ -1,7 +1,9 @@
 package com.plokie.classes.abilities;
 
 import com.mojang.brigadier.arguments.StringArgumentType;
+import com.mojang.datafixers.types.Func;
 import com.plokie.commands.PingCommand;
+import com.plokie.customitems.CustomItem;
 import com.plokie.interfaces.IPlayerMixin;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.minecraft.commands.Commands;
@@ -22,32 +24,42 @@ import java.util.stream.Stream;
 
 public class AbilityManager {
     public enum AbilityEnum implements StringRepresentable {
-        InkBombs("Ink Bombs", InkBombs::new),
-        CleansingGrenade("Cleansing Grenade", CleansingGrenade::new),
-        Hook("Hook", Hook::new),
-        EnderPearl("Ender Pearl", EnderPearl::new),
-        WindCharges("Wind Charges", WindCharges::new),
-        HealthBubble("Health Bubble", HealthBubble::new),
-        HealthPotions("Health Potions", HealthPotions::new),
-        SuperJump("Super Jump", SuperJump::new),
-        SmokeGrenade("Smoke Grenade", SmokeGrenade::new),
-        FocusApple("Focus Apple", FocusApple::new);
+        InkBombs("Ink Bombs", CustomItem.InkBomb, Ability.UsageTypeFlags.Block.value, 10.0f, 5),
+        CleansingGrenade("Cleansing Grenade", CustomItem.CleansingGrenade, Ability.UsageTypeFlags.Item.value, 30.0f, 1),
+        Hook("Hook", CustomItem.Hook, 0, 15.0f, 1),
+        EnderPearl("Ender Pearl", CustomItem.EnderPearl, Ability.UsageTypeFlags.Item.value, 25.0f, 1),
+        WindCharges("Wind Charges", CustomItem.WindCharge, Ability.UsageTypeFlags.Item.value, 5.0f, 5),
+        HealthBubble("Health Bubble", CustomItem.HealthBubble, Ability.UsageTypeFlags.Block.value, 20.0f, 1),
+        HealthPotions("Health Potions", CustomItem.HealthPotion, Ability.UsageTypeFlags.Item.value, 5.0f, 16),
+        SuperJump("Super Jump", com.plokie.classes.abilities.SuperJump::new),
+        SmokeGrenade("Smoke Grenade", CustomItem.SmokeGrenade, Ability.UsageTypeFlags.Item.value, 22.5f, 1),
+        FocusApple("Focus Apple", CustomItem.FocusApple, Ability.UsageTypeFlags.Item.value, 30.f, 1),
+        InkPuck("Ink Puck", CustomItem.InkPuck, Ability.UsageTypeFlags.Block.value,10.0f, 1)
+        ;
 
         public static final Codec<AbilityEnum> CODEC = StringRepresentable.fromEnum(AbilityEnum::values);
 
         private final String name;
-        private final Supplier<Ability> constructor;
+        private final Function<AbilityEnum, Ability> constructor;
 
-        AbilityEnum(final String name, Supplier<Ability> constructor) {
+        AbilityEnum(final String name, Function<AbilityEnum, Ability> constructor) {
             this.name = name;
             this.constructor = constructor;
         }
 
-        public Ability Construct() {
-            return constructor.get();
+        AbilityEnum(final String name, CustomItem item, int usageTypeFlags, float rechargeTimeSeconds, int maxCount)
+        {
+            this.name = name;
+            this.constructor = (enumVal)->{
+                return new Ability(this, item, usageTypeFlags, rechargeTimeSeconds, maxCount);
+            };
         }
 
-        public String getID()  { return this.getClass().getSimpleName(); }
+        public Ability Construct() {
+            return constructor.apply(this);
+        }
+
+        public String getID()  { return this.toString(); }
 
         @Override
         public String getSerializedName() {

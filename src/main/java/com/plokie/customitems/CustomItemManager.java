@@ -2,18 +2,16 @@ package com.plokie.customitems;
 
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.plokie.Splatoon;
-import com.plokie.classes.SplatoonClasses;
-import com.plokie.interfaces.IPlayerMixin;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.event.player.AttackEntityCallback;
+import net.fabricmc.fabric.api.event.player.UseBlockCallback;
 import net.fabricmc.fabric.api.event.player.UseItemCallback;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.SharedSuggestionProvider;
 import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.util.Tuple;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
@@ -47,7 +45,8 @@ public class CustomItemManager {
                         playersHolding = isPlayerHolding.get(item);
                     }
 
-                    if(itemInHand.getItemName().equals(item.getItem().getItemName()))
+                    //if(itemInHand.getItemName().equals(item.getItem().getItemName()))
+                    if(item.is(itemInHand))
                     {
                         //item.getItemDefinition().getItemInterface().whileHeld(player);
 
@@ -80,9 +79,10 @@ public class CustomItemManager {
                     }
                     else
                     {
-                        if(player.getItemInHand(player.getUsedItemHand()).getItemName().equals(item.getItem().getItemName()))
+                        //if(player.getItemInHand(player.getUsedItemHand()).getItemName().equals(item.getItem().getItemName()))
+                        if(item.is(player.getItemInHand(player.getUsedItemHand())))
                         {
-                            item.getItemDefinition().getItemInterface().onUse(player);
+                            item.getItemDefinition().getItemInterface().onUseItem(player);
                         }
 
                     }
@@ -101,9 +101,15 @@ public class CustomItemManager {
         });
 
         UseItemCallback.EVENT.register((player, world, hand) -> {
+            //Splatoon.LOGGER.info("Use {}", player.getItemInHand(hand).getItemName());
+            //Splatoon.LOGGER.info("test: {}", player.getItemInHand(hand).getHoverName());
+
+
             Arrays.stream(CustomItem.values()).forEach(item -> {
-                if(player.getItemInHand(hand).getItemName().equals(item.getItem().getItemName()))
+                //Splatoon.LOGGER.info("\tCheck if {}", item.getItem().getItemName());
+                if(item.is(player.getItemInHand(hand)))
                 {
+                    //Splatoon.LOGGER.info("\tit is");
                     int useDuration = item.getItemDefinition().getItemInterface().getUseDuration();
 
                     if(useDuration > 0)
@@ -126,7 +132,20 @@ public class CustomItemManager {
             return InteractionResult.PASS;
         });
 
+        UseBlockCallback.EVENT.register((player, world, hand, hitResult) -> {
+            //Splatoon.LOGGER.info("Use block {}", player.getItemInHand(hand).getItemName());
+            Arrays.stream(CustomItem.values()).forEach(item->{
+                //Splatoon.LOGGER.info("\tCheck if {}", item.getItem().getItemName());
+                if(item.is(player.getItemInHand(hand))) {
+                    //.LOGGER.info("\tit is");
+                    item.getItemDefinition().getItemInterface().onUseBlock(player, hitResult);
+                }
+            });
+            return InteractionResult.PASS;
+        });
+
         AttackEntityCallback.EVENT.register((player, level, hand, entity, hitResult)->{
+
             Arrays.stream(CustomItem.values()).forEach(item -> {
                 if (player.getItemInHand(hand).getItemName().equals(item.getItem().getItemName())) {
                     item.getItemDefinition().getItemInterface().onAttackHit(player, entity);

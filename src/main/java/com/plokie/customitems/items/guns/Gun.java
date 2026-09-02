@@ -58,7 +58,7 @@ public class Gun extends ICustomItem {
 
 
     @Override
-    public void onUse(Player player)
+    public void onUseItem(Player player)
     {
         if(((IPlayerMixin)player).getTimeNotInInk() < 10) {
             return;

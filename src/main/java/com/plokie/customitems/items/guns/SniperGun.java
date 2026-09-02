@@ -20,6 +20,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.Tuple;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.effect.MobEffects;
@@ -35,13 +36,11 @@ import net.minecraft.world.item.component.Tool;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.phys.EntityHitResult;
-import net.minecraft.world.phys.HitResult;
-import net.minecraft.world.phys.Vec2;
-import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.phys.*;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 public class SniperGun extends ICustomItem {
 
@@ -61,7 +60,7 @@ public class SniperGun extends ICustomItem {
     }
 
     @Override
-    public void onUse(Player player) {
+    public void onUseItem(Player player) {
         if(getTempInt(player)>0)
         {
             ServerPlayer serverPlayer = (ServerPlayer)player;
@@ -136,24 +135,54 @@ public class SniperGun extends ICustomItem {
             }
 
             // 300 blocks, idk, false = ignore fluids
-            double distance = 300.0;
-            HitResult hit = player.pick(distance, 0.0f, false);
+            double distanceToHitPoint = 300.0;
+            HitResult hitBlock = player.pick(distanceToHitPoint, 0.0f, false);
+
+            Tuple<Vec3, LivingEntity> hitEntity = null;
             //Splatoon.LOGGER.info("hit type {}", hit.getType());
+            Vec3 eyePos = player.getEyePosition(1.0f);
 
-            if(hit.getType() == HitResult.Type.BLOCK)
+            if(hitBlock.getType() == HitResult.Type.BLOCK)
             {
-                distance = Math.sqrt(hit.distanceTo(player));
+                distanceToHitPoint = Math.sqrt(hitBlock.distanceTo(player));
 
-                MutableComponent textCom = Component.literal(String.valueOf((int)Math.round(distance)));
-                if(distance < reach) {
-                    textCom = textCom.withStyle(ChatFormatting.GREEN);
+
+            }
+
+//            double maxReach = Math.min(reach, distanceToHitPoint);
+            Vec3 viewVec = player.getViewVector(1.0f);
+            Vec3 reachVec = eyePos.add(viewVec.x * reach, viewVec.y * reach, viewVec.z * reach);
+            AABB aabb = player.getBoundingBox().expandTowards(viewVec.scale(reach)).inflate(2.0, 2.0, 2.0);
+            for(LivingEntity entity : player.level().getEntitiesOfClass(LivingEntity.class, aabb)) {
+                double pickRadius = entity.getPickRadius();
+                AABB hitbox = entity.getBoundingBox().inflate(pickRadius);
+
+                Optional<Vec3> intersect = hitbox.clip(eyePos, reachVec);
+                if(!intersect.isEmpty())
+                {
+                    double dist = eyePos.distanceTo(intersect.get());
+                    if(dist < distanceToHitPoint) {
+                        distanceToHitPoint = dist;
+                        hitEntity = new Tuple<>(intersect.get(), entity);
+                    }
+                }
+            }
+
+
+            MutableComponent textCom = Component.literal(String.valueOf((int)Math.round(distanceToHitPoint)));
+            if(distanceToHitPoint < reach) {
+                if(hitEntity != null) {
+                    textCom = textCom.withStyle(ChatFormatting.LIGHT_PURPLE);
                 }
                 else {
-                    textCom = textCom.withStyle(ChatFormatting.RED);
+                    textCom = textCom.withStyle(ChatFormatting.GREEN);
                 }
-
-                serverPlayer.connection.send(new ClientboundSetActionBarTextPacket(textCom));
             }
+            else {
+                textCom = textCom.withStyle(ChatFormatting.RED);
+            }
+
+            serverPlayer.connection.send(new ClientboundSetActionBarTextPacket(textCom));
 
 
             if(chargeIndex == 0 || chargeIndex == 1 || timeScoping == 2 || timeScoping == 3)
@@ -202,17 +231,23 @@ public class SniperGun extends ICustomItem {
 
                     if(player.hasEffect(MobEffects.REGENERATION))
                     {
-                        playerMixin.changeInk(-0.133f * 0.5f);
+                        playerMixin.changeInk(-0.133f * 0.5f * (sniperCharge / 5.0f));
                     }
                     else {
-                        playerMixin.changeInk(-0.133f);
+                        playerMixin.changeInk(-0.133f * (sniperCharge / 5.0f));
                     }
 
                     if(playerMixin.getInk() <= 0.0f) {
                         scope(player);
                     }
                 });
-                Vec3 eyePos = player.getEyePosition();
+
+                if(hitEntity != null) {
+                    // if outside hard coded reach limit, use fallback raycast
+                    if(distanceToHitPoint > 64.0f) {
+                        onAttackHit(player, hitEntity.getB());
+                    }
+                }
 
                 //Splatoon.LOGGER.info("Punched");
 
@@ -234,7 +269,7 @@ public class SniperGun extends ICustomItem {
                     //Block wallBlock = playerTeam.getWallBlock();
                     DustParticleOptions dustParticleOptions = new DustParticleOptions(dustCol, 1);
 
-                    for(float i=0; i < Math.min(reach, distance); i+=0.5f)
+                    for(float i=0; i < distanceToHitPoint; i+=0.5f)
                     {
                         Vec3 pos = new Vec3(
                                 eyePos.x + (forward.x * i),
