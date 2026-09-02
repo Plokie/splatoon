@@ -62,6 +62,7 @@ public class Splatoon implements ModInitializer {
 	public void onInitialize() {
 		ServerLifecycleEvents.SERVER_STARTING.register(server -> {
 			SERVER = server;
+
 		});
 		ServerLifecycleEvents.SERVER_STOPPED.register(server -> {
 			SERVER = null;

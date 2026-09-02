@@ -145,6 +145,16 @@ public class CommandBuilder {
             return node;
         }
 
+        public static CommandStackNode argumentString(String name, Supplier<List<String>> autocomplete) {
+            CommandStackNode node = new CommandStackNode(Type.Argument);
+            node.name = name;
+            node.argumentSupplier = ()->Commands.argument(name, StringArgumentType.word()).suggests(
+                    (ctx, builder)->{
+                        return SharedSuggestionProvider.suggest(autocomplete.get(), builder);
+                    });
+            return node;
+        }
+
         public static CommandStackNode argumentPlayer(String name) {
             CommandStackNode node = new CommandStackNode(Type.Argument);
             node.name = name;
@@ -238,10 +248,17 @@ public class CommandBuilder {
         return this;
     }
 
+    @Deprecated(since = "Prefer usage of argumentEnum(\"id\", MyEnum::values)")
     public <T extends Enum<T>> CommandBuilder argumentEnum(String name, Class<T> tEnum)
     {
         List<String> enumStrings = Arrays.stream(tEnum.getEnumConstants()).map(T::toString).toList();
         return argumentString(name, enumStrings);
+    }
+
+    public <T extends Enum<T>> CommandBuilder argumentEnum(String name, Supplier<T[]> values)
+    {
+        commandStackQueue.add(CommandStackNode.argumentString(name, ()->Arrays.stream(values.get()).map(T::toString).toList()));
+        return this;
     }
 
 
@@ -249,19 +266,6 @@ public class CommandBuilder {
     public CommandBuilder executes(Function<ExecuteContext, String> callback)
     {
         commandStackQueue.add(CommandStackNode.executes(callback));
-//        commandStack.executes(ctx->{
-//            String responseMessage = callback.apply(new ExecuteContext(ctx));
-//            boolean failed = responseMessage.startsWith("!");
-//            if(failed) {
-//                ctx.getSource().sendFailure(
-//                        Component.literal(responseMessage)
-//                );
-//            }
-//            else {
-//                ctx.getSource().sendSuccess(()->Component.literal(responseMessage), true);
-//            }
-//            return failed ? 0 : 1;
-//        });
         return this;
     }
 

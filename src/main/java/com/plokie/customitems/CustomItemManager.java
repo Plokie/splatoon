@@ -1,7 +1,9 @@
 package com.plokie.customitems;
 
 import com.mojang.brigadier.arguments.StringArgumentType;
+import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.plokie.Splatoon;
+import com.plokie.helpers.CommandBuilder;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.event.player.AttackEntityCallback;
@@ -155,63 +157,30 @@ public class CustomItemManager {
             return InteractionResult.PASS;
         });
 
-        CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
-            dispatcher.register(
-                    Commands.literal("givecustomitem")
-                            .then(
-                                    Commands.argument("target", EntityArgument.player())
-                                            .then(
-                                                    Commands.argument("itemId", StringArgumentType.word())
-                                                            .suggests((ctx, builder) -> {
-                                                                ServerPlayer target = EntityArgument.getPlayer(ctx, "target");
+        CommandBuilder.command("givecustomitem").argumentPlayer("target").argumentEnum("item_id", CustomItem::values).argumentInteger("count").executes(ctx->{
+            try {
+                int count = ctx.getArgumentInteger("count");
+                CustomItem item = ctx.getArgumentEnum("item_id", CustomItem.class);
+                ServerPlayer target = ctx.getArgumentPlayer("target");
+                ItemEntity itemEntity = EntityType.ITEM.create(target.level(), EntitySpawnReason.COMMAND);
+                if(itemEntity == null) return "! Failed to spawn item entity on target";
 
-                                                                List<String> itemAutocomplete = new java.util.ArrayList<>(Arrays.stream(CustomItem.values()).map(CustomItem::toString).toList());
+                ItemStack itemStack = item.construct(target);
+                itemStack.setCount(count);
+                itemEntity.setItem(itemStack);
 
-                                                                return SharedSuggestionProvider.suggest(
-                                                                        itemAutocomplete.stream(), builder
-                                                                );
-                                                            })
-                                                            .executes(ctx -> {
-                                                                ServerPlayer target = EntityArgument.getPlayer(ctx, "target");
+                target.level().addFreshEntity(itemEntity);
 
-                                                                String itemIdValue = StringArgumentType.getString(ctx, "itemId");
-                                                                try {
-                                                                    CustomItem itemEnum = CustomItem.valueOf(itemIdValue);
+                itemEntity.setPos(target.getEyePosition());
 
-                                                                    ItemEntity itemEntity = EntityType.ITEM.create(target.level(), EntitySpawnReason.COMMAND);
-                                                                    if(itemEntity == null) return 0;
+                return "Gave " + target.getName().getString() + " " + count + " " + item.toString();
+            } catch (CommandSyntaxException e) {
+                return "! Invalid target";
+            } catch(IllegalArgumentException e) {
+                return "! Invalid item id or missing count argument";
+            }
 
-                                                                    itemEntity.setItem(itemEnum.getItem());
-
-                                                                    target.level().addFreshEntity(itemEntity);
-
-                                                                    itemEntity.setPos(target.getEyePosition());
-
-                                                                    ctx.getSource().sendSuccess(() ->
-                                                                                    Component.literal("Gave ")
-                                                                                            .append(target.getDisplayName())
-                                                                                            .append(" 1 ")
-                                                                                            .append(itemEnum.toString())
-                                                                            , true
-                                                                    );
-
-                                                                    return 1;
-                                                                } catch (IllegalArgumentException e) {
-                                                                    ctx.getSource().sendFailure(
-                                                                            Component.literal("Unrecognised class: ").append(itemIdValue)
-                                                                    );
-
-                                                                    return 0;
-                                                                }
-
-
-
-                                                            })
-                                            )
-                            )
-
-            );
-        });
+        }).register();
     }
 
     public void tick()
