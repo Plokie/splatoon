@@ -172,7 +172,7 @@ public enum CustomItem {
     ),
     InkPuck(
             Builder
-                    .item(Items.SILVERFISH_SPAWN_EGG)
+                    .item(Items.FIREWORK_STAR)
                     .name("Ink Puck")
                     .behaviour(new InkPuck())
                     //.model()

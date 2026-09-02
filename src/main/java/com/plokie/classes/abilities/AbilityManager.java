@@ -34,7 +34,7 @@ public class AbilityManager {
         SuperJump("Super Jump", com.plokie.classes.abilities.SuperJump::new),
         SmokeGrenade("Smoke Grenade", CustomItem.SmokeGrenade, Ability.UsageTypeFlags.Item.value, 22.5f, 1),
         FocusApple("Focus Apple", CustomItem.FocusApple, Ability.UsageTypeFlags.Item.value, 30.f, 1),
-        InkPuck("Ink Puck", CustomItem.InkPuck, Ability.UsageTypeFlags.Block.value,10.0f, 1)
+        InkPuck("Ink Puck", CustomItem.InkPuck, Ability.UsageTypeFlags.Block.value,10.0f, 3)
         ;
 
         public static final Codec<AbilityEnum> CODEC = StringRepresentable.fromEnum(AbilityEnum::values);

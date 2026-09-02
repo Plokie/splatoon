@@ -7,26 +7,18 @@ import com.plokie.helpers.Helpers;
 import com.plokie.helpers.Teams;
 import com.plokie.interfaces.IPlayerTeamMixin;
 import com.plokie.interfaces.IProjectile;
-import net.minecraft.commands.arguments.selector.SelectorPattern;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.DustParticleOptions;
-import net.minecraft.core.particles.ParticleOptions;
-import net.minecraft.core.particles.ParticleType;
-import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.tags.BlockTags;
 import net.minecraft.world.entity.Display;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.monster.Shulker;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.block.Rotation;
-import net.minecraft.world.phys.Vec2;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Vector3f;
 import org.spongepowered.asm.mixin.Mixin;
@@ -41,6 +33,8 @@ import java.util.UUID;
 @Mixin(Shulker.class)
 public class HealthBubbleMixin implements IProjectile {
     @Unique UUID playerUUID = null;
+
+    @Unique float radius = 4.0f;
 
     @Override
     public void setPlayerOwner(Player player) {
@@ -157,11 +151,12 @@ public class HealthBubbleMixin implements IProjectile {
 
         if(groundBlock != Blocks.AIR)
         {
+            int blockFillSize = (int)Math.floor(radius-1);
             Fill.replace(
                     level,
                     self.getOnPos(),
-                    new BlockPos(2,2,2),
-                    new BlockPos(-2,-2,-2),
+                    new BlockPos(blockFillSize, blockFillSize, blockFillSize),
+                    new BlockPos(-blockFillSize,-blockFillSize,-blockFillSize),
                     groundBlock,
                     Splatoon.Tags.GROUND_BLOCKS
             );
@@ -169,7 +164,7 @@ public class HealthBubbleMixin implements IProjectile {
 
         if(playerTeam != null && self.tickCount % 10 == 0)
         {
-            List<Player> playersInRange = Helpers.getEntitiesInRadius(level, Player.class, self.getEyePosition(), 3.0f);
+            List<Player> playersInRange = Helpers.getEntitiesInRadius(level, Player.class, self.getEyePosition(), radius);
 
             for(Player healPlayer : playersInRange)
             {
