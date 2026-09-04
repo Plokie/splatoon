@@ -48,6 +48,10 @@ public class CommandBuilder {
             return EntityArgument.getPlayer(stack, name);
         }
 
+        public Entity getArgumentEntity(String name) throws CommandSyntaxException {
+            return EntityArgument.getEntity(stack, name);
+        }
+
         public int getArgumentInteger(String name) {
             return IntegerArgumentType.getInteger(stack, name);
         }
@@ -162,6 +166,13 @@ public class CommandBuilder {
             return node;
         }
 
+        public static CommandStackNode argumentEntity(String name) {
+            CommandStackNode node = new CommandStackNode(Type.Argument);
+            node.name = name;
+            node.argumentSupplier = ()->Commands.argument(name, EntityArgument.entity());
+            return node;
+        }
+
         public static CommandStackNode argumentBlockPos(String name) {
             CommandStackNode node = new CommandStackNode(Type.Argument);
             node.name = name;
@@ -211,6 +222,12 @@ public class CommandBuilder {
     {
         //commandStack = commandStack.then(Commands.argument(name, EntityArgument.player()));
         commandStackQueue.add(CommandStackNode.argumentPlayer(name));
+        return this;
+    }
+
+    public CommandBuilder argumentEntity(String name)
+    {
+        commandStackQueue.add(CommandStackNode.argumentEntity(name));
         return this;
     }
 
@@ -328,8 +345,6 @@ public class CommandBuilder {
             {
                 if(lambdaContext.pendingExecuteCallback != null) {
                     topCommand = topCommand.executes((ctx->{
-                        String responseMessage = lambdaContext.pendingExecuteCallback.apply(new ExecuteContext(ctx));
-
                         boolean hasPermission = true;
                         if(lambdaContext.permissionCallback == null) {
                             hasPermission = ctx.getSource().hasPermission(2);
@@ -345,6 +360,8 @@ public class CommandBuilder {
                             throw new SimpleCommandExceptionType(Component.literal("! Insufficient permissions")).create();
                         }
                         else {
+                            String responseMessage = lambdaContext.pendingExecuteCallback.apply(new ExecuteContext(ctx));
+
                             boolean failed = responseMessage.startsWith("!");
                             if(failed) {
                                 ctx.getSource().sendFailure(

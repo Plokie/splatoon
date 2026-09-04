@@ -1,7 +1,9 @@
 package com.plokie;
 
+import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.plokie.classes.SplatoonClasses;
 import com.plokie.classes.abilities.AbilityManager;
+import com.plokie.commands.Command;
 import com.plokie.commands.PingCommand;
 
 import com.plokie.customitems.CustomItemManager;
@@ -9,6 +11,7 @@ import com.plokie.helpers.CommandBuilder;
 import com.plokie.helpers.ScheduleEvent;
 import com.plokie.interfaces.IPlayerMixin;
 import com.plokie.management.GameFlowManager;
+import com.plokie.management.PlayerStats;
 import com.plokie.management.SkirmishManager;
 import com.plokie.management.maps.GamemodeMaps;
 import com.plokie.moving_blocks.MovingBlocksEntity;
@@ -83,9 +86,24 @@ public class Splatoon implements ModInitializer {
 		this.skirmishManager = new SkirmishManager();
 		this.movingBlocksEntityManager = new MovingBlocksEntityManager();
 
+		PlayerStats.initialise();
+
 		CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
 			dispatcher.register(Commands.literal("ping").executes(PingCommand::execute));
 		});
+
+		CommandBuilder.command("forceride").argumentEntity("passenger").argumentEntity("vehicle").executes(ctx->{
+			try {
+				Entity passenger = ctx.getArgumentEntity("passenger");
+				Entity vehicle = ctx.getArgumentEntity("vehicle");
+				passenger.startRiding(vehicle, true);
+				return "Forced " + passenger.getName().getString() + " to ride " + vehicle.getName().getString();
+			}
+			catch(CommandSyntaxException e)
+			{
+				return "! Invalid target";
+			}
+		}).register();
 
 		CommandBuilder.command("warp").subcommand("hub").executes(ctx->{
 			Entity source = ctx.getStack().getSource().getEntity();

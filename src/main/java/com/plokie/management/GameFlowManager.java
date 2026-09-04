@@ -33,6 +33,8 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.BossEvent;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.*;
+import net.minecraft.world.entity.animal.sheep.Sheep;
+import net.minecraft.world.entity.monster.Shulker;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -216,11 +218,12 @@ public class GameFlowManager {
 
     void playSong(String soundPath, Player player)
     {
-        Splatoon.LOGGER.info("Play sound {} for {}", soundPath, player.getName().getString());
+        //Splatoon.LOGGER.info("Play sound {} for {}", soundPath, player.getName().getString());
         ScheduleEvent.schedule(1, server->{
 //            for(Player player : getGamersIncludingSpectators())
 //            {
                 ServerPlayer serverPlayer = (ServerPlayer)player;
+                Splatoon.LOGGER.info("Play sound {} for {}", soundPath, serverPlayer.getName().getString());
 
                 serverPlayer.connection.send(new ClientboundStopSoundPacket(null, SoundSource.MUSIC));
 
@@ -229,7 +232,7 @@ public class GameFlowManager {
                     serverPlayer.connection.send(new ClientboundSoundPacket(
                             Holder.direct(SoundEvent.createVariableRangeEvent(ResourceLocation.fromNamespaceAndPath("splatoon", soundPath))),
                             SoundSource.MUSIC,
-                            0, 0, 0,
+                            serverPlayer.getOnPos().getX(), serverPlayer.getOnPos().getY(), serverPlayer.getOnPos().getZ(),
                             1.0f,
                             1.0f,
                             player.getRandom().nextLong()
@@ -692,14 +695,6 @@ public class GameFlowManager {
 
         if(this.currentMap!= null)
         {
-            String song = GameState.getSong(this.currentGameState);
-            if(!song.equals(""))
-            {
-                for(Player player : getGamersIncludingSpectators()) {
-                    playSong(song, player);
-                }
-            }
-
             if(this.currentGameState == GameState.INTRO)
             {
                 //PlaySong("music.opening.match_start");
@@ -707,12 +702,17 @@ public class GameFlowManager {
                 int zoneSegmentWidth = (int)Math.ceil(readyUpZoneSize.getX() / (float)currentGamemode.getNumTeams());
                 for(int i=0; i < currentGamemode.getNumTeams(); i++) {
 
-                    BlockPos segmentPos = new BlockPos(readyUpZone.getX() + (zoneSegmentWidth * i), readyUpZone.getY(), readyUpZone.getZ());
+                    BlockPos segmentPos = new BlockPos(readyUpZone.getX() + (zoneSegmentWidth * i) + i, readyUpZone.getY(), readyUpZone.getZ());
                     BlockPos segmentSize = new BlockPos(zoneSegmentWidth, readyUpZoneSize.getY(), readyUpZoneSize.getZ() + 1);
                     BlockPos halfSegmentSize = new BlockPos((int)(segmentSize.getX() * 0.5f), (int)(segmentSize.getY() * 0.5f), (int)(segmentSize.getZ() * 0.5f));
 
-                    AABB aabb = new AABB(new BlockPos(segmentPos.getX() + halfSegmentSize.getX(), segmentPos.getY() + halfSegmentSize.getY(),  segmentPos.getZ() + halfSegmentSize.getZ()));
-                    aabb = aabb.inflate(halfSegmentSize.getX(), halfSegmentSize.getY(), halfSegmentSize.getZ());
+                    //AABB aabb = new AABB(new BlockPos(segmentPos.getX() + halfSegmentSize.getX(), segmentPos.getY() + halfSegmentSize.getY(),  segmentPos.getZ() + halfSegmentSize.getZ()));
+                    //aabb = aabb.inflate(halfSegmentSize.getX(), halfSegmentSize.getY(), halfSegmentSize.getZ());
+//                    AABB aabb = new AABB(segmentPos.getX(), segmentPos.getY(), segmentPos.getZ(), )
+                    AABB aabb = new AABB(
+                            segmentPos.getX(), segmentPos.getY(), segmentPos.getZ(),
+                            segmentPos.getX() + segmentSize.getX(), segmentPos.getY() + segmentSize.getY(), segmentPos.getZ() + segmentSize.getZ() + 1
+                    );
 
                     Splatoon.LOGGER.info("Setup team members {}, min: {} max: {}", i, aabb.getMinPosition(), aabb.getMaxPosition());
 
@@ -720,7 +720,7 @@ public class GameFlowManager {
                     {
                         Splatoon.LOGGER.info("\t Player {}", player.getName().toString());
                         setPlayerTeam(player, i);
-                    };
+                    }
                 }
 
 
@@ -826,6 +826,30 @@ public class GameFlowManager {
             }
             if(this.currentGameState == GameState.RESULTS)
             {
+                AABB mapAABB = new AABB(this.currentMap.mapCorner, this.currentMap.mapCorner.add(this.currentMap.mapSize));
+                for(Entity entity : Splatoon.SERVER.overworld().getEntitiesOfClass(Entity.class, mapAABB))
+                {
+                    boolean doKill = false;
+                    if(entity instanceof Shulker) doKill = true;
+
+                    if(entity instanceof Sheep) doKill = true;
+
+                    if(entity instanceof Display.BlockDisplay) {
+                        if(entity.getTags().contains("InkPuck")) doKill = true;
+                    }
+
+                    if(doKill) {
+                        if(entity instanceof LivingEntity livingEntity)
+                        {
+                            Affects.hurtEntity(livingEntity, 1000.f);
+                        }
+                        else
+                        {
+                            entity.discard();
+                        }
+                    }
+                }
+
                 for(Player player : getTeamPlayers())
                 {
                     ((IPlayerMixin)player).setClass(null);
@@ -863,6 +887,11 @@ public class GameFlowManager {
 
                 setGamemode(getCurrentGamemode().toEnum());
             }
+        }
+
+        String song = GameState.getSong(this.currentGameState);
+        for(Player player : getGamersIncludingSpectators()) {
+            playSong(song, player);
         }
 
     }

@@ -1,23 +1,27 @@
 package com.plokie.management.maps;
 
+import com.plokie.management.gamemodes.Payload;
 import net.minecraft.world.phys.Vec2;
 import net.minecraft.world.phys.Vec3;
 
-public class Goldrush extends GamemodeMap {
+public class Goldrush extends PayloadMap {
     public Goldrush()
     {
-        teamSpawns.put(0, new Vec3(1434, 123, 1343));
-        teamSpawns.put(1, new Vec3(1257, 123, 1405));
+        teamSpawns.put(0, new Vec3(1558, 123, 2483));
+        teamSpawns.put(1, new Vec3(1357, 123, 2381));
 
-        this.introStartPosition = new Vec3(1428.612, 129.61529, 1332.714);
-        this.introStartRotation = new Vec2(60.54f, 0.0f);
+        altSpawns.put(0, new Vec3(1506, 126, 2444));
+        altSpawns.put(1, new Vec3(1409, 126, 2420));
 
-        this.resultsPosition = new Vec3(1291.425, 160.0, 1349.573);
-        this.resultsRotation = new Vec2(-42.6f, 41.4f);
+        this.introStartPosition = new Vec3(1420.449, 139.409, 2475.549);
+        this.introStartRotation = new Vec2(-138.0f, 0.0f);
 
-        this.mapCorner = new Vec3(1250, 103, 1420);
-        this.mapSize = new Vec3(200, 45, -123);
+        this.resultsPosition = new Vec3(1426.626, 126, 2446.469);
+        this.resultsRotation = new Vec2(-115.7f, 14.8f);
 
-        this.spectatorZone = new Vec3(1346, 146, 1374);
+        this.mapCorner = new Vec3(1353, 116, 2359);
+        this.mapSize = new Vec3(197+20, 51, 149);
+
+        this.spectatorZone = new Vec3(1457, 161, 2431);
     }
 }

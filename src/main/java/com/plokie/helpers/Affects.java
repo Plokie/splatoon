@@ -1,6 +1,7 @@
 package com.plokie.helpers;
 
 import com.plokie.Splatoon;
+import com.plokie.management.PlayerStats;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -17,6 +18,7 @@ import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.animal.sheep.Sheep;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
@@ -74,6 +76,11 @@ public class Affects {
                 entity.hurtServer((ServerLevel)level, source, amount);
                 numHurtEntities++;
             }
+        }
+
+        if(damageBy instanceof Player player)
+        {
+            PlayerStats.get(player).add(PlayerStats.DAMAGE_DEALT, (int)(numHurtEntities * amount));
         }
 
         return numHurtEntities;

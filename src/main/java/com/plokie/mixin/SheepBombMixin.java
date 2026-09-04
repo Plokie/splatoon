@@ -8,6 +8,7 @@ import com.plokie.helpers.Fill;
 import com.plokie.helpers.Teams;
 import com.plokie.interfaces.IPlayerTeamMixin;
 import com.plokie.interfaces.IProjectile;
+import com.plokie.management.PlayerStats;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
@@ -191,7 +192,7 @@ public class SheepBombMixin implements IProjectile {
                 if(player != null)
                 {
                     int numHurtEntities = Affects.hurtLivingEntitiesInRange(
-                            serverLevel, sheep.getOnPos(), 4.0f, 28.0f, player, DamageTypes.EXPLOSION
+                            serverLevel, sheep.getOnPos(), 4.0f, 28.0f, player, DamageTypes.PLAYER_EXPLOSION
                     );
 
                     IPlayerTeamMixin playerTeam = Teams.getTeamMixinFromPlayer(player);
@@ -214,6 +215,8 @@ public class SheepBombMixin implements IProjectile {
                                 playerTeam.getWallBlock(),
                                 Splatoon.Tags.WALL_BLOCKS
                         );
+
+                        PlayerStats.get(player).add(PlayerStats.BLOCKS_INKED, numReplaced);
                     }
                 }
 

@@ -4,6 +4,7 @@ import com.plokie.Splatoon;
 import com.plokie.helpers.Fill;
 import com.plokie.helpers.Teams;
 import com.plokie.interfaces.IPlayerTeamMixin;
+import com.plokie.management.PlayerStats;
 import net.minecraft.core.BlockPos;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.world.entity.Entity;
@@ -53,6 +54,8 @@ public class WindChargeMixin {
                             playerTeam.getWallBlock(),
                             Splatoon.Tags.WALL_BLOCKS
                     );
+
+                    PlayerStats.get(player).add(PlayerStats.BLOCKS_INKED, numReplaced);
                 }
             }
         }

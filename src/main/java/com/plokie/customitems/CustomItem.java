@@ -154,7 +154,7 @@ public enum CustomItem {
                             DyeColor col = DyeColor.valueOf(name);
                             item.set(DataComponents.BASE_COLOR, col);
                         }
-                        catch(Exception e)
+                        catch(Exception ignored)
                         {
 
                         }
@@ -184,6 +184,7 @@ public enum CustomItem {
     Hook(Builder
             .item(Items.TRIDENT)
             .enchant("loyalty", 3)
+            .behaviour(new Hook())
             .build()
     ),
     HealthPotion(Builder

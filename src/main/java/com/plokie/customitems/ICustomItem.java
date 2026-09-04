@@ -41,4 +41,6 @@ public class ICustomItem {
         }
     }
 
+    public void onUserFunc(Player player, Object object) {}
+
 }

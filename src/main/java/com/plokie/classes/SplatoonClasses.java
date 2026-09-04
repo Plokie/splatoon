@@ -1,6 +1,7 @@
 package com.plokie.classes;
 
 import com.mojang.brigadier.arguments.StringArgumentType;
+import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.plokie.Splatoon;
 import com.plokie.classes.abilities.Ability;
 import com.plokie.classes.abilities.AbilityManager;
@@ -54,9 +55,9 @@ public class SplatoonClasses {
                 .ability(AbilityManager.AbilityEnum.InkPuck)
                 .attribute("scale", 0.1, AttributeModifier.Operation.ADD_VALUE)
                 .attribute("step_height", 0.6, AttributeModifier.Operation.ADD_VALUE)
-                .attribute("gravity", 0.8, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL)
-                .attribute("jump_strength", 0.8, AttributeModifier.Operation.ADD_MULTIPLIED_BASE)
-                .attribute("movement_speed", 0.8, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL)
+                .attribute("gravity", 0.7, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL)
+                .attribute("jump_strength", 0.7, AttributeModifier.Operation.ADD_MULTIPLIED_BASE)
+                .attribute("movement_speed", 0.7, AttributeModifier.Operation.ADD_MULTIPLIED_BASE)
                 .attribute("knockback_resistance", -2.0, AttributeModifier.Operation.ADD_VALUE)
                 .attribute("explosion_knockback_resistance", 0.8, AttributeModifier.Operation.ADD_VALUE)
         .build()),
@@ -198,69 +199,97 @@ public class SplatoonClasses {
             }
         }).register();
 
-        CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
-            dispatcher.register(
-                    Commands.literal("class")
-                            .then(Commands.literal("set")
-                                    .then(
-                                            Commands.argument("target", EntityArgument.player())
-                                                    .then(
-                                                            Commands.argument("classId", StringArgumentType.word())
-                                                                    .suggests((ctx, builder) -> {
-                                                                                ServerPlayer target = EntityArgument.getPlayer(ctx, "target");
+        CommandBuilder.command("class").subcommand("set").argumentPlayer("player").argumentEnum("class", SplatoonClass::values).executes(ctx->{
+            try {
+                SplatoonClass klass = ctx.getArgumentEnum("class", SplatoonClass.class);
+                ServerPlayer target = ctx.getArgumentPlayer("player");
 
-                                                                                List<String> classesAutocomplete = new java.util.ArrayList<>();
-                                                                                for (String classId : Arrays.stream(SplatoonClasses.SplatoonClass.values()).map(SplatoonClasses.SplatoonClass::getID).toList()) {
-                                                                                    classesAutocomplete.add(classId);
-                                                                                }
-                                                                                classesAutocomplete.add("none");
+                ((IPlayerMixin)target).setClass(klass);
 
-                                                                                return SharedSuggestionProvider.suggest(
-                                                                                        classesAutocomplete.stream(), builder
-                                                                                );
-                                                                            }
-                                                                    )
-                                                                    .executes(ctx -> {
-                                                                        ServerPlayer target = EntityArgument.getPlayer(ctx, "target");
+                return "Set " + target.getName().getString() + " class to " + klass.toString();
+            }
+            catch(CommandSyntaxException e) {
+                return "! Unrecognised target";
+            }
+            catch(IllegalArgumentException e) {
+                return "! Unrecognised class";
+            }
+        }).register();
 
-                                                                        String classIdValue = StringArgumentType.getString(ctx, "classId");
-                                                                        if(classIdValue.equals("none"))
-                                                                        {
-                                                                            ((IPlayerMixin)(Player)target).setClass(null);
-
-                                                                            return 1;
-                                                                        }
-                                                                        else {
-                                                                            try {
-                                                                                SplatoonClasses.SplatoonClass classEnum = SplatoonClasses.SplatoonClass.valueOf(classIdValue);
-
-                                                                                ((IPlayerMixin)(Player)target).setClass(classEnum);
-
-                                                                                ctx.getSource().sendSuccess(() ->
-                                                                                                Component.literal("Set ")
-                                                                                                        .append(target.getDisplayName())
-                                                                                                        .append(" class to ")
-                                                                                                        .append(classEnum.toString())
-                                                                                        , true
-                                                                                );
-
-                                                                                return 1;
-                                                                            } catch (IllegalArgumentException e) {
-                                                                                ctx.getSource().sendFailure(
-                                                                                        Component.literal("Unrecognised class: ").append(classIdValue)
-                                                                                );
-
-                                                                                return 0;
-                                                                            }
-                                                                        }
-
-
-                                                                    })
-                                                                    .requires(source -> source.hasPermission(2))
-                                                    )
-                                    )
-                            )
-            );
-        });
+        CommandBuilder.command("class").subcommand("remove").argumentPlayer("player").executes(ctx->{
+            try {
+                ServerPlayer target = ctx.getArgumentPlayer("player");
+                ((IPlayerMixin)target).setClass(null);
+                return "Removed class from " + target.getName().getString();
+            }
+            catch(CommandSyntaxException e) {
+                return "! Unrecognised target";
+            }
+        }).register();
+//
+//        CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
+//            dispatcher.register(
+//                    Commands.literal("class")
+//                            .then(Commands.literal("set")
+//                                    .then(
+//                                            Commands.argument("target", EntityArgument.player())
+//                                                    .then(
+//                                                            Commands.argument("classId", StringArgumentType.word())
+//                                                                    .suggests((ctx, builder) -> {
+//                                                                                ServerPlayer target = EntityArgument.getPlayer(ctx, "target");
+//
+//                                                                                List<String> classesAutocomplete = new java.util.ArrayList<>();
+//                                                                                for (String classId : Arrays.stream(SplatoonClasses.SplatoonClass.values()).map(SplatoonClasses.SplatoonClass::getID).toList()) {
+//                                                                                    classesAutocomplete.add(classId);
+//                                                                                }
+//                                                                                classesAutocomplete.add("none");
+//
+//                                                                                return SharedSuggestionProvider.suggest(
+//                                                                                        classesAutocomplete.stream(), builder
+//                                                                                );
+//                                                                            }
+//                                                                    )
+//                                                                    .executes(ctx -> {
+//                                                                        ServerPlayer target = EntityArgument.getPlayer(ctx, "target");
+//
+//                                                                        String classIdValue = StringArgumentType.getString(ctx, "classId");
+//                                                                        if(classIdValue.equals("none"))
+//                                                                        {
+//                                                                            ((IPlayerMixin)(Player)target).setClass(null);
+//
+//                                                                            return 1;
+//                                                                        }
+//                                                                        else {
+//                                                                            try {
+//                                                                                SplatoonClasses.SplatoonClass classEnum = SplatoonClasses.SplatoonClass.valueOf(classIdValue);
+//
+//                                                                                ((IPlayerMixin)(Player)target).setClass(classEnum);
+//
+//                                                                                ctx.getSource().sendSuccess(() ->
+//                                                                                                Component.literal("Set ")
+//                                                                                                        .append(target.getDisplayName())
+//                                                                                                        .append(" class to ")
+//                                                                                                        .append(classEnum.toString())
+//                                                                                        , true
+//                                                                                );
+//
+//                                                                                return 1;
+//                                                                            } catch (IllegalArgumentException e) {
+//                                                                                ctx.getSource().sendFailure(
+//                                                                                        Component.literal("Unrecognised class: ").append(classIdValue)
+//                                                                                );
+//
+//                                                                                return 0;
+//                                                                            }
+//                                                                        }
+//
+//
+//                                                                    })
+//                                                                    .requires(source -> source.hasPermission(2))
+//                                                    )
+//                                    )
+//                            )
+//            );
+//        });
     }
 }

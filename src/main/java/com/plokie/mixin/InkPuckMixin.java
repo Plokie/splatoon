@@ -5,6 +5,7 @@ import com.plokie.helpers.Fill;
 import com.plokie.helpers.Teams;
 import com.plokie.interfaces.IPlayerTeamMixin;
 import com.plokie.interfaces.IProjectile;
+import com.plokie.management.PlayerStats;
 import net.fabricmc.fabric.api.networking.v1.PlayerLookup;
 import net.minecraft.commands.arguments.EntityAnchorArgument;
 import net.minecraft.core.BlockPos;
@@ -169,13 +170,14 @@ public class InkPuckMixin implements IProjectile {
         }
 
         BlockPos blockPos = self.getOnPos();
-        Fill.replace(
+        int numReplaced = Fill.replace(
                 (ServerLevel)self.level(),
                 blockPos.offset(0,1,0),
                 blockPos.offset(0,-1,0),
                 team.getGroundBlock(),
                 Splatoon.Tags.GROUND_BLOCKS
         );
+        PlayerStats.get(owner).add(PlayerStats.BLOCKS_INKED, numReplaced);
 
         if(self.tickCount % 7 == 0)
         {

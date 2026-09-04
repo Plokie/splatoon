@@ -149,7 +149,9 @@ public class CustomItemManager {
         AttackEntityCallback.EVENT.register((player, level, hand, entity, hitResult)->{
 
             Arrays.stream(CustomItem.values()).forEach(item -> {
-                if (player.getItemInHand(hand).getItemName().equals(item.getItem().getItemName())) {
+                //if (player.getItemInHand(hand).getItemName().equals(item.getItem().getItemName()))
+                if(item.is(player.getItemInHand(hand)))
+                {
                     item.getItemDefinition().getItemInterface().onAttackHit(player, entity);
                 }
             });

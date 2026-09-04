@@ -7,6 +7,7 @@ import com.plokie.helpers.Helpers;
 import com.plokie.helpers.Teams;
 import com.plokie.interfaces.IPlayerTeamMixin;
 import com.plokie.interfaces.IProjectile;
+import com.plokie.management.PlayerStats;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.DustParticleOptions;
 import net.minecraft.network.chat.Component;
@@ -104,16 +105,17 @@ public class HealthBubbleMixin implements IProjectile {
 
         if(this.textDisplay == null) return;
 
+        if(playerUUID == null) return;
+
+        Player playerOwner = level.getPlayerByUUID(playerUUID);
+
+        if(playerOwner == null) return;
+
         if(dustCol == -1 || groundBlock == Blocks.AIR) {
-            if(playerUUID != null) {
-                Player player = level.getPlayerByUUID(playerUUID);
-                if(player != null) {
-                    playerTeam = Teams.getTeamMixinFromPlayer(player);
-                    if(playerTeam != null) {
-                        dustCol = playerTeam.getTeamColourInt();
-                        groundBlock = playerTeam.getGroundBlock();
-                    }
-                }
+            playerTeam = Teams.getTeamMixinFromPlayer(playerOwner);
+            if(playerTeam != null) {
+                dustCol = playerTeam.getTeamColourInt();
+                groundBlock = playerTeam.getGroundBlock();
             }
         }
 
@@ -162,7 +164,7 @@ public class HealthBubbleMixin implements IProjectile {
             );
         }
 
-        if(playerTeam != null && self.tickCount % 10 == 0)
+        if(playerTeam != null && self.tickCount % 5 == 0)
         {
             List<Player> playersInRange = Helpers.getEntitiesInRadius(level, Player.class, self.getEyePosition(), radius);
 
@@ -175,6 +177,7 @@ public class HealthBubbleMixin implements IProjectile {
                     {
                         healPlayer.heal(2.0f);
                         self.heal(-2.0f);
+                        PlayerStats.get(playerOwner).add(PlayerStats.AMOUNT_HEALED, 2);
                     }
                 }
             }

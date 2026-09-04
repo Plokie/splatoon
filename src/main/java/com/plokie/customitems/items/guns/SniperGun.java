@@ -38,20 +38,19 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.*;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 public class SniperGun extends ICustomItem {
+    static Map<Player, Integer> scoping = new HashMap<>();
 
     public static int getTempInt(Player player)
     {
-        return player.getScore();
+        return scoping.getOrDefault(player, 0);
     }
 
     public static void setTempInt(Player player, int value)
     {
-        player.setScore(value);
+        scoping.put(player, value);
     }
 
     public static void changeTempInt(Player player, int delta)
@@ -362,7 +361,7 @@ public class SniperGun extends ICustomItem {
                 ((ServerPlayer)player).connection.send(new ClientboundSoundPacket(
                         Holder.direct(SoundEvents.EXPERIENCE_ORB_PICKUP),
                         //Holder.direct(SoundEvent.createVariableRangeEvent(ResourceLocation.fromNamespaceAndPath("splatoon", soundPath))),
-                        SoundSource.MUSIC,
+                        SoundSource.MASTER,
                         ppos.x, ppos.y, ppos.z,
                         1.0f,
                         1.0f,

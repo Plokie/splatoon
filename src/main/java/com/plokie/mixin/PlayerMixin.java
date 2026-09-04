@@ -72,6 +72,8 @@ public class PlayerMixin implements IPlayerMixin {
     private Inventory inventory;
     @Unique private Player player;
 
+    @Unique private int lastClassChangeTime = -100;
+
     @Unique private Input input = new Input(false, false, false, false, false, false, false);
     @Unique private Input oldInput = new Input(false, false, false, false, false, false, false);
     @Override
@@ -113,6 +115,10 @@ public class PlayerMixin implements IPlayerMixin {
 //        {
 //            Splatoon.LOGGER.info("\t{}:{}", trace.getFileName(), trace.getMethodName());
 //        }
+        if(klass != null)
+        {
+            lastClassChangeTime = player.tickCount;
+        }
 
         if(splatoonClass != null)
         {
@@ -355,7 +361,18 @@ public class PlayerMixin implements IPlayerMixin {
             }
         }
 
-
+        int timeSinceClassChanged = player.tickCount - lastClassChangeTime;
+        if(timeSinceClassChanged < 60)
+        {
+            Effects.givePotionEffect(player, MobEffects.RESISTANCE, 4, 10, true);
+            Affects.setAttributeModifier(player, "movement_speed", "deathcooldown", -100.0, AttributeModifier.Operation.ADD_VALUE);
+            Affects.setAttributeModifier(player, "jump_strength", "deathcooldown", -100.0, AttributeModifier.Operation.ADD_VALUE);
+            inInk = true;
+        }
+        else {
+            Affects.removeAttributeModifier(player, "movement_speed", "deathcooldown");
+            Affects.removeAttributeModifier(player, "jump_strength", "deathcooldown");
+        }
 
 
 

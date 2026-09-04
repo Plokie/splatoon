@@ -82,13 +82,13 @@ public class MovingBlocksEntity {
 
                     //
 
-                    Shulker collisionBox = EntityType.SHULKER.create(level, EntitySpawnReason.COMMAND);
-                    if(collisionBox == null) {
-                        continue;
-                    }
-                    collisionBox.setNoAi(true);
-                    collisionBox.setPos(relativePosition.x + x, relativePosition.y + y, relativePosition.z + z);
-                    level.addFreshEntity(collisionBox);
+//                    Shulker collisionBox = EntityType.SHULKER.create(level, EntitySpawnReason.COMMAND);
+//                    if(collisionBox == null) {
+//                        continue;
+//                    }
+//                    collisionBox.setNoAi(true);
+//                    collisionBox.setPos(relativePosition.x + x, relativePosition.y + y, relativePosition.z + z);
+//                    level.addFreshEntity(collisionBox);
                 }
             }
         }

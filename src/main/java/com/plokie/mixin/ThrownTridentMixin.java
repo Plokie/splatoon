@@ -3,6 +3,7 @@ package com.plokie.mixin;
 import com.plokie.Splatoon;
 import com.plokie.classes.abilities.Ability;
 import com.plokie.classes.abilities.AbilityManager;
+import com.plokie.customitems.CustomItem;
 import com.plokie.helpers.Affects;
 import com.plokie.helpers.Effects;
 import com.plokie.helpers.Fill;
@@ -10,14 +11,22 @@ import com.plokie.helpers.Teams;
 import com.plokie.interfaces.IPlayerMixin;
 import com.plokie.interfaces.IPlayerTeamMixin;
 import com.plokie.interfaces.IProjectile;
+import com.plokie.interfaces.IThrownTrident;
+import com.plokie.management.PlayerStats;
+import net.fabricmc.fabric.api.networking.v1.PlayerLookup;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
+import net.minecraft.network.protocol.game.ClientboundSetPassengersPacket;
+import net.minecraft.network.protocol.game.ClientboundTeleportEntityPacket;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.PositionMoveRotation;
+import net.minecraft.world.entity.monster.Shulker;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.AbstractArrow;
 import net.minecraft.world.entity.projectile.ThrownTrident;
@@ -32,10 +41,11 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+import java.util.Set;
 import java.util.UUID;
 
 @Mixin(AbstractArrow.class)
-public class ThrownTridentMixin implements IProjectile {
+public class ThrownTridentMixin implements IThrownTrident {
     //@Unique
     //UUID playerOwnerUUID = null;
 
@@ -43,6 +53,7 @@ public class ThrownTridentMixin implements IProjectile {
     @Unique boolean hasSetup = false;
 
     @Unique LivingEntity hookedEntity = null;
+    @Unique LivingEntity ropedEntity = null;
 
     @Override
     public void setPlayerOwner(Player player)
@@ -50,9 +61,21 @@ public class ThrownTridentMixin implements IProjectile {
 
     }
 
+    @Override
+    public void setRopedTarget(LivingEntity ropedTarget)
+    {
+        hasHit = true;
+        ropedEntity = ropedTarget;
+        //ropedTarget.startRiding((AbstractArrow)(Object)this, true);
+        //hookedEntity = ropedTarget;
+    }
+
     @Inject(method="onHitEntity", at = @At("TAIL"))
     private void onHitEntity(EntityHitResult entityHitResult, CallbackInfo ci) {
         AbstractArrow self = (AbstractArrow) (Object)this;
+
+        self.ejectPassengers();
+        ropedEntity= null;
 
         Splatoon.LOGGER.info("Hit entity {}", entityHitResult.getEntity().getName());
 
@@ -72,6 +95,9 @@ public class ThrownTridentMixin implements IProjectile {
 
         if(!(self instanceof ThrownTrident)) return;
 
+        self.ejectPassengers();
+        ropedEntity = null;
+
         if(!hasHit)
         {
             Splatoon.LOGGER.info("Hit ground");
@@ -80,15 +106,49 @@ public class ThrownTridentMixin implements IProjectile {
     }
 
     @Inject(method="tick", at = @At("TAIL"))
-    private void onTick(CallbackInfo ci)
+    private void tick(CallbackInfo ci)
     {
         AbstractArrow self = (AbstractArrow) (Object)this;
 
         if(!(self instanceof ThrownTrident)) return;
 
+        Entity owner = self.getOwner();
+
+        if(owner != null) {
+            if(owner instanceof Player playerOwner) {
+                IPlayerMixin playerMixin = (IPlayerMixin) playerOwner;
+                if(playerMixin.getSplatoonClass() == null) self.discard();
+            }
+        }
+
+//        if(!self.getPassengers().isEmpty())
+//        {
+//            for(ServerPlayer serverPlayer : PlayerLookup.tracking(self))
+//            {
+//                serverPlayer.connection.send(new ClientboundSetPassengersPacket(self));
+//            }
+//        }
+        if(ropedEntity != null) {
+            ropedEntity.setPos(self.getPosition(0.0f));
+            ropedEntity.setDeltaMovement(self.getDeltaMovement());
+            var packet = ClientboundTeleportEntityPacket.teleport(
+                    ropedEntity.getId(),
+                    new PositionMoveRotation(ropedEntity.position(), ropedEntity.getDeltaMovement(), ropedEntity.getYRot(), ropedEntity.getXRot()),
+                    Set.of(),
+                    self.onGround()
+            );
+            if(ropedEntity instanceof Player ropedPlayer) {
+                ((ServerPlayer)ropedPlayer).connection.send(packet);
+            }
+            for(ServerPlayer serverPlayer : PlayerLookup.tracking(ropedEntity))
+            {
+                serverPlayer.connection.send(packet);
+            }
+        }
+
         if(!hasSetup)
         {
-            Entity owner = self.getOwner();
+
             Splatoon.LOGGER.info("Trident thrown by {}", owner.getName());
             if(owner instanceof Player player)
             {
@@ -98,6 +158,7 @@ public class ThrownTridentMixin implements IProjectile {
                 if(ability != null) {
 //                    ability.onUseItem(player, player.getUsedItemHand(), 0);
                     ability.onUse();
+                    CustomItem.Hook.getItemDefinition().getItemInterface().onUserFunc(player, self);
                 }
                 else {
                     Splatoon.LOGGER.warn("Couldnt find hook ability on player");
@@ -115,7 +176,7 @@ public class ThrownTridentMixin implements IProjectile {
             }
         }
 
-        if(hasHit && hookedEntity != null)
+        if(hookedEntity != null)
         {
             if(!hookedEntity.isPassenger())
             {
@@ -167,6 +228,8 @@ public class ThrownTridentMixin implements IProjectile {
                         playerTeam.getWallBlock(),
                         Splatoon.Tags.WALL_BLOCKS
                 );
+
+                PlayerStats.get(player).add(PlayerStats.BLOCKS_INKED, numReplaced);
             }
 
             float nearestDistance = 9999.f;
@@ -175,6 +238,7 @@ public class ThrownTridentMixin implements IProjectile {
             AABB aabb = new AABB(self.getOnPos()).inflate(3.5);
             for(LivingEntity entity : level.getEntitiesOfClass(LivingEntity.class, aabb))
             {
+                if(entity instanceof Shulker) continue;
                 if(entity == player) continue;
 
                 float distance = entity.distanceTo(self);
