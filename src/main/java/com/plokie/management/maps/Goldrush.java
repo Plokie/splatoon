@@ -1,6 +1,7 @@
 package com.plokie.management.maps;
 
 import com.plokie.management.gamemodes.Payload;
+import net.minecraft.core.BlockPos;
 import net.minecraft.world.phys.Vec2;
 import net.minecraft.world.phys.Vec3;
 
@@ -23,5 +24,11 @@ public class Goldrush extends PayloadMap {
         this.mapSize = new Vec3(197+20, 51, 149);
 
         this.spectatorZone = new Vec3(1457, 161, 2431);
+
+        for(int i=0;i<5;i++) {
+            this.podiums.add(new BlockPos(1474, 126, 2400 + (i*4)));
+        }
+        this.podiumViewerPosition = new Vec3(1484.5, 129.0, 2408.5);
+        this.podiumViewerRotation = new Vec2(-90.0f, 20.0f);
     }
 }

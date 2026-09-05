@@ -1,5 +1,6 @@
 package com.plokie.management.maps;
 
+import net.minecraft.core.BlockPos;
 import net.minecraft.world.phys.Vec2;
 import net.minecraft.world.phys.Vec3;
 
@@ -19,5 +20,12 @@ public class MorayTowers extends GamemodeMap {
         this.mapSize = new Vec3(142, 71, 102);
 
         this.spectatorZone = new Vec3(2769, 188, 1291);
+
+        for(int i=0;i<5;i++) {
+            this.podiums.add(new BlockPos(2772, 131, 1269 + (i*4)));
+        }
+        this.podiumViewerPosition = new Vec3(2763.5, 133.0, 1277.5);
+        this.podiumViewerRotation = new Vec2(-90.0f, 10.0f);
+
     }
 }

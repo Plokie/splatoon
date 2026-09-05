@@ -25,11 +25,11 @@ import java.util.stream.Stream;
 public class AbilityManager {
     public enum AbilityEnum implements StringRepresentable {
         InkBombs("Ink Bombs", CustomItem.InkBomb, Ability.UsageTypeFlags.Block.value, 10.0f, 5),
-        CleansingGrenade("Cleansing Grenade", CustomItem.CleansingGrenade, Ability.UsageTypeFlags.Item.value, 30.0f, 1),
+        CleansingGrenade("Cleansing Grenade", CustomItem.CleansingGrenade, Ability.UsageTypeFlags.Item.value, 35.0f, 1),
         Hook("Hook", CustomItem.Hook, 0, 15.0f, 1),
         EnderPearl("Ender Pearl", CustomItem.EnderPearl, Ability.UsageTypeFlags.Item.value, 25.0f, 1),
         WindCharges("Wind Charges", CustomItem.WindCharge, Ability.UsageTypeFlags.Item.value, 5.0f, 5),
-        HealthBubble("Health Bubble", CustomItem.HealthBubble, Ability.UsageTypeFlags.Block.value, 20.0f, 1),
+        HealthBubble("Health Bubble", CustomItem.HealthBubble, Ability.UsageTypeFlags.Block.value, 30.0f, 1),
         HealthPotions("Health Potions", CustomItem.HealthPotion, Ability.UsageTypeFlags.Item.value, 5.0f, 16),
         SuperJump("Super Jump", com.plokie.classes.abilities.SuperJump::new),
         SmokeGrenade("Smoke Grenade", CustomItem.SmokeGrenade, Ability.UsageTypeFlags.Item.value, 22.5f, 1),

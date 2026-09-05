@@ -62,6 +62,20 @@ public class PlayerStatsMixin implements IPlayerStatsMixin {
     }
 
     @Override
+    public void forceAddNoMatch(PlayerStats stat, int delta)
+    {
+        if(stats.containsKey(stat)) {
+            stats.put(stat, stats.get(stat) + delta);
+        }
+        else
+        {
+            stats.put(stat, delta);
+        }
+
+        PlayerStats.updateScoreboardReflection(self, stat);
+    }
+
+    @Override
     public void addOnlyMatchStat(PlayerStats stat, int delta)
     {
         if(((IPlayerMixin)self).getSplatoonClass() == null) return;

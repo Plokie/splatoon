@@ -17,6 +17,7 @@ import net.minecraft.util.StringRepresentable;
 import net.minecraft.util.Tuple;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.scores.Objective;
+import net.minecraft.world.scores.PlayerTeam;
 import net.minecraft.world.scores.ReadOnlyScoreInfo;
 import net.minecraft.world.scores.ScoreAccess;
 import net.minecraft.world.scores.criteria.ObjectiveCriteria;
@@ -67,7 +68,7 @@ public enum PlayerStats implements StringRepresentable {
             PlayerStats stat = entry.getValue().getA();
             Splatoon.LOGGER.info("Porting old player scoreboard '{}' to new stat {} (Adding {}, was {})", entry.getKey(), stat.toString(), newValue, oldValue);
 
-            PlayerStats.get(player).forceAdd(stat, newValue);
+            PlayerStats.get(player).forceAddNoMatch(stat, newValue);
 
             player.getScoreboard().resetSinglePlayerScore(player, objective);
         }
@@ -218,8 +219,11 @@ public enum PlayerStats implements StringRepresentable {
                 String returnMessage = "Top 10 leaderboard of stat " + stat.getSerializedName() + "\n";
                 returnMessage += "----------------\n";
 
+                var sorted = scores.entrySet();
+
+
                 int idx = 0;
-                for(var entry : scores.entrySet())
+                for(var entry : sorted.stream().toList().reversed())
                 {
                     if(idx >= 10) break;
 
@@ -298,6 +302,29 @@ public enum PlayerStats implements StringRepresentable {
 
         ScoreAccess scoreAccess = player.getScoreboard().getOrCreatePlayerScore(player, objective);
         scoreAccess.set(PlayerStats.get(player).get(stat));
+    }
+
+    public static Tuple<Player, Integer> getMatchPlayerStatGreatestOf(PlayerStats stat, List<Player> players)
+    {
+        TreeMap<Integer, Player> statMap = new TreeMap<>();
+
+        for(Player player : players) {
+            int value = PlayerStats.get(player).getMatchStat(stat);
+            statMap.put(value, player);
+        }
+
+        for(var entry : statMap.entrySet()  .stream().toList().reversed()) {
+            return new Tuple<>(entry.getValue(), entry.getKey());
+        }
+
+        return new Tuple<>(null, 0);
+    }
+
+    public static void resetMatchStats(Player player)
+    {
+        for(PlayerStats stat : PlayerStats.values()) {
+            PlayerStats.get(player).forceAddOnlyMatchStat(stat, -PlayerStats.get(player).getMatchStat(stat));
+        }
     }
 
     public static final Codec<PlayerStats> CODEC = StringRepresentable.fromEnum(PlayerStats::values);

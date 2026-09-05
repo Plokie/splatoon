@@ -1,5 +1,6 @@
 package com.plokie.management.maps;
 
+import net.minecraft.core.BlockPos;
 import net.minecraft.world.phys.Vec2;
 import net.minecraft.world.phys.Vec3;
 
@@ -19,5 +20,11 @@ public class UrchinUnderpass extends GamemodeMap {
         this.mapSize = new Vec3(200, 45, -123);
 
         this.spectatorZone = new Vec3(1346, 146, 1374);
+
+        for(int i=0;i<5;i++) {
+            this.podiums.add(new BlockPos(1354, 110, 1365 + (i*4)));
+        }
+        this.podiumViewerPosition = new Vec3(1365.5, 112.0, 1373.5);
+        this.podiumViewerRotation = new Vec2(90.0f, 5.0f);
     }
 }

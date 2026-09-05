@@ -7,6 +7,7 @@ import net.minecraft.world.entity.player.Player;
 public interface IPlayerStatsMixin {
     void add(PlayerStats stat, int delta);
     void forceAdd(PlayerStats stat, int delta);
+    void forceAddNoMatch(PlayerStats stat, int delta);
     void addOnlyMatchStat(PlayerStats stat, int delta);
     void forceAddOnlyMatchStat(PlayerStats stat, int delta);
     int get(PlayerStats stat);

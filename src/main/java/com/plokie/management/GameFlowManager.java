@@ -6,6 +6,7 @@ import com.plokie.classes.SplatoonClasses;
 import com.plokie.customitems.CustomItem;
 import com.plokie.helpers.*;
 import com.plokie.interfaces.IPlayerMixin;
+import com.plokie.management.gameflow.*;
 import com.plokie.management.gamemodes.Gamemode;
 import com.plokie.management.gamemodes.Gamemodes;
 import com.plokie.management.maps.GamemodeMap;
@@ -14,6 +15,7 @@ import com.plokie.management.maps.UrchinUnderpass;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.minecraft.commands.CommandSource;
 import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.commands.arguments.EntityAnchorArgument;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Holder;
@@ -30,6 +32,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.tags.BlockTags;
 import net.minecraft.world.BossEvent;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.*;
@@ -55,41 +58,45 @@ import java.util.*;
 
 public class GameFlowManager {
     public enum GameState {
-        NONE, INTRO, CLASS_SELECT, GAME_TIME, RESULTS;
+        NONE(new None()),
+        INTRO(new Intro()),
+        CLASS_SELECT(new ClassSelect()),
+        GAME_TIME(new GameTime()),
+        RESULTS(new Results()),
+        CELEBRATION(new Celebration())
+        ;
 
-        public static GameState next(GameState current) {
-            return switch (current) {
-                case NONE -> INTRO;
-                case INTRO -> CLASS_SELECT;
-                case CLASS_SELECT -> GAME_TIME;
-                case GAME_TIME -> RESULTS;
-                case RESULTS -> NONE;
-                default -> NONE;
-            };
-        }
+        final IGameState gameState;
 
-        public static String getSong(GameState current) {
-            return switch (current) {
-//                case NONE -> INTRO;
-                case INTRO -> "music.opening.match_start";
-                case CLASS_SELECT -> "music.lobby.main";
-                case GAME_TIME -> "music.battle.splattack";
-//                case RESULTS -> NONE;
-                default -> "";
-            };
+        GameState(IGameState gameState) {
+            this.gameState = gameState;
         }
-
-        public static int getDuration(GameState state, Gamemodes gamemode)
-        {
-            return switch (state) {
-                case NONE -> -1;
-                case INTRO -> (gamemode.getGamemode().getIntroText().size() + 1) * 100;
-                case CLASS_SELECT -> 900;
-                case GAME_TIME -> 7200;
-                case RESULTS -> 600;
-                default -> -1;
-            };
-        }
+//
+//        public static String getSong(GameState current) {
+//            return switch (current) {
+////                case NONE -> INTRO;
+//                case INTRO -> "music.opening.match_start";
+//                case CLASS_SELECT -> "music.lobby.main";
+//                case GAME_TIME -> "music.battle.splattack";
+//                case RESULTS -> "music.ending.win";
+//                case CELEBRATION -> "music.ending.win_results";
+////                case RESULTS -> NONE;
+//                default -> "";
+//            };
+//        }
+//
+//        public static int getDuration(GameState state, Gamemodes gamemode)
+//        {
+//            return switch (state) {
+//                case NONE -> -1;
+//                case INTRO -> (gamemode.getGamemode().getIntroText().size() + 1) * 100;
+//                case CLASS_SELECT -> 900;
+//                case GAME_TIME -> 7200;
+//                case RESULTS -> 300;
+//                case CELEBRATION -> 600;
+//                default -> -1;
+//            };
+//        }
     }
 
     List<TeamSelector> teamSelectors = new ArrayList<>();
@@ -110,18 +117,47 @@ public class GameFlowManager {
     int timer = -1;
     boolean paused = false;
 
+    public Vec3 hubSpawn = new Vec3(-131, 103, -146);
+    public final BlockPos readyUpZone = new BlockPos(-136, 103, -160);
+    public final BlockPos readyUpZoneSize = new BlockPos(10, 5, 5);
+
+    int winningTeam = -1;
     Map<Integer, List<UUID>> players = new HashMap<>();
     List<UUID> spectators = new ArrayList<>();
     Map<Integer, Boolean> readyState = new HashMap<>();
+
+    public boolean areAllTeamsReady(Gamemode currentGamemode)
+    {
+        //if(currentGamemode == null) return false;
+
+        for(int i=0; i < currentGamemode.getNumTeams(); i++)
+        {
+            Boolean ready = readyState.get(i);
+            if(ready == null) return false;
+            if(!ready) return false;
+        }
+
+        for(TeamSelector teamSelector : teamSelectors) {
+            if(teamSelector.type != TeamSelector.Type.TeamSlot) continue;
+
+            if(teamSelector.selectedTeam == null) return false;
+        }
+
+        return true;
+    }
+
+    public void setWinningTeam(int winningTeam) {
+        this.winningTeam = winningTeam;
+    }
+
+    public int getWinningTeam() { return this.winningTeam; }
 
     public GameState getCurrentGameState() { return currentGameState; }
     public Gamemode getCurrentGamemode() { return currentGamemode; }
     public GamemodeMap getCurrentMap() { return currentMap; }
     public int getTimer() { return timer; }
 
-    Entity introGuide = null;
-
-    void setPlayerTeam(Player player, int teamIndex) {
+    public void setPlayerTeam(Player player, int teamIndex) {
         removePlayerTeam(player);
         players.get(teamIndex).add(player.getUUID());
 
@@ -141,7 +177,7 @@ public class GameFlowManager {
         }
     }
 
-    List<Player> getTeamPlayers() {
+    public List<Player> getTeamPlayers() {
         List<Player> ret = new ArrayList<>();
         if(currentGamemode != null) {
             for(int i=0; i<currentGamemode.getNumTeams(); i++) {
@@ -161,6 +197,8 @@ public class GameFlowManager {
 
     public List<Player> getTeamPlayers(int teamIndex) {
         List<Player> ret = new ArrayList<>();
+        if(teamIndex < 0) return ret;
+
         List<UUID> teamPlayers = players.get(teamIndex);
         if(teamPlayers != null) {
             for(UUID playerUUID : teamPlayers) {
@@ -191,7 +229,7 @@ public class GameFlowManager {
         return ret;
     }
 
-    void clearActivePlayers()
+    public void clearActivePlayers()
     {
         for(Player player : getTeamPlayers())
         {
@@ -216,12 +254,9 @@ public class GameFlowManager {
         }
     }
 
-    void playSong(String soundPath, Player player)
+    public void playSong(String soundPath, Player player)
     {
-        //Splatoon.LOGGER.info("Play sound {} for {}", soundPath, player.getName().getString());
         ScheduleEvent.schedule(1, server->{
-//            for(Player player : getGamersIncludingSpectators())
-//            {
                 ServerPlayer serverPlayer = (ServerPlayer)player;
                 Splatoon.LOGGER.info("Play sound {} for {}", soundPath, serverPlayer.getName().getString());
 
@@ -238,20 +273,12 @@ public class GameFlowManager {
                             player.getRandom().nextLong()
                     ));
                 }
-//            }
         });
 
     }
 
-    Vec3 hubSpawn = new Vec3(-131, 103, -146);
-    Map<Integer, Vec3> classSelectSpawns = new HashMap<>();
 
-//    private final ServerBossEvent timerBossEvent = new ServerBossEvent(
-//            Component.literal("Timer"),
-//            BossEvent.BossBarColor.PURPLE,
-//            BossEvent.BossBarOverlay.PROGRESS
-//    );
-    CustomBossEvent getTimerBossbar() {
+    public CustomBossEvent getTimerBossbar() {
         ResourceLocation barId = ResourceLocation.fromNamespaceAndPath("minecraft", "timer");
         CustomBossEvent bar = Splatoon.SERVER.getCustomBossEvents().get(barId);
         if (bar == null) {
@@ -261,15 +288,14 @@ public class GameFlowManager {
         return bar;
     }
 
-    public final BlockPos readyUpZone = new BlockPos(-136, 103, -160);
-    public final BlockPos readyUpZoneSize = new BlockPos(10, 5, 5);
 
-    boolean setGamemode(Gamemodes gamemode)
+
+    public boolean setGamemode(Gamemodes gamemode)
     {
         return setGamemode(gamemode.getGamemode());
     }
 
-    boolean setGamemode(Gamemode gamemode)
+    public boolean setGamemode(Gamemode gamemode)
     {
         if(this.currentGameState == GameState.NONE)
         {
@@ -395,11 +421,8 @@ public class GameFlowManager {
 
             spectators.add(player.getUUID());
 
-            String song = GameState.getSong(this.currentGameState);
-            if(!song.equals(""))
-            {
-                playSong(song, player);
-            }
+            String song = this.currentGameState.gameState.getStateMusic();
+            playSong(song, player);
 
             return true;
         }
@@ -410,9 +433,6 @@ public class GameFlowManager {
     {
 //        this.currentGamemode = Gamemodes.TurfWar.getGamemode();
         ServerTickEvents.START_SERVER_TICK.register(this::tick);
-
-        classSelectSpawns.put(0, new Vec3(-135.5,94,-157.5));
-        classSelectSpawns.put(1, new Vec3(-126.5,94,-157.5));
 
         players.put(0, new ArrayList<>());
         players.put(1, new ArrayList<>());
@@ -431,7 +451,7 @@ public class GameFlowManager {
         }).register();
 
         CommandBuilder.command("gameflow").subcommand("skip").executes(ctx->{
-            setGameState(GameState.next(currentGameState));
+            setGameState(currentGameState.gameState.getDefaultNextState());
             return "Skipping to next gamestate " + currentGameState.toString();
         }).register();
 
@@ -685,215 +705,38 @@ public class GameFlowManager {
 
     public void setGameState(GameState gameState)
     {
-        if(this.currentGameState != gameState && currentGamemode != null)
+        if(this.currentGameState != gameState && currentGamemode != null && currentMap != null)
         {
-            currentGamemode.onGameStateChange(this, gameState);
+            this.currentGameState.gameState.onStateExit(currentGamemode, currentMap);
         }
         this.currentGameState = gameState;
 
-        timer = GameState.getDuration(currentGameState, currentGamemode.toEnum());
+        timer = currentGameState.gameState.calculateDuration(currentGamemode, currentMap);
+
+//        timer = GameState.getDuration(currentGameState, currentGamemode.toEnum());
+        this.currentGameState.gameState.onStateEnter(currentGamemode, currentMap);
+
+        if(this.currentGamemode != null) {
+            currentGamemode.onGameStateChange(this, gameState);
+        }
 
         if(this.currentMap!= null)
         {
-            if(this.currentGameState == GameState.INTRO)
-            {
-                //PlaySong("music.opening.match_start");
 
-                int zoneSegmentWidth = (int)Math.ceil(readyUpZoneSize.getX() / (float)currentGamemode.getNumTeams());
-                for(int i=0; i < currentGamemode.getNumTeams(); i++) {
-
-                    BlockPos segmentPos = new BlockPos(readyUpZone.getX() + (zoneSegmentWidth * i) + i, readyUpZone.getY(), readyUpZone.getZ());
-                    BlockPos segmentSize = new BlockPos(zoneSegmentWidth, readyUpZoneSize.getY(), readyUpZoneSize.getZ() + 1);
-                    BlockPos halfSegmentSize = new BlockPos((int)(segmentSize.getX() * 0.5f), (int)(segmentSize.getY() * 0.5f), (int)(segmentSize.getZ() * 0.5f));
-
-                    //AABB aabb = new AABB(new BlockPos(segmentPos.getX() + halfSegmentSize.getX(), segmentPos.getY() + halfSegmentSize.getY(),  segmentPos.getZ() + halfSegmentSize.getZ()));
-                    //aabb = aabb.inflate(halfSegmentSize.getX(), halfSegmentSize.getY(), halfSegmentSize.getZ());
-//                    AABB aabb = new AABB(segmentPos.getX(), segmentPos.getY(), segmentPos.getZ(), )
-                    AABB aabb = new AABB(
-                            segmentPos.getX(), segmentPos.getY(), segmentPos.getZ(),
-                            segmentPos.getX() + segmentSize.getX(), segmentPos.getY() + segmentSize.getY(), segmentPos.getZ() + segmentSize.getZ() + 1
-                    );
-
-                    Splatoon.LOGGER.info("Setup team members {}, min: {} max: {}", i, aabb.getMinPosition(), aabb.getMaxPosition());
-
-                    for(Player player : Splatoon.SERVER.overworld().getEntitiesOfClass(Player.class, aabb))
-                    {
-                        Splatoon.LOGGER.info("\t Player {}", player.getName().toString());
-                        setPlayerTeam(player, i);
-                    }
-                }
-
-
-                ServerLevel level = Splatoon.SERVER.overworld();
-                introGuide = EntityType.BLOCK_DISPLAY.create(level, EntitySpawnReason.COMMAND);
-                assert introGuide != null;
-
-                introGuide.setPos(currentMap.introStartPosition);
-                introGuide.forceSetRotation(currentMap.introStartRotation.x, getCurrentMap().introStartRotation.y);
-
-                level.addFreshEntity(introGuide);
-            }
-            else {
-                if(introGuide != null) {
-                    introGuide.discard();
-                    introGuide = null;
-                }
-            }
-            if(this.currentGameState == GameState.CLASS_SELECT)
-            {
-                for(Player player : getGamersIncludingSpectators())
-                {
-                    if(player.getItemBySlot(EquipmentSlot.HEAD).is(Items.AIR)) {
-                        player.setItemSlot(EquipmentSlot.HEAD, player.getItemBySlot(EquipmentSlot.FEET));
-                        player.setItemSlot(EquipmentSlot.FEET, new ItemStack(Items.AIR));
-                    }
-                }
-
-                //PlaySong("music.lobby.main");
-
-                getTimerBossbar().setVisible(true);
-                getTimerBossbar().setName(Component.literal("Class select"));
-
-                for(int i=0; i < currentGamemode.getNumTeams(); i++) {
-                    Vec3 classSelect = classSelectSpawns.get(i);
-                    for(Player player : getTeamPlayers(i)) {
-                        player.teleportTo(classSelect.x, classSelect.y, classSelect.z);
-
-                        ServerPlayer serverPlayer = ((ServerPlayer)player);
-
-                        ServerPlayer.RespawnConfig respawnConfig = new ServerPlayer.RespawnConfig(ServerLevel.OVERWORLD, Helpers.toBlockPos(classSelect), 0.0f, true);
-                        serverPlayer.setRespawnPosition(respawnConfig, false);
-
-//                        CommandSourceStack source = serverPlayer.getServer().createCommandSourceStack().withSuppressedOutput();
-//                        serverPlayer.getServer().getCommands().performPrefixedCommand(source, "bossbar set minecraft:timer visible true");
-
-                        getTimerBossbar().addPlayer(serverPlayer);
-                    }
-                }
-
-                Vec3 spectatorZone = currentMap.spectatorZone;
-                for(Player player : getSpectators()) {
-                    player.teleportTo(spectatorZone.x, spectatorZone.y, spectatorZone.z);
-
-                    ServerPlayer serverPlayer = ((ServerPlayer)player);
-
-                    ServerPlayer.RespawnConfig respawnConfig = new ServerPlayer.RespawnConfig(ServerLevel.OVERWORLD, Helpers.toBlockPos(spectatorZone), 0.0f, true);
-                    serverPlayer.setRespawnPosition(respawnConfig, false);
-
-                    getTimerBossbar().addPlayer(serverPlayer);
-                }
-            }
-            if(this.currentGameState == GameState.GAME_TIME)
-            {
-                getTimerBossbar().setName(Component.literal("Game time"));
-
-                //PlaySong("music.battle.splattack");
-
-                for(int i=0; i < currentGamemode.getNumTeams(); i++) {
-                    Vec3 teamSpawn = currentMap.teamSpawns.get(i);
-                    for(Player player : getTeamPlayers(i)) {
-                        List<String> removeTags = new ArrayList<>();
-                        for(String tag : player.getTags())
-                        {
-                            if(tag.endsWith("Pick")) {
-//                                String klass = tag.substring(0, tag.length() - 4);
-                                String klass = tag.replace("Pick", "");
-                                Splatoon.LOGGER.info("XPICK {}", klass);
-
-                                try {
-                                    SplatoonClasses.SplatoonClass pickClass = SplatoonClasses.SplatoonClass.valueOf(klass);
-                                    ((IPlayerMixin)player).setClass(pickClass);
-                                }
-                                catch(Exception e)
-                                {
-                                    Splatoon.LOGGER.warn("Unknown pick tag {}", tag);
-                                }
-
-                                removeTags.add(tag);
-                            }
-                        }
-                        // avoids concurrentmodificationexception
-                        for(String tag : removeTags) {
-                            player.removeTag(tag);
-                        }
-
-                        player.teleportTo(teamSpawn.x, teamSpawn.y, teamSpawn.z);
-
-                        ServerPlayer.RespawnConfig respawnConfig = new ServerPlayer.RespawnConfig(ServerLevel.OVERWORLD, Helpers.toBlockPos(teamSpawn), 0.0f, true);
-                        ((ServerPlayer)player).setRespawnPosition(respawnConfig, false);
-                    }
-                }
-            }
-            if(this.currentGameState == GameState.RESULTS)
-            {
-                AABB mapAABB = new AABB(this.currentMap.mapCorner, this.currentMap.mapCorner.add(this.currentMap.mapSize));
-                for(Entity entity : Splatoon.SERVER.overworld().getEntitiesOfClass(Entity.class, mapAABB))
-                {
-                    boolean doKill = false;
-                    if(entity instanceof Shulker) doKill = true;
-
-                    if(entity instanceof Sheep) doKill = true;
-
-                    if(entity instanceof Display.BlockDisplay) {
-                        if(entity.getTags().contains("InkPuck")) doKill = true;
-                    }
-
-                    if(doKill) {
-                        if(entity instanceof LivingEntity livingEntity)
-                        {
-                            Affects.hurtEntity(livingEntity, 1000.f);
-                        }
-                        else
-                        {
-                            entity.discard();
-                        }
-                    }
-                }
-
-                for(Player player : getTeamPlayers())
-                {
-                    ((IPlayerMixin)player).setClass(null);
-                }
-
-                //PlaySong("");
-
-                Vec3 resultsPos = this.currentMap.resultsPosition;
-                Vec2 resultsRot = this.currentMap.resultsRotation;
-                for(Player player : getGamersIncludingSpectators()) {
-                    player.teleportTo(resultsPos.x, resultsPos.y, resultsPos.z);
-                    player.forceSetRotation(resultsRot.x, resultsRot.y);
-                }
-
-                getTimerBossbar().setVisible(false);
-                getTimerBossbar().removeAllPlayers();
-            }
             if(this.currentGameState == GameState.NONE)
             {
-                for(Player player : getGamersIncludingSpectators())
-                {
-                    if(player.getItemBySlot(EquipmentSlot.HEAD).is(Items.AIR)) {
-                        player.setItemSlot(EquipmentSlot.HEAD, player.getItemBySlot(EquipmentSlot.FEET));
-                        player.setItemSlot(EquipmentSlot.FEET, new ItemStack(Items.AIR));
-                    }
-                }
 
-                for(Player player : getGamersIncludingSpectators()) {
-                    player.teleportTo(hubSpawn.x, hubSpawn.y, hubSpawn.z);
-
-                    ServerPlayer.RespawnConfig respawnConfig = new ServerPlayer.RespawnConfig(ServerLevel.OVERWORLD, Helpers.toBlockPos(hubSpawn), 0.0f, true);
-                    ((ServerPlayer)player).setRespawnPosition(respawnConfig, false);
-                }
-                clearActivePlayers();
-
-                setGamemode(getCurrentGamemode().toEnum());
             }
         }
 
-        String song = GameState.getSong(this.currentGameState);
-        for(Player player : getGamersIncludingSpectators()) {
-            playSong(song, player);
+//        String song = GameState.getSong(this.currentGameState);
+        String song = this.currentGameState.gameState.getStateMusic();
+        if(!song.equals(""))
+        {
+            for(Player player : getGamersIncludingSpectators()) {
+                playSong(song, player);
+            }
         }
-
     }
 
     void tick(MinecraftServer server)
@@ -905,29 +748,9 @@ public class GameFlowManager {
 
         if(currentGamemode != null && currentMap != null)
         {
-            getTimerBossbar().setProgress(timer / (float)GameState.getDuration(currentGameState, currentGamemode.toEnum()));
+            getTimerBossbar().setProgress(timer / (float)currentGameState.gameState.calculateDuration(currentGamemode, currentMap));
 
-            if(currentGameState == GameState.NONE)
-            {
-                if(areAllTeamsReady())
-                {
-                    setGameState(GameState.INTRO);
-                }
-
-                for(ServerPlayer player : Splatoon.SERVER.getPlayerList().getPlayers())
-                {
-                    for(int i=0; i<9; i++)
-                    {
-//                        if(player.getInventory().getItem(i).getItemName().equals(CustomItem.SpectateItem.getItem().getItemName()))
-                        if(CustomItem.SpectateItem.is(player.getInventory().getItem(i)))
-                        {
-                            ItemStack item = new ItemStack(Items.AIR);
-                            player.getInventory().setItem(i, item);
-                        }
-                    }
-                }
-            }
-            else
+            if(currentGameState != GameState.NONE)
             {
                 for(ServerPlayer player : Splatoon.SERVER.getPlayerList().getPlayers())
                 {
@@ -942,136 +765,41 @@ public class GameFlowManager {
                         }
                     }
                 }
-
-
-                if(this.currentGameState == GameState.INTRO)
+            }
+            else
+            {
+                for(ServerPlayer player : Splatoon.SERVER.getPlayerList().getPlayers())
                 {
-                    if(introGuide != null) {
-                        for(Player player : getGamersIncludingSpectators()) {
-//                            ((ServerPlayer)player).setGameMode(GameType.);
-                            Effects.givePotionEffect(player, MobEffects.INVISIBILITY, 1, 1, true);
-                            Effects.givePotionEffect(player, MobEffects.WEAKNESS, 1, 100, true);
-
-                            if(!player.getItemBySlot(EquipmentSlot.HEAD).is(Items.AIR)) {
-                                player.setItemSlot(EquipmentSlot.FEET, player.getItemBySlot(EquipmentSlot.HEAD));
-                                player.setItemSlot(EquipmentSlot.HEAD, new ItemStack(Items.AIR));
-                            }
-
-                            if(!player.isPassenger()) {
-                                player.startRiding(introGuide, true);
-                            }
-                        }
-
-                        Vec3 forward = introGuide.getForward();
-                        Vec3 pos = introGuide.getEyePosition();
-                        forward = new Vec3(pos.x + (forward.x * 0.25f), pos.y + (forward.y * 0.25), pos.z + (forward.z * 0.25));
-
-                        introGuide.setPos(forward);
-                    }
-
-                    int duration = GameState.getDuration(currentGameState, currentGamemode.toEnum());
-                    if(timer == duration - 1)
+                    for(int i=0; i<9; i++)
                     {
-                        for(Player player : getGamersIncludingSpectators())
+//                        if(player.getInventory().getItem(i).getItemName().equals(CustomItem.SpectateItem.getItem().getItemName()))
+                        if(CustomItem.SpectateItem.is(player.getInventory().getItem(i)))
                         {
-                            ServerPlayer serverPlayer = (ServerPlayer)player;
-
-                            serverPlayer.connection.send(new ClientboundSetTitleTextPacket(Component.literal(this.currentGamemode.getName())));
-                        }
-
-
-                    }
-
-                    for(int i=0; i<this.currentGamemode.getIntroText().size(); i++)
-                    {
-                        if(timer == duration - ((i+1) * 100))
-                        {
-                            for(Player player : getGamersIncludingSpectators())
-                            {
-                                ServerPlayer serverPlayer = (ServerPlayer)player;
-
-                                player.level().playSound(
-                                        player,
-                                        player.getEyePosition().x, player.getEyePosition().y, player.getEyePosition().z,
-                                        SoundEvents.EXPERIENCE_ORB_PICKUP,
-                                        SoundSource.MASTER,
-                                        0.5f,
-                                        1.0f
-                                );
-
-                                String text = this.currentGamemode.getIntroText().get(i);
-                                serverPlayer.connection.send(new ClientboundSetSubtitleTextPacket(Component.literal(text)));
-                                serverPlayer.connection.send(new ClientboundSetTitleTextPacket(Component.literal("")));
-                            }
+                            ItemStack item = new ItemStack(Items.AIR);
+                            player.getInventory().setItem(i, item);
                         }
                     }
                 }
-                else if(this.currentGameState == GameState.RESULTS)
-                {
-                    Vec3 resultsPos = currentMap.resultsPosition;
-                    Vec2 resultsRot = currentMap.resultsRotation;
+            }
 
-                    for(Player player : getGamersIncludingSpectators())
-                    {
-                        Effects.givePotionEffect(player, MobEffects.INVISIBILITY, 1, 1, true);
-                        Effects.givePotionEffect(player, MobEffects.WEAKNESS, 1, 100, true);
-
-                        if(!player.getItemBySlot(EquipmentSlot.HEAD).is(Items.AIR)) {
-                            player.setItemSlot(EquipmentSlot.FEET, player.getItemBySlot(EquipmentSlot.HEAD));
-                            player.setItemSlot(EquipmentSlot.HEAD, new ItemStack(Items.AIR));
-                        }
-
-                        player.snapTo(resultsPos.x, resultsPos.y, resultsPos.z, resultsRot.x, resultsRot.y);
-                        player.teleportTo(resultsPos.x, resultsPos.y, resultsPos.z);
-                    }
-                }
-                else if(this.currentGameState == GameState.GAME_TIME)
-                {
-                    if(timer == 1200) {
-
-                        for(Player player : getGamersIncludingSpectators())
-                        {
-                            playSong("music.battle.last_minute", player);
-
-                            ServerPlayer serverPlayer = (ServerPlayer)player;
-                            serverPlayer.connection.send(new ClientboundSetSubtitleTextPacket(Component.literal("One minute left!")));
-                            serverPlayer.connection.send(new ClientboundSetTitleTextPacket(Component.literal("")));
-                        }
-                    }
-                }
-
+            GameState nextState = currentGameState.gameState.onStateTick(timer, currentGamemode, currentMap);
+            if(nextState != null) {
+                setGameState(nextState);
+            }
+            else
+            {
                 currentGamemode.tick(this, timer);
 
-                if(!paused)
+                if(!paused && timer > 0)
                 {
                     timer--;
                 }
 
-                if(timer <= 0)
+                if(timer == 0)
                 {
-                    setGameState(GameState.next(currentGameState));
+                    setGameState(currentGameState.gameState.getDefaultNextState());
                 }
             }
         }
-    }
-
-    boolean areAllTeamsReady()
-    {
-        if(currentGamemode == null) return false;
-
-        for(int i=0; i < currentGamemode.getNumTeams(); i++)
-        {
-            Boolean ready = readyState.get(i);
-            if(ready == null) return false;
-            if(!ready) return false;
-        }
-
-        for(TeamSelector teamSelector : teamSelectors) {
-            if(teamSelector.type != TeamSelector.Type.TeamSlot) continue;
-
-            if(teamSelector.selectedTeam == null) return false;
-        }
-
-        return true;
     }
 }

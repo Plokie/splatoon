@@ -1,5 +1,6 @@
 package com.plokie.management.gamemodes;
 
+import com.mojang.math.Transformation;
 import com.plokie.Splatoon;
 import com.plokie.helpers.Fill;
 import com.plokie.helpers.Helpers;
@@ -14,10 +15,18 @@ import net.minecraft.network.protocol.game.ClientboundSetSubtitleTextPacket;
 import net.minecraft.network.protocol.game.ClientboundSetTitleTextPacket;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.Display;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntitySpawnReason;
+import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.phys.Vec2;
+import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.scores.PlayerTeam;
+import org.joml.Vector3f;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -33,7 +42,12 @@ public class TurfWar extends Gamemode {
         maps.add(GamemodeMaps.UrchinUnderpass);
         maps.add(GamemodeMaps.MorayTowers);
         maps.add(GamemodeMaps.Cyberscape);
+
+        scoreboardDisplayEntities.put(0, new ArrayList<>());
+        scoreboardDisplayEntities.put(1, new ArrayList<>());
     }
+
+    HashMap<Integer, List<Entity>> scoreboardDisplayEntities = new HashMap<>();
 
     @Override
     public String getName() { return "Turf War"; }
@@ -58,7 +72,67 @@ public class TurfWar extends Gamemode {
 
         if(gameState == GameFlowManager.GameState.RESULTS)
         { // results
+            float totalWidth = 4.0f;
+            float perTeamSeg = totalWidth / getNumTeams();
 
+
+
+//            Display.BlockDisplay menuPivot = EntityType.BLOCK_DISPLAY.create(Splatoon.SERVER.overworld(), EntitySpawnReason.COMMAND);
+//            assert menuPivot != null;
+//            menuPivot.setPos(gameFlowManager.getCurrentMap().resultsPosition);
+//            menuPivot.setXRot(gameFlowManager.getCurrentMap().resultsRotation.x);
+//            menuPivot.setYRot(gameFlowManager.getCurrentMap().resultsRotation.y);
+//            Splatoon.SERVER.overworld().addFreshEntity(menuPivot);
+
+            Vec2 rot = gameFlowManager.getCurrentMap().resultsRotation;
+
+            Vec3 forward = Vec3.directionFromRotation(rot.y, rot.x);
+            Vec3 right = Vec3.directionFromRotation(rot.y, rot.x  + 90.0f);
+            Vec3 up = Vec3.directionFromRotation(rot.y- 90.0f, rot.x );
+
+            for(int i=0; i<getNumTeams(); i++) {
+                float localX = (perTeamSeg * i) + (perTeamSeg*0.5f);
+                float localY = 0.0f;
+                float localZ = 3.0f;
+
+                Display.BlockDisplay teamBar = EntityType.BLOCK_DISPLAY.create(Splatoon.SERVER.overworld(), EntitySpawnReason.COMMAND);
+                if(teamBar != null) {
+                    Vec3 pos = gameFlowManager.getCurrentMap().resultsPosition;
+                    pos = pos.add(right.scale(localX));
+                    //pos = pos.add(up.scale(localY + 2.0f));
+                    pos = pos.add(forward.scale(localZ));
+
+                    teamBar.setPos(pos);
+                    teamBar.forceSetRotation(rot.x, rot.y);
+//                    teamBar.setYRot(rot.y);
+
+                    teamBar.setBlockState(Blocks.WHITE_WOOL.defaultBlockState());
+
+                    teamBar.setTransformation(new Transformation(
+                            new Vector3f(-0.5f, -0.5f, -0.5f),
+                            null,
+                            new Vector3f(1.0f, 1.0f, 1.0f),
+                            null
+                    ));
+
+                    Splatoon.SERVER.overworld().addFreshEntity(teamBar);
+
+                    scoreboardDisplayEntities.get(i).add(teamBar);
+                }
+            }
+        }
+
+        if(gameState == GameFlowManager.GameState.CELEBRATION)
+        { // cleanup
+            for(var entry : scoreboardDisplayEntities.entrySet())
+            {
+                for(Entity entity : entry.getValue()) {
+                    entity.discard();
+                }
+            }
+            scoreboardDisplayEntities.clear();
+
+            teamScores.clear();
         }
 
         if(gameState == GameFlowManager.GameState.NONE)
@@ -115,7 +189,7 @@ public class TurfWar extends Gamemode {
                 return true;
             }, ()->{
                 int highestScore = 0;
-                int teamHighestScore = 0;
+                int teamHighestScore = -1;
                 for(int teamIdx=0; teamIdx < gameFlowManager.getCurrentGamemode().getNumTeams(); teamIdx++)
                 {
                     if(teamScores.get(teamIdx) != null)
@@ -128,25 +202,29 @@ public class TurfWar extends Gamemode {
                     }
                 }
 
-                String winningTeam = "Error";
-                List<Player> winningTeamMembers = gameFlowManager.getTeamPlayers(teamHighestScore);
-                if(!winningTeamMembers.isEmpty())
-                {
-                    Player player = winningTeamMembers.get(0);
-                    IPlayerTeamMixin teamMixin = Teams.getTeamMixinFromPlayer(player);
-                    if(teamMixin != null) {
-                        PlayerTeam playerTeam = (PlayerTeam)teamMixin;
-                        winningTeam = playerTeam.getName();
-                    }
-                }
+                gameFlowManager.setWinningTeam(teamHighestScore);
 
+                gameFlowManager.setGameState(GameFlowManager.GameState.CELEBRATION);
 
-                for(Player player : gameFlowManager.getGamersIncludingSpectators())
-                {
-                    ServerPlayer serverPlayer = (ServerPlayer)player;
+//                String winningTeam = "Error";
+//                List<Player> winningTeamMembers = gameFlowManager.getTeamPlayers(teamHighestScore);
+//                if(!winningTeamMembers.isEmpty())
+//                {
+//                    Player player = winningTeamMembers.get(0);
+//                    IPlayerTeamMixin teamMixin = Teams.getTeamMixinFromPlayer(player);
+//                    if(teamMixin != null) {
+//                        PlayerTeam playerTeam = (PlayerTeam)teamMixin;
+//                        winningTeam = playerTeam.getName();
+//                    }
+//                }
 
-                    serverPlayer.connection.send(new ClientboundSetTitleTextPacket(Component.literal("Winning team: ").append(winningTeam)));
-                }
+//                for(Player player : gameFlowManager.getGamersIncludingSpectators())
+//                {
+//                    ServerPlayer serverPlayer = (ServerPlayer)player;
+//
+//                    serverPlayer.connection.send(new ClientboundSetTitleTextPacket(Component.literal("Winning team: ").append(winningTeam)));
+//                }
+
 
                 return true;
             });

@@ -1,8 +1,13 @@
 package com.plokie.helpers;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.util.ProblemReporter;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.storage.TagValueInput;
+import net.minecraft.world.level.storage.TagValueOutput;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Vector3d;
@@ -56,5 +61,19 @@ public class Helpers {
         }
 
         return  ret;
+    }
+
+    public static void mergeNbtIntoEntity(Entity entity, CompoundTag nbt) {
+        HolderLookup.Provider registries = entity.level().registryAccess();
+
+        TagValueOutput vo = TagValueOutput.createWithoutContext(ProblemReporter.DISCARDING);
+        entity.saveWithoutId(vo);
+
+        CompoundTag newNbt = vo.buildResult();
+        newNbt.merge(nbt);
+
+        TagValueInput vi = (TagValueInput) TagValueInput.create(ProblemReporter.DISCARDING, registries, newNbt);
+
+        entity.load(vi);
     }
 }
