@@ -2,13 +2,15 @@ package com.plokie.customitems;
 
 import com.plokie.classes.abilities.Ability;
 import com.plokie.interfaces.IPlayerMixin;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.BlockHitResult;
 
 public class ICustomItem {
     protected int useDuration = 1;
-    protected int usageRate = 1;
+    protected int usageRate = 5;
 
     public int getUseDuration() { return useDuration; }
     public int getUsageRate() { return usageRate; }
@@ -17,7 +19,7 @@ public class ICustomItem {
 
         int idx = 0;
         for(Ability ability : playerMixin.getAbilities()) {
-            if(ability.getItem().is(player.getItemInHand(player.getUsedItemHand())))
+            if(ability.getItem().is(player.getItemBySlot(EquipmentSlot.MAINHAND)))
             {
                 ability.onUseItem(player, player.getUsedItemHand(), idx);
             }
@@ -33,9 +35,9 @@ public class ICustomItem {
 
         int idx = 0;
         for(Ability ability : playerMixin.getAbilities()) {
-            if(ability.getItem().is(player.getItemInHand(player.getUsedItemHand())))
+            if(ability.getItem().is(player.getItemBySlot(EquipmentSlot.MAINHAND)))
             {
-                ability.onUseBlock(player, player.getUsedItemHand(), hit, idx);
+                ability.onUseBlock(player, InteractionHand.MAIN_HAND, hit, idx);
             }
             idx++;
         }

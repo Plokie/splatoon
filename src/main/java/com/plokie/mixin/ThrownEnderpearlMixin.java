@@ -3,6 +3,7 @@ package com.plokie.mixin;
 import com.plokie.Splatoon;
 import com.plokie.helpers.Effects;
 import com.plokie.helpers.Fill;
+import com.plokie.helpers.Helpers;
 import com.plokie.helpers.Teams;
 import com.plokie.interfaces.IPlayerTeamMixin;
 import com.plokie.management.PlayerStats;
@@ -71,6 +72,8 @@ public class ThrownEnderpearlMixin {
                     PlayerStats.get(player).add(PlayerStats.BLOCKS_INKED, numReplaced);
 
                     Effects.explosionEffect(level, player.getOnPos());
+
+                    Helpers.inkSlimesInRadius(self.position(), 3.0f, player);
                 }
             }
         }

@@ -6,6 +6,7 @@ import com.plokie.helpers.Helpers;
 import com.plokie.helpers.Teams;
 import com.plokie.interfaces.IPlayerTeamMixin;
 import com.plokie.management.GameFlowManager;
+import com.plokie.management.PlayerStats;
 import com.plokie.management.maps.GamemodeMap;
 import com.plokie.management.maps.GamemodeMaps;
 import net.minecraft.core.BlockPos;
@@ -13,7 +14,9 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.entity.player.Player;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Supplier;
 
 public abstract class Gamemode {
@@ -38,6 +41,8 @@ public abstract class Gamemode {
     {
         return Gamemodes.valueOf(getClass().getSimpleName());
     }
+
+    public Map<PlayerStats, Float> rewards = new HashMap<>();
 
     int clearIndex = 0;
     protected void clearStepMap(){

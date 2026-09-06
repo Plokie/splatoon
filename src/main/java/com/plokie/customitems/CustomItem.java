@@ -67,6 +67,7 @@ public enum CustomItem {
                     .item(Items.IRON_AXE)
                     .name("Iron Axe")
                     .enchant("sharpness", 4)
+                    .behaviour(new SupportAxe())
             .build()
     ),
     JumperMace(
@@ -141,27 +142,27 @@ public enum CustomItem {
                     .enchant("knockback", 5)
             .build()
     ),
-    Shield(
-            Builder
-                    .item(Items.SHIELD)
-                    .name("Shield")
-                    .dataCallback((player, item)->{
-                        IPlayerTeamMixin team = Teams.getTeamMixinFromPlayer(player);
-                        if(team == null) return;
-                        PlayerTeam playerTeam = (PlayerTeam)team;
-                        String name = playerTeam.getName().toUpperCase();
-                        try {
-                            DyeColor col = DyeColor.valueOf(name);
-                            item.set(DataComponents.BASE_COLOR, col);
-                        }
-                        catch(Exception ignored)
-                        {
-
-                        }
-
-                    })
-            .build()
-    ),
+//    Shield(
+//            Builder
+//                    .item(Items.SHIELD)
+//                    .name("Shield")
+//                    .dataCallback((player, item)->{
+//                        IPlayerTeamMixin team = Teams.getTeamMixinFromPlayer(player);
+//                        if(team == null) return;
+//                        PlayerTeam playerTeam = (PlayerTeam)team;
+//                        String name = playerTeam.getName().toUpperCase();
+//                        try {
+//                            DyeColor col = DyeColor.valueOf(name);
+//                            item.set(DataComponents.BASE_COLOR, col);
+//                        }
+//                        catch(Exception ignored)
+//                        {
+//
+//                        }
+//
+//                    })
+//            .build()
+//    ),
     SpectateItem(
             Builder
                     .item(Items.WARPED_FUNGUS_ON_A_STICK)

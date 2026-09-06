@@ -3,6 +3,7 @@ package com.plokie.management.gameflow;
 import com.plokie.Splatoon;
 import com.plokie.helpers.Effects;
 import com.plokie.management.GameFlowManager;
+import com.plokie.management.PlayerStats;
 import com.plokie.management.gamemodes.Gamemode;
 import com.plokie.management.maps.GamemodeMap;
 import net.minecraft.core.BlockPos;
@@ -65,6 +66,10 @@ public class Intro implements IGameState {
         introGuide.forceSetRotation(currentMap.introStartRotation.x, currentMap.introStartRotation.y);
 
         level.addFreshEntity(introGuide);
+
+        for(Player player : Splatoon.gameFlowManager.getTeamPlayers()) {
+            PlayerStats.resetMatchStats(player);
+        }
     }
 
     @Override

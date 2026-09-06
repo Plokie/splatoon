@@ -18,6 +18,8 @@ import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.animal.sheep.Sheep;
+import net.minecraft.world.entity.monster.Shulker;
+import net.minecraft.world.entity.monster.Slime;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
@@ -74,6 +76,10 @@ public class Affects {
             if(entity.distanceToSqr(new Vec3(pos.x, pos.y, pos.z)) < radius*radius)
             {
                 entity.hurtServer((ServerLevel)level, source, amount);
+
+                if(entity instanceof Shulker) continue;
+                if(entity instanceof Slime) continue;
+
                 numHurtEntities++;
             }
         }

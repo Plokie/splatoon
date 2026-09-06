@@ -2,6 +2,7 @@ package com.plokie.management.maps;
 
 import com.plokie.management.gamemodes.Payload;
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.Vec2;
 import net.minecraft.world.phys.Vec3;
 
@@ -29,6 +30,9 @@ public class Goldrush extends PayloadMap {
             this.podiums.add(new BlockPos(1474, 126, 2400 + (i*4)));
         }
         this.podiumViewerPosition = new Vec3(1484.5, 129.0, 2408.5);
-        this.podiumViewerRotation = new Vec2(-90.0f, 20.0f);
+        this.podiumViewerRotation = new Vec2(90.0f, 20.0f);
+
+        this.groundBlock = Blocks.RED_SAND;
+        this.wallBlock = Blocks.PALE_MOSS_BLOCK;
     }
 }

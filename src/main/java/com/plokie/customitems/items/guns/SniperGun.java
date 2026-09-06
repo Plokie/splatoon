@@ -6,6 +6,7 @@ import com.plokie.customitems.ICustomItem;
 import com.plokie.helpers.*;
 import com.plokie.interfaces.IPlayerMixin;
 import com.plokie.interfaces.IPlayerTeamMixin;
+import com.plokie.management.PlayerStats;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
@@ -268,7 +269,7 @@ public class SniperGun extends ICustomItem {
                     //Block wallBlock = playerTeam.getWallBlock();
                     DustParticleOptions dustParticleOptions = new DustParticleOptions(dustCol, 1);
 
-                    for(float i=0; i < distanceToHitPoint; i+=0.5f)
+                    for(float i=0; i < distanceToHitPoint + 1.0; i+=0.5f)
                     {
                         Vec3 pos = new Vec3(
                                 eyePos.x + (forward.x * i),
@@ -293,13 +294,15 @@ public class SniperGun extends ICustomItem {
                                     Splatoon.Tags.GROUND_BLOCKS
                             );
 
-                            numReplaced = Fill.replace(
+                            numReplaced += Fill.replace(
                                     level, Helpers.toBlockPos(pos),
                                     new BlockPos(0,1,0),
                                     new BlockPos(0,-10,0),
                                     playerTeam.getWallBlock(),
                                     Splatoon.Tags.WALL_BLOCKS
                             );
+
+                            PlayerStats.get(player).add(PlayerStats.BLOCKS_INKED, numReplaced);
                         }
                     }
                 }
@@ -385,13 +388,17 @@ public class SniperGun extends ICustomItem {
                         Splatoon.Tags.GROUND_BLOCKS
                 );
 
-                numReplaced = Fill.replace(
+                numReplaced += Fill.replace(
                         level, entity.getOnPos(),
                         new BlockPos(2,2,2),
                         new BlockPos(-2,-2,-2),
                         playerTeam.getWallBlock(),
                         Splatoon.Tags.WALL_BLOCKS
                 );
+
+                PlayerStats.get(player).add(PlayerStats.BLOCKS_INKED, numReplaced);
+
+                Helpers.inkSlimesInRadius(entity.getOnPos(), 1.5f, player);
             }
         }
     }

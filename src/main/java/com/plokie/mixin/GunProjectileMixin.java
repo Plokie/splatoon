@@ -7,6 +7,7 @@ import com.plokie.helpers.Affects;
 import com.plokie.helpers.Fill;
 import com.plokie.helpers.Teams;
 import com.plokie.interfaces.IGunProjectileMixin;
+import com.plokie.interfaces.IInkablePayloadBlock;
 import com.plokie.interfaces.IPlayerTeamMixin;
 import com.plokie.management.PlayerStats;
 import net.minecraft.core.BlockPos;
@@ -14,6 +15,7 @@ import net.minecraft.tags.BlockTags;
 import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.monster.Slime;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.Snowball;
 import net.minecraft.world.entity.projectile.ThrowableItemProjectile;
@@ -45,6 +47,24 @@ public class GunProjectileMixin implements IGunProjectileMixin {
     @Inject(method="onHitEntity", at=@At("TAIL"))
     void onHitEntity(EntityHitResult entityHitResult, CallbackInfo ci)
     {
+        Snowball snowball = (Snowball)(Object)this;
+        Entity ownerEntity = snowball.getOwner();
+        if(ownerEntity == null) return;
+        if(!(ownerEntity instanceof Player player)) return;
+
+        if(entityHitResult.getEntity() instanceof Slime slime) {
+            IPlayerTeamMixin team = Teams.getTeamMixinFromPlayer(player);
+            if(team != null) {
+                IPlayerTeamMixin currentTeam = ((IInkablePayloadBlock)slime).getTeam();
+                if(currentTeam != team) {
+                    ((IInkablePayloadBlock)slime).setTeam(team);
+                    PlayerStats.get(player).add(PlayerStats.PAYLOAD_INKED, 1);
+                }
+            }
+
+        }
+
+
         hit(entityHitResult.getEntity());
     }
 

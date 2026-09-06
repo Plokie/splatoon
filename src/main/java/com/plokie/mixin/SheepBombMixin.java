@@ -2,10 +2,7 @@ package com.plokie.mixin;
 
 import com.mojang.math.Transformation;
 import com.plokie.Splatoon;
-import com.plokie.helpers.Affects;
-import com.plokie.helpers.Effects;
-import com.plokie.helpers.Fill;
-import com.plokie.helpers.Teams;
+import com.plokie.helpers.*;
 import com.plokie.interfaces.IPlayerTeamMixin;
 import com.plokie.interfaces.IProjectile;
 import com.plokie.management.PlayerStats;
@@ -179,7 +176,12 @@ public class SheepBombMixin implements IProjectile {
         if(sheep.onGround()) {
             fuseTime += 3;
         }
-        else {
+        else if(sheep.isPassenger())
+        {
+            // no fuse if passenger of something (dont explode while being carried)
+        }
+        else
+        {
             fuseTime += 1;
         }
 
@@ -217,6 +219,8 @@ public class SheepBombMixin implements IProjectile {
                         );
 
                         PlayerStats.get(player).add(PlayerStats.BLOCKS_INKED, numReplaced);
+
+                        Helpers.inkSlimesInRadius(sheep.position(), 3.0f, player);
                     }
                 }
 

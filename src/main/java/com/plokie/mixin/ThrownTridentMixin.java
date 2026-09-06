@@ -4,10 +4,7 @@ import com.plokie.Splatoon;
 import com.plokie.classes.abilities.Ability;
 import com.plokie.classes.abilities.AbilityManager;
 import com.plokie.customitems.CustomItem;
-import com.plokie.helpers.Affects;
-import com.plokie.helpers.Effects;
-import com.plokie.helpers.Fill;
-import com.plokie.helpers.Teams;
+import com.plokie.helpers.*;
 import com.plokie.interfaces.IPlayerMixin;
 import com.plokie.interfaces.IPlayerTeamMixin;
 import com.plokie.interfaces.IProjectile;
@@ -27,6 +24,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.PositionMoveRotation;
 import net.minecraft.world.entity.monster.Shulker;
+import net.minecraft.world.entity.monster.Slime;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.AbstractArrow;
 import net.minecraft.world.entity.projectile.ThrownTrident;
@@ -230,6 +228,8 @@ public class ThrownTridentMixin implements IThrownTrident {
                 );
 
                 PlayerStats.get(player).add(PlayerStats.BLOCKS_INKED, numReplaced);
+
+                Helpers.inkSlimesInRadius(self.position(), 3.0f, player);
             }
 
             float nearestDistance = 9999.f;
@@ -239,6 +239,7 @@ public class ThrownTridentMixin implements IThrownTrident {
             for(LivingEntity entity : level.getEntitiesOfClass(LivingEntity.class, aabb))
             {
                 if(entity instanceof Shulker) continue;
+                if(entity instanceof Slime) continue;
                 if(entity == player) continue;
 
                 float distance = entity.distanceTo(self);

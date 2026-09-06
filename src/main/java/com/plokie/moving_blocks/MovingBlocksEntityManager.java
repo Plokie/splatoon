@@ -34,7 +34,7 @@ public class MovingBlocksEntityManager {
             Vec3 pivotOffset = ctx.getArgumentVec3("pivot_offset");
             Vec3 spawnPos = ctx.getStack().getSource().getPosition();
 
-            MovingBlocksEntity movingBlocksEntity = MovingBlocksEntity.create(level, corner0, corner1, pivotOffset, spawnPos);
+            MovingBlocksEntity movingBlocksEntity = MovingBlocksEntity.create(level, corner0, corner1, pivotOffset, spawnPos, false);
             if(movingBlocksEntity==null) {
                 return "! Something went wrong, check console for more info";
             }

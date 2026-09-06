@@ -7,6 +7,7 @@ import com.plokie.helpers.Fill;
 import com.plokie.helpers.Teams;
 import com.plokie.interfaces.IPlayerMixin;
 import com.plokie.interfaces.IPlayerTeamMixin;
+import com.plokie.management.PlayerStats;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
@@ -40,6 +41,8 @@ public class JumperMace extends ICustomItem {
                         team.getGroundBlock(),
                         Splatoon.Tags.GROUND_BLOCKS
                 );
+
+                PlayerStats.get(player).add(PlayerStats.BLOCKS_INKED, filled);
 
             }
 

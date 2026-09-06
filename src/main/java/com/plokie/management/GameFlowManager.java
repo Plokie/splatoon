@@ -301,6 +301,8 @@ public class GameFlowManager {
         {
             this.currentGamemode = gamemode;
 
+            this.currentMap = gamemode.getMaps().get(0).getMap();
+
             teamSelectors.clear();
             teamSelectors.add(new TeamSelector(new BlockPos(-122, 88, -127), TeamSelector.Type.OwnTeam, -1));
 

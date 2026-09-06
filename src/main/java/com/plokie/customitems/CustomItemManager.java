@@ -13,15 +13,20 @@ import net.minecraft.commands.Commands;
 import net.minecraft.commands.SharedSuggestionProvider;
 import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.network.protocol.game.ClientboundSetActionBarTextPacket;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 
 import java.util.*;
+import java.util.stream.Stream;
 
 public class CustomItemManager {
     static class ExtraCustomItemTick {
@@ -29,7 +34,7 @@ public class CustomItemManager {
         public int ticksLeft;
         public int timeUsing = 0;
     }
-    Map<Player, ExtraCustomItemTick> extraItemUsageTicks = new HashMap<>();
+    Map<UUID, Map<CustomItem, ExtraCustomItemTick>> extraItemUsageTicks = new HashMap<>();
 
     Map<CustomItem, List<Player>> isPlayerHolding = new HashMap<>();
 
@@ -37,8 +42,9 @@ public class CustomItemManager {
     {
         ServerTickEvents.END_SERVER_TICK.register((server)->{
             server.getPlayerList().getPlayers().forEach(player -> {
+
                 Arrays.stream(CustomItem.values()).forEach(item -> {
-                    ItemStack itemInHand = player.getItemInHand(player.getUsedItemHand());
+                    ItemStack itemInHand = player.getItemBySlot(EquipmentSlot.MAINHAND);
 
                     List<Player> playersHolding = isPlayerHolding.get(item);
                     if(playersHolding == null)
@@ -47,11 +53,8 @@ public class CustomItemManager {
                         playersHolding = isPlayerHolding.get(item);
                     }
 
-                    //if(itemInHand.getItemName().equals(item.getItem().getItemName()))
                     if(item.is(itemInHand))
                     {
-                        //item.getItemDefinition().getItemInterface().whileHeld(player);
-
                         if(!playersHolding.contains(player)  )
                         {
                             playersHolding.add(player);
@@ -69,64 +72,99 @@ public class CustomItemManager {
                 });
             });
 
-            for(Map.Entry<Player, ExtraCustomItemTick> entry : new HashMap<>(extraItemUsageTicks).entrySet())
+//            server.getPlayerList().getPlayers().forEach(player -> {
+//                MutableComponent actionbarDebug = Component.literal("");
+//                for(Map.Entry<UUID, Map<CustomItem, ExtraCustomItemTick>> entry : new HashMap<>(extraItemUsageTicks).entrySet()) {
+//                    if(entry.getKey() != player.getUUID()) continue;
+//                    for(var itemEntry : entry.getValue().entrySet()) {
+//                        ExtraCustomItemTick extra = itemEntry.getValue();
+//                        CustomItem item = extra.item;
+//                        int ticksLeft = extra.ticksLeft;
+//                        int timeUsing = extra.timeUsing;
+//                        int modResult = itemEntry.getValue().timeUsing % item.getItemDefinition().getItemInterface().getUsageRate();
+//
+//                        actionbarDebug.append(Component.literal(item.toString()+":"));
+//                        actionbarDebug.append(Component.literal(" "+ticksLeft));
+//                        actionbarDebug.append(Component.literal(" "+timeUsing));
+//                        actionbarDebug.append(Component.literal(" "+modResult));
+//                        actionbarDebug.append(Component.literal("\n"));
+//                    }
+//                }
+//                player.connection.send(new ClientboundSetActionBarTextPacket(actionbarDebug));
+//            });
+
+            for(Map.Entry<UUID, Map<CustomItem, ExtraCustomItemTick>> entry : new HashMap<>(extraItemUsageTicks).entrySet())
             {
-                Player player = entry.getKey();
-                CustomItem item = entry.getValue().item;
+                Player player = Splatoon.SERVER.getPlayerList().getPlayer(entry.getKey());
+                if(player == null) continue;
 
-                if(entry.getValue().timeUsing % item.getItemDefinition().getItemInterface().getUsageRate() == 0)
-                {
-                    if(entry.getValue().ticksLeft <= 0) {
-                        extraItemUsageTicks.remove(player);
-                    }
-                    else
+                var itemsInUse = entry.getValue();
+
+                for(var itemEntry : new ArrayList<>(itemsInUse.entrySet().stream().toList()) ) {
+
+                    ExtraCustomItemTick extra = itemEntry.getValue();
+                    CustomItem item = extra.item;
+
+                    if(extra.timeUsing % item.getItemDefinition().getItemInterface().getUsageRate() == 0)
                     {
-                        //if(player.getItemInHand(player.getUsedItemHand()).getItemName().equals(item.getItem().getItemName()))
-                        if(item.is(player.getItemInHand(player.getUsedItemHand())))
-                        {
-                            item.getItemDefinition().getItemInterface().onUseItem(player);
+                        if(extra.ticksLeft <= 0) {
+                            itemsInUse.remove(item);
                         }
+                        else
+                        {
+                            if(item.is(player.getItemBySlot(EquipmentSlot.MAINHAND)))
+                            {
+                                item.getItemDefinition().getItemInterface().onUseItem(player);
+                            }
 
+                        }
                     }
+
+                    itemEntry.getValue().timeUsing++;
+//                    if(item.is(player.getItemBySlot(EquipmentSlot.MAINHAND))
+//                    {
+//                    }
+
+
+                    itemEntry.getValue().ticksLeft--;
+
                 }
 
-                //Splatoon.LOGGER.info("Ticks left: {}, time using: {}", entry.getValue().ticksLeft, entry.getValue().timeUsing);
-
-                entry.getValue().timeUsing++;
-
-                entry.getValue().ticksLeft--;
-
-//                if(entry.getValue().ticksLeft <= 0) {
-//                    extraItemUsageTicks.remove(player);
-//                }
             }
         });
 
         UseItemCallback.EVENT.register((player, world, hand) -> {
-            //Splatoon.LOGGER.info("Use {}", player.getItemInHand(hand).getItemName());
-            //Splatoon.LOGGER.info("test: {}", player.getItemInHand(hand).getHoverName());
+            if(hand != InteractionHand.MAIN_HAND) return InteractionResult.PASS;
+
+            //Splatoon.LOGGER.info("useitemcallback {}", player.getItemBySlot(EquipmentSlot.MAINHAND).getItemName());
 
 
             Arrays.stream(CustomItem.values()).forEach(item -> {
                 //Splatoon.LOGGER.info("\tCheck if {}", item.getItem().getItemName());
-                if(item.is(player.getItemInHand(hand)))
+                if(item.is(player.getItemBySlot(EquipmentSlot.MAINHAND)))
                 {
                     //Splatoon.LOGGER.info("\tit is");
                     int useDuration = item.getItemDefinition().getItemInterface().getUseDuration();
 
                     if(useDuration > 0)
                     {
-                        if(extraItemUsageTicks.containsKey(player))
+                        if(!extraItemUsageTicks.containsKey(player.getUUID()))
                         {
-                            extraItemUsageTicks.get(player).ticksLeft = useDuration;
+                            extraItemUsageTicks.put(player.getUUID(), new HashMap<>());
                         }
-                        else
-                        {
+
+                        var itemsInUse = extraItemUsageTicks.get(player.getUUID());
+
+                        if(itemsInUse.containsKey(item)) {
+                            itemsInUse.get(item).ticksLeft = useDuration;
+                        }
+                        else {
                             ExtraCustomItemTick itemTick = new ExtraCustomItemTick();
                             itemTick.item = item;
                             itemTick.ticksLeft = useDuration;
-                            extraItemUsageTicks.put(player, itemTick);
+                            itemsInUse.put(item, itemTick);
                         }
+
                     }
                 }
             });
@@ -135,10 +173,11 @@ public class CustomItemManager {
         });
 
         UseBlockCallback.EVENT.register((player, world, hand, hitResult) -> {
-            //Splatoon.LOGGER.info("Use block {}", player.getItemInHand(hand).getItemName());
+            if(hand != InteractionHand.MAIN_HAND) return InteractionResult.PASS;
+
             Arrays.stream(CustomItem.values()).forEach(item->{
-                //Splatoon.LOGGER.info("\tCheck if {}", item.getItem().getItemName());
-                if(item.is(player.getItemInHand(hand))) {
+
+                if(item.is(player.getItemBySlot(EquipmentSlot.MAINHAND))) {
                     //.LOGGER.info("\tit is");
                     item.getItemDefinition().getItemInterface().onUseBlock(player, hitResult);
                 }
@@ -147,10 +186,10 @@ public class CustomItemManager {
         });
 
         AttackEntityCallback.EVENT.register((player, level, hand, entity, hitResult)->{
+            if(hand != InteractionHand.MAIN_HAND) return InteractionResult.PASS;
 
             Arrays.stream(CustomItem.values()).forEach(item -> {
-                //if (player.getItemInHand(hand).getItemName().equals(item.getItem().getItemName()))
-                if(item.is(player.getItemInHand(hand)))
+                if(item.is(player.getItemBySlot(EquipmentSlot.MAINHAND)))
                 {
                     item.getItemDefinition().getItemInterface().onAttackHit(player, entity);
                 }

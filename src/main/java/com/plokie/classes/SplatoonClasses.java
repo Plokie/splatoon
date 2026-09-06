@@ -64,7 +64,7 @@ public class SplatoonClasses {
         Support("Support", SplatoonClassDefinition.Builder.start()
                 .customItem(CustomItem.SupportAxe)
                 .customItem(CustomItem.Burstshot)
-                //.offhand(CustomItem.Shield)
+//                .offhand(CustomItem.Shield)
                 .ability(AbilityManager.AbilityEnum.HealthBubble)
                 .ability(AbilityManager.AbilityEnum.HealthPotions)
                 .attribute("scale", 0.3, AttributeModifier.Operation.ADD_VALUE)

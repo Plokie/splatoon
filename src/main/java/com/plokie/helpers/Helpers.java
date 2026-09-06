@@ -1,14 +1,21 @@
 package com.plokie.helpers;
 
+import com.plokie.interfaces.IInkablePayloadBlock;
+import com.plokie.interfaces.IPlayerTeamMixin;
+import com.plokie.management.PlayerStats;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.util.Mth;
 import net.minecraft.util.ProblemReporter;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.monster.Slime;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.storage.TagValueInput;
 import net.minecraft.world.level.storage.TagValueOutput;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec2;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Vector3d;
 import org.joml.Vector3f;
@@ -75,5 +82,68 @@ public class Helpers {
         TagValueInput vi = (TagValueInput) TagValueInput.create(ProblemReporter.DISCARDING, registries, newNbt);
 
         entity.load(vi);
+    }
+
+    public static Vec3 localToWorld(Vec3 observerPos, double yawDeg, double pitchDeg, Vec3 localVector)
+    {
+        double yaw = Math.toRadians(yawDeg);
+        double pitch = Math.toRadians(pitchDeg);
+
+        double cosYaw = Math.cos(yaw);
+        double sinYaw = Math.sin(yaw);
+        double cosPitch = Math.cos(pitch);
+        double sinPitch = Math.sin(pitch);
+
+        double yy = localVector.y * cosPitch - localVector.z * sinPitch;
+        double zz = localVector.z * cosPitch + localVector.y * sinPitch;
+
+        Vec3 relative = new Vec3(
+                localVector.x * cosYaw - zz * sinYaw,
+                yy,
+                localVector.x * sinYaw + zz * cosYaw
+        );
+
+        return observerPos.add(relative);
+    }
+
+    public static Vec3 localToWorld(Entity entity, Vec3 localVector) {
+        return localToWorld(entity.getPosition(0.0f), entity.getYRot(), entity.getXRot(), localVector);
+    }
+
+    public static void inkSlimesInRadius(BlockPos worldPos, float radius, Player inkedBy)
+    {
+        inkSlimesInRadius(new Vec3(worldPos.getX(), worldPos.getY(), worldPos.getZ()), radius, inkedBy);
+    }
+
+    public static void inkSlimesInRadius(Vec3 worldPos, float radius, Player inkedBy) {
+        IPlayerTeamMixin playerTeam = Teams.getTeamMixinFromPlayer(inkedBy);
+        if(playerTeam == null) return;
+
+        for (Slime slime : getEntitiesInRadius(inkedBy.level(), Slime.class, worldPos, radius)) {
+            IInkablePayloadBlock payloadBlock = (IInkablePayloadBlock)slime;
+
+            if(payloadBlock.getTeam() != playerTeam) {
+                payloadBlock.setTeam(playerTeam);
+                PlayerStats.get(inkedBy).add(PlayerStats.PAYLOAD_INKED, 1);
+            }
+
+        }
+    }
+
+    public static void cleanSlimesInRadius(BlockPos worldPos, float radius, Player cleanedBy)
+    {
+        cleanSlimesInRadius(new Vec3(worldPos.getX(), worldPos.getY(), worldPos.getZ()), radius, cleanedBy);
+    }
+
+    public static void cleanSlimesInRadius(Vec3 worldPos, float radius, Player cleanedBy) {
+
+        for (Slime slime : getEntitiesInRadius(cleanedBy.level(), Slime.class, worldPos, radius)) {
+            IInkablePayloadBlock payloadBlock = (IInkablePayloadBlock)slime;
+
+            if(payloadBlock.getTeam() != null) {
+                payloadBlock.setTeam(null);
+                PlayerStats.get(cleanedBy).add(PlayerStats.PAYLOAD_INKED, 1);
+            }
+        }
     }
 }

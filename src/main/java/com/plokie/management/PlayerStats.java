@@ -27,14 +27,20 @@ import java.util.*;
 import java.util.function.BiFunction;
 
 public enum PlayerStats implements StringRepresentable {
-    MONEY,
-    PLAYER_KILLS, MOB_KILLS, DAMAGE_DEALT,
-    BLOCKS_INKED, PAYLOAD_INKED,
-    AMOUNT_HEALED,
-    TURF_WAR_WINS, PAYLOAD_WINS,
-    TOTAL_ZOMBIES_POINTS, TOTAL_ZOMBIES_ROUNDS,
-    TOTAL_SECONDS_ONLINE
+    MONEY("Money"),
+    PLAYER_KILLS("Player kills"), MOB_KILLS("Mob kills"), DAMAGE_DEALT("Damage dealt"),
+    BLOCKS_INKED("Blocks inked"), PAYLOAD_INKED("Payload inked"),
+    AMOUNT_HEALED("Amount healed"),
+    TURF_WAR_WINS("Turf war wins"), PAYLOAD_WINS("Payload wins"),
+    TOTAL_ZOMBIES_POINTS("Zombies points"), TOTAL_ZOMBIES_ROUNDS("Zombies rounds"),
+    TOTAL_SECONDS_ONLINE("Seconds online")
     ;
+
+    public final String title;
+
+    PlayerStats(String title) {
+        this.title = title;
+    }
 
     public String getScoreboardReflectionName()
     {
@@ -313,7 +319,7 @@ public enum PlayerStats implements StringRepresentable {
             statMap.put(value, player);
         }
 
-        for(var entry : statMap.entrySet()  .stream().toList().reversed()) {
+        for(var entry : statMap.entrySet().stream().toList().reversed()) {
             return new Tuple<>(entry.getValue(), entry.getKey());
         }
 

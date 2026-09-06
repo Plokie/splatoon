@@ -7,6 +7,7 @@ import com.plokie.helpers.Helpers;
 import com.plokie.helpers.Teams;
 import com.plokie.interfaces.IPlayerTeamMixin;
 import com.plokie.management.GameFlowManager;
+import com.plokie.management.PlayerStats;
 import com.plokie.management.maps.GamemodeMap;
 import com.plokie.management.maps.GamemodeMaps;
 import net.minecraft.core.BlockPos;
@@ -15,11 +16,13 @@ import net.minecraft.network.protocol.game.ClientboundSetSubtitleTextPacket;
 import net.minecraft.network.protocol.game.ClientboundSetTitleTextPacket;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.util.CommonColors;
 import net.minecraft.world.entity.Display;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.Vec2;
 import net.minecraft.world.phys.Vec3;
@@ -43,6 +46,12 @@ public class TurfWar extends Gamemode {
         maps.add(GamemodeMaps.MorayTowers);
         maps.add(GamemodeMaps.Cyberscape);
 
+        rewards.put(PlayerStats.BLOCKS_INKED, 1.0f / 750.0f);
+        rewards.put(PlayerStats.AMOUNT_HEALED, 1.0f / 25.0f);
+        rewards.put(PlayerStats.PLAYER_KILLS, 4.0f);
+        rewards.put(PlayerStats.DAMAGE_DEALT, 1.0f / 200.0f);
+
+        scoreboardDisplayEntities.put(-1, new ArrayList<>());
         scoreboardDisplayEntities.put(0, new ArrayList<>());
         scoreboardDisplayEntities.put(1, new ArrayList<>());
     }
@@ -75,49 +84,78 @@ public class TurfWar extends Gamemode {
             float totalWidth = 4.0f;
             float perTeamSeg = totalWidth / getNumTeams();
 
+            Vec3 observerPos = gameFlowManager.getCurrentMap().resultsPosition;
+            float pitch = gameFlowManager.getCurrentMap().resultsRotation.x;
+            float yaw = gameFlowManager.getCurrentMap().resultsRotation.y;
 
-
-//            Display.BlockDisplay menuPivot = EntityType.BLOCK_DISPLAY.create(Splatoon.SERVER.overworld(), EntitySpawnReason.COMMAND);
-//            assert menuPivot != null;
-//            menuPivot.setPos(gameFlowManager.getCurrentMap().resultsPosition);
-//            menuPivot.setXRot(gameFlowManager.getCurrentMap().resultsRotation.x);
-//            menuPivot.setYRot(gameFlowManager.getCurrentMap().resultsRotation.y);
-//            Splatoon.SERVER.overworld().addFreshEntity(menuPivot);
-
-            Vec2 rot = gameFlowManager.getCurrentMap().resultsRotation;
-
-            Vec3 forward = Vec3.directionFromRotation(rot.y, rot.x);
-            Vec3 right = Vec3.directionFromRotation(rot.y, rot.x  + 90.0f);
-            Vec3 up = Vec3.directionFromRotation(rot.y- 90.0f, rot.x );
+            Map<Integer, IPlayerTeamMixin> teams = new HashMap<>();
+            teams.put(0, null);
+            teams.put(1, null);
+            for(int teamIdx=0; teamIdx < getNumTeams(); teamIdx++) {
+                List<Player> players = gameFlowManager.getTeamPlayers(teamIdx);
+                for(Player player : players) {
+                    IPlayerTeamMixin team = Teams.getTeamMixinFromPlayer(player);
+                    if(team != null) {
+                        teams.put(teamIdx, team);
+                        break;
+                    }
+                }
+            }
 
             for(int i=0; i<getNumTeams(); i++) {
-                float localX = (perTeamSeg * i) + (perTeamSeg*0.5f);
+                float localX = ((perTeamSeg * i) + (perTeamSeg*0.5f)) - (totalWidth * 0.5f);
                 float localY = 0.0f;
                 float localZ = 3.0f;
 
                 Display.BlockDisplay teamBar = EntityType.BLOCK_DISPLAY.create(Splatoon.SERVER.overworld(), EntitySpawnReason.COMMAND);
                 if(teamBar != null) {
-                    Vec3 pos = gameFlowManager.getCurrentMap().resultsPosition;
-                    pos = pos.add(right.scale(localX));
-                    //pos = pos.add(up.scale(localY + 2.0f));
-                    pos = pos.add(forward.scale(localZ));
+                    Vec3 pos = Helpers.localToWorld(observerPos, pitch, yaw, new Vec3(localX, localY - 1.0, localZ));
+                    pos = pos.add(0,1.8,0);
+
+                    teamBar.setGlowingTag(true);
+                    int glowCol = CommonColors.WHITE;
+                    if(teams.get(i) != null) glowCol = teams.get(i).getTeamColourInt();
+                    teamBar.setGlowColorOverride(glowCol);
 
                     teamBar.setPos(pos);
-                    teamBar.forceSetRotation(rot.x, rot.y);
-//                    teamBar.setYRot(rot.y);
+                    teamBar.forceSetRotation(pitch, yaw);
 
-                    teamBar.setBlockState(Blocks.WHITE_WOOL.defaultBlockState());
+                    Block block = Blocks.WHITE_WOOL;
+                    if(teams.get(i) != null) block = teams.get(i).getWallBlock();
+                    teamBar.setBlockState(block.defaultBlockState());
 
                     teamBar.setTransformation(new Transformation(
-                            new Vector3f(-0.5f, -0.5f, -0.5f),
+                            new Vector3f(-0.5f, 0.0f, -0.005f),
                             null,
-                            new Vector3f(1.0f, 1.0f, 1.0f),
+                            new Vector3f(1.0f, 0.0f, 0.01f),
                             null
                     ));
 
                     Splatoon.SERVER.overworld().addFreshEntity(teamBar);
 
                     scoreboardDisplayEntities.get(i).add(teamBar);
+                }
+
+                Display.TextDisplay teamScore = EntityType.TEXT_DISPLAY.create(Splatoon.SERVER.overworld(), EntitySpawnReason.COMMAND);
+                if(teamScore != null) {
+                    Vec3 pos = Helpers.localToWorld(observerPos, pitch, yaw, new Vec3(localX, localY - 1.5, localZ));
+                    pos = pos.add(0,1.8,0);
+
+                    teamScore.setPos(pos);
+                    teamScore.forceSetRotation(pitch, yaw);
+
+                    teamScore.setText(Component.literal("000"));
+
+                    teamScore.setTransformation(new Transformation(
+                            new Vector3f(0.0f, 0.0f, 0.0f),
+                            null,
+                            new Vector3f(-2.0f, 2.0f, 2.0f),
+                            null
+                    ));
+
+                    Splatoon.SERVER.overworld().addFreshEntity(teamScore);
+
+                    scoreboardDisplayEntities.get(i).add(teamScore);
                 }
             }
         }
@@ -129,8 +167,9 @@ public class TurfWar extends Gamemode {
                 for(Entity entity : entry.getValue()) {
                     entity.discard();
                 }
+
+                entry.getValue().clear();
             }
-            scoreboardDisplayEntities.clear();
 
             teamScores.clear();
         }
@@ -183,6 +222,30 @@ public class TurfWar extends Gamemode {
                     }
                     else {
                         teamScores.put(teamIdx, teamScores.get(teamIdx) + count);
+                    }
+
+                    for(var entry : teamScores.entrySet())
+                    {
+                        List<Entity> displayEntities = scoreboardDisplayEntities.get(entry.getKey());
+                        if(displayEntities == null) {
+                            Splatoon.LOGGER.error("couldnt get scoreboard display entities for team {}", entry.getKey());
+                            continue;
+                        }
+
+                        for(Entity entity : displayEntities) {
+                            int score = entry.getValue();
+                            if(entity instanceof Display.TextDisplay textDisplay) {
+                                textDisplay.setText(Component.literal(String.valueOf(score)));
+                            }
+                            if(entity instanceof Display.BlockDisplay blockDisplay) {
+                                blockDisplay.setTransformation(new Transformation(
+                                        new Vector3f(-0.5f, 0.0f, -0.005f),
+                                        null,
+                                        new Vector3f(1.0f, score * 0.0007f, 0.01f),
+                                        null
+                                ));
+                            }
+                        }
                     }
 
                 }

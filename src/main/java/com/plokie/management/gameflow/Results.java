@@ -26,10 +26,10 @@ public class Results implements IGameState {
     @Override
     public void onStateEnter(Gamemode currentGamemode, GamemodeMap currentMap) {
 
-        for(Player player : Splatoon.gameFlowManager.getTeamPlayers())
-        {
-            ((IPlayerMixin)player).setClass(null);
-        }
+//        for(Player player : Splatoon.gameFlowManager.getTeamPlayers())
+//        {
+//            ((IPlayerMixin)player).setClass(null);
+//        }
 
         //PlaySong("");
 
@@ -40,9 +40,9 @@ public class Results implements IGameState {
             player.forceSetRotation(resultsRot.x, resultsRot.y);
         }
 
-        CustomBossEvent timerBossbar = Splatoon.gameFlowManager.getTimerBossbar();
-        timerBossbar.setVisible(false);
-        timerBossbar.removeAllPlayers();
+//        CustomBossEvent timerBossbar = Splatoon.gameFlowManager.getTimerBossbar();
+//        timerBossbar.setVisible(false);
+//        timerBossbar.removeAllPlayers();
 
 
 
@@ -66,7 +66,8 @@ public class Results implements IGameState {
             }
 
             player.setNoGravity(true);
-
+            player.setDeltaMovement(Vec3.ZERO);
+            player.forceSetRotation(resultsRot.x, resultsRot.y);
             player.snapTo(resultsPos.x, resultsPos.y, resultsPos.z, resultsRot.x, resultsRot.y);
             player.teleportTo(resultsPos.x, resultsPos.y, resultsPos.z);
         }

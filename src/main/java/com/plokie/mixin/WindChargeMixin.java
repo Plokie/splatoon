@@ -2,6 +2,7 @@ package com.plokie.mixin;
 
 import com.plokie.Splatoon;
 import com.plokie.helpers.Fill;
+import com.plokie.helpers.Helpers;
 import com.plokie.helpers.Teams;
 import com.plokie.interfaces.IPlayerTeamMixin;
 import com.plokie.management.PlayerStats;
@@ -56,6 +57,8 @@ public class WindChargeMixin {
                     );
 
                     PlayerStats.get(player).add(PlayerStats.BLOCKS_INKED, numReplaced);
+
+                    Helpers.inkSlimesInRadius(self.position(), 2.0f, player);
                 }
             }
         }

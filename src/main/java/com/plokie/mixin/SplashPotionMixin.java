@@ -60,6 +60,8 @@ public class SplashPotionMixin {
                         );
 
                         PlayerStats.get(player).add(PlayerStats.BLOCKS_INKED, numReplaced);
+
+                        Helpers.inkSlimesInRadius(self.position(), 2.0f, player);
                     }
 
                     AABB aabb = new AABB(self.getOnPos()).inflate(4.0);

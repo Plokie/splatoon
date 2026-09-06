@@ -259,7 +259,7 @@ public class PlayerMixin implements IPlayerMixin {
             classEffectQueue.clear();
         }
 
-        ItemStack itemInHand = player.getItemInHand(player.getUsedItemHand());
+        ItemStack itemInHand = player.getItemBySlot(EquipmentSlot.MAINHAND);
         Arrays.stream(CustomItem.values()).forEach(item -> {
             if(itemInHand.getItemName().equals(item.getItem().getItemName()))
             {
@@ -535,25 +535,38 @@ public class PlayerMixin implements IPlayerMixin {
                     idx++;
                 }
 
-                ItemStack offhandItem;
-                if(splatoonClass.definition.offhandItem == null) {
-                    offhandItem = new ItemStack(Items.AIR);
-                }
-                else if(player.getItemBySlot(EquipmentSlot.MAINHAND).is(Items.CARROT_ON_A_STICK))
+                //todo: properly determine if the offhand should be cleared
+                if(player.getItemBySlot(EquipmentSlot.MAINHAND).is(Items.IRON_AXE))
                 {
-                    offhandItem = new ItemStack(Items.AIR);
+
                 }
-                else {
-                    offhandItem = splatoonClass.definition.offhandItem.getItem().copy();
-                    for(BiConsumer<Player, ItemStack> dataCallbacks : splatoonClass.definition.offhandItem.getDataCallbacks())
-                    {
-                        dataCallbacks.accept(player, offhandItem);
+                else
+                {
+                    if(!player.getItemBySlot(EquipmentSlot.OFFHAND).is(Items.AIR)) {
+                        player.setItemSlot(EquipmentSlot.OFFHAND, ItemStack.EMPTY);
                     }
                 }
-                if(!player.getItemBySlot(EquipmentSlot.OFFHAND).is(offhandItem.getItem()))
-                {
-                    player.setItemSlot(EquipmentSlot.OFFHAND, offhandItem);
-                }
+
+//                ItemStack offhandItem;
+
+//                if(splatoonClass.definition.offhandItem == null) {
+//                    offhandItem = new ItemStack(Items.AIR);
+//                }
+//                else if(player.getItemBySlot(EquipmentSlot.MAINHAND).is(Items.CARROT_ON_A_STICK))
+//                {
+//                    offhandItem = new ItemStack(Items.AIR);
+//                }
+//                else {
+//                    offhandItem = splatoonClass.definition.offhandItem.getItem().copy();
+//                    for(BiConsumer<Player, ItemStack> dataCallbacks : splatoonClass.definition.offhandItem.getDataCallbacks())
+//                    {
+//                        dataCallbacks.accept(player, offhandItem);
+//                    }
+//                }
+//                if(!player.getItemBySlot(EquipmentSlot.OFFHAND).is(offhandItem.getItem()))
+//                {
+//                    player.setItemSlot(EquipmentSlot.OFFHAND, offhandItem);
+//                }
             }
         }
 

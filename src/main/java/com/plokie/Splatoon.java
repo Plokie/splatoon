@@ -1,6 +1,7 @@
 package com.plokie;
 
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import com.mojang.math.Transformation;
 import com.plokie.classes.SplatoonClasses;
 import com.plokie.classes.abilities.AbilityManager;
 import com.plokie.commands.Command;
@@ -8,6 +9,7 @@ import com.plokie.commands.PingCommand;
 
 import com.plokie.customitems.CustomItemManager;
 import com.plokie.helpers.CommandBuilder;
+import com.plokie.helpers.Helpers;
 import com.plokie.helpers.ScheduleEvent;
 import com.plokie.interfaces.IPlayerMixin;
 import com.plokie.management.GameFlowManager;
@@ -22,12 +24,20 @@ import net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.minecraft.commands.Commands;
 import net.minecraft.core.registries.Registries;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.tags.TagKey;
+import net.minecraft.world.entity.Display;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntitySpawnReason;
+import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.phys.Vec2;
+import net.minecraft.world.phys.Vec3;
+import org.joml.Vector3f;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -126,6 +136,90 @@ public class Splatoon implements ModInitializer {
 			} catch (IllegalArgumentException e) {
                 return "! Invalid map id";
             }
+		}).register();
+
+		CommandBuilder.command("debug").subcommand("build_results_screen").executes(ctx->{
+			if(ctx.getStack().getSource().getEntity() == null) {
+				return "! Command must be executed by an entity";
+			}
+			Entity entity = ctx.getStack().getSource().getEntity();
+			Vec2 rotation = entity.getRotationVector();
+
+			String ret = "";
+
+			float totalWidth = 4.0f;
+			float perTeamSeg = totalWidth / (float)2;
+			for(int i=0; i<2; i++) {
+				float localX = ((perTeamSeg * i) + (perTeamSeg*0.5f)) - (totalWidth * 0.5f);
+				float localY = 0.0f;
+				float localZ = 3.0f;
+				Display.BlockDisplay teamBar = EntityType.BLOCK_DISPLAY.create(Splatoon.SERVER.overworld(), EntitySpawnReason.COMMAND);
+				if(teamBar != null) {
+
+					Vec3 pos = Helpers.localToWorld(entity, new Vec3(localX, localY - 0.5, localZ));
+					pos = pos.add(0,1.8,0);
+					ret += pos.toString() + "\n";
+
+					teamBar.setPos(pos);
+					teamBar.forceSetRotation(rotation.y, rotation.x);
+
+					teamBar.setBlockState(Blocks.WHITE_WOOL.defaultBlockState());
+
+					teamBar.setTransformation(new Transformation(
+							new Vector3f(-0.5f, 0.0f, -0.005f),
+							null,
+							new Vector3f(1.0f, 1.0f, 0.01f),
+							null
+					));
+
+					Splatoon.SERVER.overworld().addFreshEntity(teamBar);
+				}
+
+				Display.TextDisplay teamScore = EntityType.TEXT_DISPLAY.create(Splatoon.SERVER.overworld(), EntitySpawnReason.COMMAND);
+				if(teamScore != null) {
+					Vec3 pos = Helpers.localToWorld(entity, new Vec3(localX, localY - 1.0, localZ));
+					pos = pos.add(0,1.8,0);
+
+					teamScore.setPos(pos);
+					teamScore.forceSetRotation(rotation.y, rotation.x);
+
+					teamScore.setText(Component.literal("000"));
+
+					teamScore.setTransformation(new Transformation(
+							new Vector3f(0.0f, 0.0f, 0.0f),
+							null,
+							new Vector3f(-2.0f, 2.0f, 2.0f),
+							null
+					));
+
+					Splatoon.SERVER.overworld().addFreshEntity(teamScore);
+				}
+			}
+
+			return ret;
+
+		}).register();
+
+		CommandBuilder.command("gravity").subcommand("on").argumentEntity("target").executes(ctx->{
+			try {
+				Entity entity = ctx.getArgumentEntity("target");
+				entity.setNoGravity(false);
+				return "Gravity enabled";
+			}
+			catch(CommandSyntaxException e) {
+				return "! Invalid target";
+			}
+		}).register();
+
+		CommandBuilder.command("gravity").subcommand("off").argumentEntity("target").executes(ctx->{
+			try {
+				Entity entity = ctx.getArgumentEntity("target");
+				entity.setNoGravity(true);
+				return "Gravity enabled";
+			}
+			catch(CommandSyntaxException e) {
+				return "! Invalid target";
+			}
 		}).register();
 
 		LOGGER.info("Splatoon plugin :)");

@@ -7,6 +7,7 @@ import com.plokie.helpers.Helpers;
 import com.plokie.helpers.Teams;
 import com.plokie.interfaces.IPlayerMixin;
 import com.plokie.interfaces.IPlayerTeamMixin;
+import com.plokie.management.PlayerStats;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.commands.ForceLoadCommand;
 import net.minecraft.server.level.ServerLevel;
@@ -78,6 +79,8 @@ public class InkRoller extends ICustomItem {
             BlockGetter.traverseBlocks(bl, tr, null, (context, currentPos)->{
                 int filled = Fill.replace((ServerLevel)player.level(), currentPos, currentPos, groundBlock, Splatoon.Tags.GROUND_BLOCKS);
                 filled += Fill.replace((ServerLevel)player.level(), currentPos, currentPos, wallBlock, Splatoon.Tags.WALL_BLOCKS);
+
+                PlayerStats.get(player).add(PlayerStats.BLOCKS_INKED, filled);
 
                 if(filled > 0) {
                     playerMixin.changeInk(-0.002f);

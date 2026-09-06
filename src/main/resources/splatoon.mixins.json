@@ -7,6 +7,7 @@
     "GunProjectileGravityMixin",
     "GunProjectileMixin",
     "HealthBubbleMixin",
+    "InkablePayloadBlockMixin",
     "InkPuckMixin",
     "LingeringPotionMixin",
     "NoSuffocationMixin",

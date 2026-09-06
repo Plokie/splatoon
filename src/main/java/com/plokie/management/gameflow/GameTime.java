@@ -11,6 +11,7 @@ import com.plokie.management.maps.GamemodeMap;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.game.ClientboundSetSubtitleTextPacket;
 import net.minecraft.network.protocol.game.ClientboundSetTitleTextPacket;
+import net.minecraft.server.bossevents.CustomBossEvent;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Display;
@@ -108,6 +109,15 @@ public class GameTime implements IGameState {
                 }
             }
         }
+
+        for(Player player : Splatoon.gameFlowManager.getTeamPlayers())
+        {
+            ((IPlayerMixin)player).setClass(null);
+        }
+
+        CustomBossEvent timerBossbar = Splatoon.gameFlowManager.getTimerBossbar();
+        timerBossbar.setVisible(false);
+        timerBossbar.removeAllPlayers();
     }
 
     @Override

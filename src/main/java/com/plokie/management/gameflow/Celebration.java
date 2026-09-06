@@ -14,6 +14,7 @@ import com.plokie.management.PlayerStats;
 import com.plokie.management.gamemodes.Gamemode;
 import com.plokie.management.maps.GamemodeMap;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
+import net.minecraft.ChatFormatting;
 import net.minecraft.commands.arguments.EntityAnchorArgument;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.component.DataComponents;
@@ -23,6 +24,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.protocol.game.ClientboundSetSubtitleTextPacket;
 import net.minecraft.network.protocol.game.ClientboundSetTitleTextPacket;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.Tuple;
 import net.minecraft.world.Container;
@@ -37,6 +39,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.component.FireworkExplosion;
 import net.minecraft.world.item.component.Fireworks;
+import net.minecraft.world.item.component.UseCooldown;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.Vec2;
 import net.minecraft.world.phys.Vec3;
@@ -45,6 +48,7 @@ import org.joml.Vector3f;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 public class Celebration implements IGameState {
     List<Display.TextDisplay> textDisplays = new ArrayList<>();
@@ -68,6 +72,45 @@ public class Celebration implements IGameState {
         Vec2 podiumViewerRot = currentMap.podiumViewerRotation;
         int winningTeamIdx = Splatoon.gameFlowManager.getWinningTeam();
 
+        MutableComponent statsMessage = Component.literal("");
+
+        for(int i=0; i<currentGamemode.getNumTeams(); i++) {
+            List<Player> playersOnTeam = Splatoon.gameFlowManager.getTeamPlayers(i);
+            IPlayerTeamMixin team = null;
+            for(Player player : playersOnTeam) {
+                team = Teams.getTeamMixinFromPlayer(player);
+                if(team != null) break;
+            }
+
+            if(team == null) continue;
+
+            PlayerTeam playerTeam = (PlayerTeam)team;
+
+            statsMessage.append(Component.literal("======= "));
+            statsMessage.append(playerTeam.getFormattedDisplayName());
+            statsMessage.append(Component.literal(" team : \n"));
+
+            for(var statReward : currentGamemode.rewards.entrySet()) {
+                PlayerStats stat = statReward.getKey();
+                var playerStatValue = PlayerStats.getMatchPlayerStatGreatestOf(stat, playersOnTeam);
+                Player bestPlayer = playerStatValue.getA();
+                int bestScore = playerStatValue.getB();
+
+                if(bestScore == 0) continue;
+
+                String mostMessage = "Most " + stat.title.toLowerCase();
+                statsMessage.append(mostMessage).append(": ").append(bestPlayer.getDisplayName()).append(" = ").append(String.valueOf(bestScore)).append("\n");
+            }
+
+            statsMessage.append("\n");
+        }
+
+        for(Player player : Splatoon.gameFlowManager.getGamersIncludingSpectators()) {
+            ((ServerPlayer)player).sendSystemMessage(statsMessage);
+        }
+
+
+
         List<Player> winningTeamPlayers = Splatoon.gameFlowManager.getTeamPlayers(winningTeamIdx);
         if(winningTeamPlayers.isEmpty()) return;
 
@@ -85,12 +128,6 @@ public class Celebration implements IGameState {
             }
         }
 
-
-        Tuple<Player, Integer> mostKills = PlayerStats.getMatchPlayerStatGreatestOf(PlayerStats.PLAYER_KILLS, winningTeamPlayers);
-        Tuple<Player, Integer> mostBlocksInked = PlayerStats.getMatchPlayerStatGreatestOf(PlayerStats.BLOCKS_INKED, winningTeamPlayers);
-        Tuple<Player, Integer> mostHealed = PlayerStats.getMatchPlayerStatGreatestOf(PlayerStats.AMOUNT_HEALED, winningTeamPlayers);
-        Tuple<Player, Integer> mostDamageDealt = PlayerStats.getMatchPlayerStatGreatestOf(PlayerStats.DAMAGE_DEALT, winningTeamPlayers);
-
         int idx = 0;
         for(Player player : winningTeamPlayers)
         {
@@ -99,6 +136,7 @@ public class Celebration implements IGameState {
                 if(i==0) {
                     if(player.getInventory().getItem(i).is(Items.AIR)) {
                         ItemStack taunt = new ItemStack(Items.GOAT_HORN);
+                        taunt.set(DataComponents.USE_COOLDOWN, new UseCooldown(0.5f));
                         player.getInventory().setItem(i, taunt);
                     }
                 }
@@ -153,10 +191,21 @@ public class Celebration implements IGameState {
             Vec3 orthogonalVector = new Vec3(x,y,z);
 
             String podiumText = "";
-            if(mostKills.getA() == player) podiumText += "Most kills : " + mostKills.getB() + "\n";
-            if(mostBlocksInked.getA() == player) podiumText += "Most blocks inked : " + mostBlocksInked.getB() + "\n";
-            if(mostHealed.getA() == player) podiumText += "Most healed : " + mostHealed.getB() + "\n";
-            if(mostDamageDealt.getA() == player) podiumText += "Most damage dealt : " + mostDamageDealt.getB() + "\n";
+            for(var entry : currentGamemode.rewards.entrySet())
+            {
+                PlayerStats stat = entry.getKey();
+
+                var mostStat = PlayerStats.getMatchPlayerStatGreatestOf(stat, winningTeamPlayers);
+                Player mostPlayer = mostStat.getA();
+                int mostVal = mostStat.getB();
+
+                if(mostVal == 0) continue;
+
+                if(player == mostPlayer) {
+                    String mostText = "Most " + stat.title.toLowerCase() +": " + mostVal;
+                    podiumText += mostText + "\n";
+                }
+            }
             podiumText += "\n" + player.getName().getString();
 
             Display.TextDisplay outwardText = EntityType.TEXT_DISPLAY.create(player.level(), EntitySpawnReason.COMMAND);
@@ -254,7 +303,11 @@ public class Celebration implements IGameState {
         for(Player player : Splatoon.gameFlowManager.getGamersIncludingSpectators()) {
             if(Splatoon.gameFlowManager.getTeamPlayers(winningTeam).contains(player))
             {
+                Effects.givePotionEffect(player, MobEffects.INSTANT_HEALTH, 1, 100, true);
 
+                if(player.tickCount % 20 == 0) {
+                    player.getCooldowns().removeCooldown(ResourceLocation.withDefaultNamespace("goat_horn"));
+                }
             }
             else
             {
@@ -308,7 +361,7 @@ public class Celebration implements IGameState {
 
     @Override
     public int calculateDuration(Gamemode currentGamemode, GamemodeMap currentMap) {
-        return 500;
+        return 400;
     }
 
     @Override

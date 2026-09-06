@@ -70,6 +70,9 @@ public class XpBottleGrenadeMixin implements IProjectile {
         Player player = level.getPlayerByUUID(playerOwnerUUID);
         if(player != null) {
             PlayerStats.get(player).add(PlayerStats.BLOCKS_INKED, numReplaced);
+
+            Helpers.cleanSlimesInRadius(self.position(), 5.0f, player);
         }
+
     }
 }
