@@ -32,7 +32,7 @@ public class Goldrush extends PayloadMap {
         this.podiumViewerPosition = new Vec3(1484.5, 129.0, 2408.5);
         this.podiumViewerRotation = new Vec2(90.0f, 20.0f);
 
-        this.groundBlock = Blocks.RED_SAND;
-        this.wallBlock = Blocks.PALE_MOSS_BLOCK;
+        this.getGroundBlock = y->(y>=125 ? Blocks.GRAVEL : Blocks.RED_SAND);
+        this.getWallBlock = y->Blocks.PALE_MOSS_BLOCK;
     }
 }

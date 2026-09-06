@@ -26,6 +26,39 @@ public class Results implements IGameState {
     @Override
     public void onStateEnter(Gamemode currentGamemode, GamemodeMap currentMap) {
 
+        AABB mapAABB = new AABB(currentMap.mapCorner, currentMap.mapCorner.add(currentMap.mapSize));
+        for(Entity entity : Splatoon.SERVER.overworld().getEntitiesOfClass(Entity.class, mapAABB))
+        {
+            boolean doKill = false;
+            if(entity instanceof Shulker) doKill = true;
+
+            if(entity instanceof Sheep) doKill = true;
+
+            if(entity instanceof Display.BlockDisplay) {
+                if(entity.getTags().contains("InkPuck")) doKill = true;
+            }
+
+            if(doKill) {
+                if(entity instanceof LivingEntity livingEntity)
+                {
+                    Affects.hurtEntity(livingEntity, 1000.f);
+                }
+                else
+                {
+                    entity.discard();
+                }
+            }
+        }
+
+        for(Player player : Splatoon.gameFlowManager.getTeamPlayers())
+        {
+            ((IPlayerMixin)player).setClass(null);
+        }
+
+        CustomBossEvent timerBossbar = Splatoon.gameFlowManager.getTimerBossbar();
+        timerBossbar.setVisible(false);
+        timerBossbar.removeAllPlayers();
+
 //        for(Player player : Splatoon.gameFlowManager.getTeamPlayers())
 //        {
 //            ((IPlayerMixin)player).setClass(null);

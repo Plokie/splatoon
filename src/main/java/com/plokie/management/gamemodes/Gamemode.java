@@ -12,6 +12,7 @@ import com.plokie.management.maps.GamemodeMaps;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.block.Block;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -57,23 +58,34 @@ public abstract class Gamemode {
         {
             stepCallback.get();
 
-            Fill.replace(
-                    Splatoon.SERVER.overworld(),
-                    Helpers.toBlockPos(gameFlowManager.getCurrentMap().mapCorner),
-                    new BlockPos(clearIndex,0,0),
-                    new BlockPos(clearIndex,(int)gameFlowManager.getCurrentMap().mapSize.y,(int)gameFlowManager.getCurrentMap().mapSize.z),
-                    map.groundBlock,
-                    Splatoon.Tags.GROUND_BLOCKS
-            );
+            for(
+                    int y=0;
+                    y < (int)gameFlowManager.getCurrentMap().mapSize.y;
+                    y++
+            )
+            {
+                Block groundBlock = map.getGroundBlock.apply(y + (int)gameFlowManager.getCurrentMap().mapCorner.y);
+                Block wallBlock = map.getWallBlock.apply(y + (int)gameFlowManager.getCurrentMap().mapCorner.y);
 
-            Fill.replace(
-                    Splatoon.SERVER.overworld(),
-                    Helpers.toBlockPos(gameFlowManager.getCurrentMap().mapCorner),
-                    new BlockPos(clearIndex,0,0),
-                    new BlockPos(clearIndex,(int)gameFlowManager.getCurrentMap().mapSize.y,(int)gameFlowManager.getCurrentMap().mapSize.z),
-                    map.wallBlock,
-                    Splatoon.Tags.WALL_BLOCKS
-            );
+                Fill.replace(
+                        Splatoon.SERVER.overworld(),
+                        Helpers.toBlockPos(gameFlowManager.getCurrentMap().mapCorner),
+                        new BlockPos(clearIndex,y,0),
+                        new BlockPos(clearIndex,y,(int)gameFlowManager.getCurrentMap().mapSize.z),
+                        groundBlock,
+                        Splatoon.Tags.GROUND_BLOCKS
+                );
+
+                Fill.replace(
+                        Splatoon.SERVER.overworld(),
+                        Helpers.toBlockPos(gameFlowManager.getCurrentMap().mapCorner),
+                        new BlockPos(clearIndex,y,0),
+                        new BlockPos(clearIndex,y,(int)gameFlowManager.getCurrentMap().mapSize.z),
+                        wallBlock,
+                        Splatoon.Tags.WALL_BLOCKS
+                );
+
+            }
 
             clearIndex++;
         }

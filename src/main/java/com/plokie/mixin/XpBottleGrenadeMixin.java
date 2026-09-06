@@ -55,7 +55,7 @@ public class XpBottleGrenadeMixin implements IProjectile {
                 Blocks.CYAN_TERRACOTTA, Splatoon.Tags.GROUND_BLOCKS
         );
 
-        numReplaced = Fill.replace(
+        numReplaced += Fill.replace(
                 level, blockPos,
                 new BlockPos(-5,-5,-5),
                 new BlockPos(5,5,5),
@@ -65,7 +65,7 @@ public class XpBottleGrenadeMixin implements IProjectile {
 
         Effects.explosionEffect(level, blockPos);
 
-        int numHurtEntities = Affects.hurtLivingEntitiesInRange(level, blockPos, 5.5f, 400.f, level.getPlayerByUUID(playerOwnerUUID), DamageTypes.EXPLOSION);
+        int numHurtEntities = Affects.hurtLivingEntitiesInRange(level, blockPos, 5.5f, 400.f, level.getPlayerByUUID(playerOwnerUUID), DamageTypes.PLAYER_EXPLOSION);
 
         Player player = level.getPlayerByUUID(playerOwnerUUID);
         if(player != null) {

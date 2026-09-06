@@ -4,6 +4,7 @@ import com.mojang.datafixers.types.templates.Tag;
 import com.mojang.math.Axis;
 import com.mojang.math.Transformation;
 import com.plokie.Splatoon;
+import com.plokie.helpers.Affects;
 import com.plokie.helpers.Effects;
 import com.plokie.helpers.Fill;
 import com.plokie.helpers.Teams;
@@ -25,14 +26,14 @@ import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.protocol.game.ClientboundSetSubtitleTextPacket;
 import net.minecraft.network.protocol.game.ClientboundSetTitleTextPacket;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.bossevents.CustomBossEvent;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.Tuple;
 import net.minecraft.world.Container;
 import net.minecraft.world.effect.MobEffects;
-import net.minecraft.world.entity.Display;
-import net.minecraft.world.entity.EntitySpawnReason;
-import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.*;
+import net.minecraft.world.entity.animal.sheep.Sheep;
+import net.minecraft.world.entity.monster.Shulker;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.FireworkRocketEntity;
 import net.minecraft.world.item.ItemStack;
@@ -41,6 +42,7 @@ import net.minecraft.world.item.component.FireworkExplosion;
 import net.minecraft.world.item.component.Fireworks;
 import net.minecraft.world.item.component.UseCooldown;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec2;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.scores.PlayerTeam;
@@ -68,6 +70,40 @@ public class Celebration implements IGameState {
 
     @Override
     public void onStateEnter(Gamemode currentGamemode, GamemodeMap currentMap) {
+        AABB mapAABB = new AABB(currentMap.mapCorner, currentMap.mapCorner.add(currentMap.mapSize));
+        for(Entity entity : Splatoon.SERVER.overworld().getEntitiesOfClass(Entity.class, mapAABB))
+        {
+            boolean doKill = false;
+            if(entity instanceof Shulker) doKill = true;
+
+            if(entity instanceof Sheep) doKill = true;
+
+            if(entity instanceof Display.BlockDisplay) {
+                if(entity.getTags().contains("InkPuck")) doKill = true;
+            }
+
+            if(doKill) {
+                if(entity instanceof LivingEntity livingEntity)
+                {
+                    Affects.hurtEntity(livingEntity, 1000.f);
+                }
+                else
+                {
+                    entity.discard();
+                }
+            }
+        }
+
+        for(Player player : Splatoon.gameFlowManager.getTeamPlayers())
+        {
+            ((IPlayerMixin)player).setClass(null);
+        }
+
+        CustomBossEvent timerBossbar = Splatoon.gameFlowManager.getTimerBossbar();
+        timerBossbar.setVisible(false);
+        timerBossbar.removeAllPlayers();
+
+
         Vec3 podiumViewerPos = currentMap.podiumViewerPosition;
         Vec2 podiumViewerRot = currentMap.podiumViewerRotation;
         int winningTeamIdx = Splatoon.gameFlowManager.getWinningTeam();

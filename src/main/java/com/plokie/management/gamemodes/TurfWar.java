@@ -198,23 +198,37 @@ public class TurfWar extends Gamemode {
                     IPlayerTeamMixin playerTeam = Teams.getTeamMixinFromPlayer(players.get(0));
                     if(playerTeam == null) continue;
 
-                    int count = Fill.replace(
-                            Splatoon.SERVER.overworld(),
-                            Helpers.toBlockPos(gameFlowManager.getCurrentMap().mapCorner),
-                            new BlockPos(clearIndex,0,0),
-                            new BlockPos(clearIndex,(int)gameFlowManager.getCurrentMap().mapSize.y,(int)gameFlowManager.getCurrentMap().mapSize.z),
-                            map.groundBlock,
-                            playerTeam.getGroundBlock()
-                    );
+                    int count = 0;
 
-                    count += Fill.replace(
-                            Splatoon.SERVER.overworld(),
-                            Helpers.toBlockPos(gameFlowManager.getCurrentMap().mapCorner),
-                            new BlockPos(clearIndex,0,0),
-                            new BlockPos(clearIndex,(int)gameFlowManager.getCurrentMap().mapSize.y,(int)gameFlowManager.getCurrentMap().mapSize.z),
-                            map.wallBlock,
-                            playerTeam.getWallBlock()
-                    );
+                    for(
+                            int y=0;
+                            y < (int)gameFlowManager.getCurrentMap().mapSize.y;
+                            y++
+                    )
+                    {
+                        Block groundBlock = map.getGroundBlock.apply(y + (int)gameFlowManager.getCurrentMap().mapCorner.y);
+                        Block wallBlock = map.getWallBlock.apply(y + (int)gameFlowManager.getCurrentMap().mapCorner.y);
+
+                        count += Fill.replace(
+                                Splatoon.SERVER.overworld(),
+                                Helpers.toBlockPos(gameFlowManager.getCurrentMap().mapCorner),
+                                new BlockPos(clearIndex,y,0),
+                                new BlockPos(clearIndex,y,(int)gameFlowManager.getCurrentMap().mapSize.z),
+                                groundBlock,
+                                playerTeam.getGroundBlock()
+                        );
+
+                        count += Fill.replace(
+                                Splatoon.SERVER.overworld(),
+                                Helpers.toBlockPos(gameFlowManager.getCurrentMap().mapCorner),
+                                new BlockPos(clearIndex,y,0),
+                                new BlockPos(clearIndex,y,(int)gameFlowManager.getCurrentMap().mapSize.z),
+                                wallBlock,
+                                playerTeam.getWallBlock()
+                        );
+
+                    }
+
 
                     if(teamScores.get(teamIdx) == null)
                     {

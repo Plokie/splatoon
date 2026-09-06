@@ -3,9 +3,11 @@ package com.plokie.management;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.plokie.Splatoon;
 import com.plokie.classes.SplatoonClasses;
+import com.plokie.commands.Command;
 import com.plokie.customitems.CustomItem;
 import com.plokie.helpers.*;
 import com.plokie.interfaces.IPlayerMixin;
+import com.plokie.interfaces.IPlayerTeamMixin;
 import com.plokie.management.gameflow.*;
 import com.plokie.management.gamemodes.Gamemode;
 import com.plokie.management.gamemodes.Gamemodes;
@@ -63,40 +65,17 @@ public class GameFlowManager {
         CLASS_SELECT(new ClassSelect()),
         GAME_TIME(new GameTime()),
         RESULTS(new Results()),
-        CELEBRATION(new Celebration())
+        CELEBRATION(new Celebration()),
+        OVERTIME(new Overtime())
         ;
 
         final IGameState gameState;
 
+        public IGameState getGameState() { return gameState; }
+
         GameState(IGameState gameState) {
             this.gameState = gameState;
         }
-//
-//        public static String getSong(GameState current) {
-//            return switch (current) {
-////                case NONE -> INTRO;
-//                case INTRO -> "music.opening.match_start";
-//                case CLASS_SELECT -> "music.lobby.main";
-//                case GAME_TIME -> "music.battle.splattack";
-//                case RESULTS -> "music.ending.win";
-//                case CELEBRATION -> "music.ending.win_results";
-////                case RESULTS -> NONE;
-//                default -> "";
-//            };
-//        }
-//
-//        public static int getDuration(GameState state, Gamemodes gamemode)
-//        {
-//            return switch (state) {
-//                case NONE -> -1;
-//                case INTRO -> (gamemode.getGamemode().getIntroText().size() + 1) * 100;
-//                case CLASS_SELECT -> 900;
-//                case GAME_TIME -> 7200;
-//                case RESULTS -> 300;
-//                case CELEBRATION -> 600;
-//                default -> -1;
-//            };
-//        }
     }
 
     List<TeamSelector> teamSelectors = new ArrayList<>();
@@ -146,6 +125,16 @@ public class GameFlowManager {
         return true;
     }
 
+    public IPlayerTeamMixin getTeamMixinFromTeamIndex(int teamIndex) {
+        for(Player player : getTeamPlayers(teamIndex)) {
+            IPlayerTeamMixin team = Teams.getTeamMixinFromPlayer(player);
+            if(team != null) {
+                return team;
+            }
+        }
+        return null;
+    }
+
     public void setWinningTeam(int winningTeam) {
         this.winningTeam = winningTeam;
     }
@@ -156,6 +145,11 @@ public class GameFlowManager {
     public Gamemode getCurrentGamemode() { return currentGamemode; }
     public GamemodeMap getCurrentMap() { return currentMap; }
     public int getTimer() { return timer; }
+    public void setTimer(int value) { timer = value; }
+    public void addTimer(int delta) {
+        timer += delta;
+        timer = Math.clamp(timer, 0, getTimerBossbar().getMax());
+    }
 
     public void setPlayerTeam(Player player, int teamIndex) {
         removePlayerTeam(player);
@@ -578,6 +572,12 @@ public class GameFlowManager {
                 catch(IllegalArgumentException ignored) { return "! Unrecognised gamemode";}
             }
         ).register();
+
+        CommandBuilder.command("gameflow").subcommand("set").subcommand("timer").argumentInteger("timer_value").executes(ctx->{
+            int value = ctx.getArgumentInteger("timer_value");
+            setTimer(value);
+            return "Set timer to " + getTimer();
+        }).register();
 
         CommandBuilder.command("gameflow").subcommand("toggle_spectator").argumentPlayer("target").executes(
                 ctx->{

@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 
 public class GamemodeMap {
     public Map<Integer, Vec3> teamSpawns = new HashMap<>();
@@ -35,6 +36,6 @@ public class GamemodeMap {
         return GamemodeMaps.valueOf(getClass().getSimpleName());
     }
 
-    public Block groundBlock = Blocks.CYAN_TERRACOTTA;
-    public Block wallBlock = Blocks.PALE_MOSS_BLOCK;
+    public Function<Integer, Block> getGroundBlock = y->Blocks.CYAN_TERRACOTTA;
+    public Function<Integer, Block> getWallBlock = y->Blocks.PALE_MOSS_BLOCK;
 }

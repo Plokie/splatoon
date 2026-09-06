@@ -6,20 +6,30 @@ import com.plokie.interfaces.IInkablePayloadBlock;
 import com.plokie.interfaces.IPlayerTeamMixin;
 import com.plokie.management.GameFlowManager;
 import com.plokie.management.PlayerStats;
+import com.plokie.management.gameflow.IGameState;
+import com.plokie.management.gameflow.Overtime;
 import com.plokie.management.maps.GamemodeMap;
 import com.plokie.management.maps.GamemodeMaps;
+import com.plokie.management.maps.PayloadMap;
 import com.plokie.moving_blocks.MovingBlocksEntity;
 import net.fabricmc.fabric.api.networking.v1.PlayerLookup;
 import net.minecraft.commands.arguments.EntityAnchorArgument;
 import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.protocol.game.ClientboundSetSubtitleTextPacket;
 import net.minecraft.network.protocol.game.ClientboundSetTitleTextPacket;
 import net.minecraft.network.protocol.game.ClientboundTeleportEntityPacket;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.bossevents.CustomBossEvent;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.util.ColorRGBA;
+import net.minecraft.util.CommonColors;
 import net.minecraft.util.Tuple;
+import net.minecraft.world.BossEvent;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.monster.Shulker;
@@ -30,6 +40,7 @@ import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.scores.PlayerTeam;
+import org.apache.commons.compress.compressors.z.ZCompressorInputStream;
 
 import java.util.*;
 import java.util.function.Consumer;
@@ -64,6 +75,47 @@ public class Payload extends Gamemode {
         rewards.put(PlayerStats.PLAYER_KILLS, 4.0f);
         rewards.put(PlayerStats.DAMAGE_DEALT, 1.0f / 200.0f);
         rewards.put(PlayerStats.PAYLOAD_INKED, 1.0f / 50.0f);
+
+        CommandBuilder.command("payload").subcommand("override_most_ink").argumentInteger("team_index").executes(ctx->{
+            int teamLeader = ctx.getArgumentInteger("team_index");
+            overrideTeamWithMostInk = teamLeader;
+
+            return "Force set team leader to " + overrideTeamWithMostInk;
+        }).register();
+
+        CommandBuilder.command("payload").subcommand("query").subcommand("most_ink").executes(ctx->{
+            String returnMessage = "Payload team leaders:\n";
+            int payloadIdx = 0;
+            for(PayloadInstance payload : payloads) {
+                int teamLeader = calculateTeamWithMostInk(payload, true);
+                int trueTeamLeader = calculateTeamWithMostInk(payload, false);
+                returnMessage += "payload " + payloadIdx +": " + teamLeader+" (" + trueTeamLeader+" without override)\n";
+
+                payloadIdx++;
+            }
+
+            return returnMessage;
+        }).register();
+
+        CommandBuilder.command("payload").subcommand("query").subcommand("furthest_distances").executes(ctx->{
+            String returnMessage = "Furthest distances:\n";
+            for(var teamIndexToDistance : furthestDistances.entrySet()) {
+                int relativeDistance = calculateTeamFurthestDistance(teamIndexToDistance.getKey());
+                returnMessage += "team " + teamIndexToDistance.getKey() + ": " + teamIndexToDistance.getValue()+" / " + relativeDistance + "\n";
+            }
+
+            return returnMessage;
+        }).register();
+
+        CommandBuilder.command("payload").subcommand("query").subcommand("altspawn_indices").executes(ctx->{
+            String returnMessage = "Altspawn indices:\n";
+            for(var teamIndexToDistance : furthestDistances.entrySet()) {
+                int altSpawnIndex = calculateAltSpawnIndex(teamIndexToDistance.getKey());
+                returnMessage += "team " + teamIndexToDistance.getKey() + ": " + altSpawnIndex + "\n";
+            }
+
+            return returnMessage;
+        }).register();
     }
 
     @Override
@@ -75,6 +127,128 @@ public class Payload extends Gamemode {
     List<Entity> route = new ArrayList<>();
 
     List<PayloadInstance> payloads = new ArrayList<>();
+    Map<Integer, Integer> furthestDistances = new HashMap<>();
+
+    int overrideTeamWithMostInk = -1;
+
+    CustomBossEvent getTeam0Bossbar() {
+        ResourceLocation barId = ResourceLocation.fromNamespaceAndPath("minecraft", "side1");
+        CustomBossEvent bar = Splatoon.SERVER.getCustomBossEvents().get(barId);
+        if (bar == null) {
+            bar = Splatoon.SERVER.getCustomBossEvents().create(barId, Component.literal("side1"));
+        }
+
+        return bar;
+    }
+
+    CustomBossEvent getTeam1Bossbar() {
+        ResourceLocation barId = ResourceLocation.fromNamespaceAndPath("minecraft", "side2");
+        CustomBossEvent bar = Splatoon.SERVER.getCustomBossEvents().get(barId);
+        if (bar == null) {
+            bar = Splatoon.SERVER.getCustomBossEvents().create(barId, Component.literal("side2"));
+        }
+
+        return bar;
+    }
+
+    int calculateAltSpawnIndex(int teamIndex)
+    {
+        if(route.size() == 0) return 0;
+
+        int numNodes = route.size();
+        int midpoint = Math.round(numNodes * 0.5f);
+        int halfmidpoint = Math.round(midpoint * 0.5f);
+
+        if(teamIndex == 0) {
+            return midpoint + halfmidpoint;
+        }
+        if(teamIndex == 1) {
+            return midpoint - halfmidpoint;
+        }
+
+        return 0;
+    }
+
+    void setTeamSpawnpoint(int teamIndex, Vec3 spawnpoint)
+    {
+        //Splatoon.LOGGER.info("Set team {} spawnpoint to {}", teamIndex, spawnpoint);
+
+        for(Player player : Splatoon.gameFlowManager.getTeamPlayers(teamIndex))
+        {
+            ServerPlayer.RespawnConfig respawnConfig = new ServerPlayer.RespawnConfig(ServerLevel.OVERWORLD, Helpers.toBlockPos(spawnpoint), 0.0f, true);
+            ((ServerPlayer)player).setRespawnPosition(respawnConfig, false);
+
+            //((ServerPlayer)player).sendSystemMessage(Component.literal("Your teams spawn has moved"));
+        }
+    }
+
+    int calculateTeamFurthestDistance()
+    {
+        int furthest = -1;
+        int teamFurthest = -1;
+
+        int middleIndex = Math.round(route.size() * 0.5f);
+
+        for(var teamIdxToDistance : furthestDistances.entrySet()) {
+            int distance = Math.abs(middleIndex - teamIdxToDistance.getValue());
+            if(distance > furthest) {
+                furthest = distance;
+                teamFurthest = teamIdxToDistance.getKey();
+            }
+        }
+
+        return teamFurthest;
+    }
+
+    int calculateTeamFurthestDistance(int teamIdx) {
+        if(!furthestDistances.containsKey(teamIdx)) return -1;
+
+        int middleIndex = Math.round(route.size() * 0.5f);
+        int currentNode = furthestDistances.get(teamIdx);
+        int distance = Math.abs(middleIndex - currentNode);
+        return distance;
+    }
+
+    int calculateTeamWithMostInk(PayloadInstance payloadInstance, boolean allowOverride)
+    {
+        if(allowOverride && overrideTeamWithMostInk>=0) {
+            return overrideTeamWithMostInk;
+        }
+
+        int numWool = payloadInstance.slimeBoxes.size();
+        int minRequiredToMove = numWool / 2;
+        int teamWithMostInked = -1;
+
+        for(int teamIdx=0; teamIdx<getNumTeams(); teamIdx++) {
+            for(Player player : Splatoon.gameFlowManager.getTeamPlayers(teamIdx)) {
+                IPlayerTeamMixin team = Teams.getTeamMixinFromPlayer(player);
+                if(team != null) {
+                    int teamInked = 0;
+
+                    for(var slimeAndOffset : payloadInstance.slimeBoxes) {
+                        UUID slimeUUID = slimeAndOffset.getA();
+                        Entity slimeEntity = player.level().getEntity(slimeUUID);
+                        if(slimeEntity==null) continue;
+                        if(slimeEntity instanceof Slime slime) {
+                            IPlayerTeamMixin slimeTeam = ((IInkablePayloadBlock)slime).getTeam();
+                            if(slimeTeam == team) {
+                                teamInked++;
+                            }
+                        }
+                    }
+
+                    if(teamInked > minRequiredToMove) {
+                        teamWithMostInked = teamIdx;
+                    }
+
+                    break;
+                }
+
+            }
+        }
+
+        return teamWithMostInked;
+    }
 
     void createPayloadAndRoute()
     {
@@ -97,7 +271,7 @@ public class Payload extends Gamemode {
             //Splatoon.LOGGER.info("Check display at {}", blockDisplay.getPosition(0.0f));
             if(!blockDisplay.getTags().contains("PayloadNav")) continue;
 
-            double dist = blockDisplay.distanceToSqr(team0spawn);
+            double dist = Math.sqrt(blockDisplay.distanceToSqr(team0spawn));
             if(dist < nearestDist) {
                 nearestDist = dist;
                 nearestNav = blockDisplay;
@@ -118,7 +292,7 @@ public class Payload extends Gamemode {
 
             Display.BlockDisplay nearestOtherNav = null;
             double nearestOtherDist = 99999999.0;
-            for (Display.BlockDisplay otherNav : Splatoon.SERVER.overworld().getEntitiesOfClass(Display.BlockDisplay.class, new AABB(nearestNav.getOnPos()).inflate(10.0))) {
+            for (Display.BlockDisplay otherNav : Splatoon.SERVER.overworld().getEntitiesOfClass(Display.BlockDisplay.class, new AABB(nearestNav.getOnPos()).inflate(50.0))) {
                 if(!otherNav.getTags().contains("PayloadNav")) continue;
                 if(route.contains(otherNav)) continue;
 
@@ -140,6 +314,9 @@ public class Payload extends Gamemode {
 
         // the payload spawns at the middle node
         int middleIndex = Math.round(route.size() * 0.5f);
+
+        furthestDistances.put(0, middleIndex);
+        furthestDistances.put(1, middleIndex);
 
         Entity middleNode = route.get(middleIndex);
         Entity nextNode = route.get(middleIndex - 1);
@@ -220,21 +397,98 @@ public class Payload extends Gamemode {
                 );
             });
 
-            ScheduleEvent.schedule(20, server->createPayloadAndRoute());
+            ScheduleEvent.schedule(60, server->createPayloadAndRoute());
         }
 
         if(gameState == GameFlowManager.GameState.GAME_TIME)
         { // during
+            for(int i=0; i<getNumTeams(); i++) {
+                CustomBossEvent bossbar;
+                switch (i) {
+                    case 0:
+                        bossbar = getTeam0Bossbar();
+                        break;
+                    case 1:
+                        bossbar = getTeam1Bossbar();
+                        break;
+                    default:
+                        continue;
+                }
 
+                IPlayerTeamMixin team = gameFlowManager.getTeamMixinFromTeamIndex(i);
+                if(team != null) {
+                    PlayerTeam playerTeam = (PlayerTeam)team;
+
+                    MutableComponent bossbarName = playerTeam.getFormattedDisplayName();
+                    bossbar.setName(bossbarName.append(" furthest distance"));
+
+                    try {
+                        BossEvent.BossBarColor bossBarColor = BossEvent.BossBarColor.valueOf(team.getBossbarColour().toUpperCase());
+                        bossbar.setColor(bossBarColor);
+
+                    } catch (IllegalArgumentException ignored) {}
+
+
+                }
+            }
+        }
+
+        if(gameState == GameFlowManager.GameState.CELEBRATION)
+        {
+            for(int i=0; i<getNumTeams(); i++) {
+                CustomBossEvent bossbar;
+                switch (i) {
+                    case 0:
+                        bossbar = getTeam0Bossbar();
+                        break;
+                    case 1:
+                        bossbar = getTeam1Bossbar();
+                        break;
+                    default:
+                        continue;
+                }
+
+                bossbar.setVisible(false);
+            }
         }
 
         if(gameState == GameFlowManager.GameState.RESULTS)
         { // results
+            for(int i=0; i<getNumTeams(); i++) {
+                CustomBossEvent bossbar;
+                switch (i) {
+                    case 0:
+                        bossbar = getTeam0Bossbar();
+                        break;
+                    case 1:
+                        bossbar = getTeam1Bossbar();
+                        break;
+                    default:
+                        continue;
+                }
 
+                bossbar.setVisible(false);
+            }
         }
 
         if(gameState == GameFlowManager.GameState.NONE)
         { // cleanup
+            for(int i=0; i<getNumTeams(); i++) {
+                CustomBossEvent bossbar;
+                switch (i) {
+                    case 0:
+                        bossbar = getTeam0Bossbar();
+                        break;
+                    case 1:
+                        bossbar = getTeam1Bossbar();
+                        break;
+                    default:
+                        continue;
+                }
+
+                bossbar.setVisible(false);
+            }
+
             for(PayloadInstance payload : payloads) {
                 for(var slimeUUIDrel : payload.slimeBoxes) {
                     Entity slimeEnitity = Splatoon.SERVER.overworld().getEntity(slimeUUIDrel.getA());
@@ -294,46 +548,26 @@ public class Payload extends Gamemode {
 
 
 
-        int numWool = payload.slimeBoxes.size();
-        int minRequiredToMove = numWool / 2;
-        int teamWithMostInked = -1;
 
-        for(int teamIdx=0; teamIdx<getNumTeams(); teamIdx++) {
-            for(Player player : Splatoon.gameFlowManager.getTeamPlayers(teamIdx)) {
-                IPlayerTeamMixin team = Teams.getTeamMixinFromPlayer(player);
-                if(team != null) {
-                    int teamInked = 0;
-
-                    for(var slimeAndOffset : payload.slimeBoxes) {
-                        UUID slimeUUID = slimeAndOffset.getA();
-                        Entity slimeEntity = player.level().getEntity(slimeUUID);
-                        if(slimeEntity==null) continue;
-                        if(slimeEntity instanceof Slime slime) {
-                            IPlayerTeamMixin slimeTeam = ((IInkablePayloadBlock)slime).getTeam();
-                            if(slimeTeam == team) {
-                                teamInked++;
-                            }
-                        }
-                    }
-
-                    if(teamInked > minRequiredToMove) {
-                        teamWithMostInked = teamIdx;
-                    }
-
-                    break;
-                }
-
+        int teamWithMostInked = calculateTeamWithMostInk(payload, true);
+        IPlayerTeamMixin playerTeam = Splatoon.gameFlowManager.getTeamMixinFromTeamIndex(teamWithMostInked);
+        if(playerTeam != null) {
+            int intCol = playerTeam.getTeamColourInt();
+            for(var blockDisplayToPos : payload.entity.getDisplayEntities())
+            {
+                blockDisplayToPos.getA().setGlowingTag(true);
+                blockDisplayToPos.getA().setGlowColorOverride(intCol);
             }
         }
 
         int nextIdx = currentIdx;
+        int nextDiff = 0;
 
         switch(teamWithMostInked) {
-            case 0: nextIdx += 1; break;
-            case 1: nextIdx -= 1; break;
+            case 0: nextDiff = 1; break;
+            case 1: nextDiff = -1; break;
         }
-
-        //todo: calculate next idx
+        nextIdx += nextDiff;
 
         if(nextIdx >= route.size()) {
             // team0 win
@@ -348,6 +582,12 @@ public class Payload extends Gamemode {
         else if(nextIdx == currentIdx)
         {
             // tied up
+            int intCol = CommonColors.WHITE;
+            for(var blockDisplayToPos : payload.entity.getDisplayEntities())
+            {
+                blockDisplayToPos.getA().setGlowingTag(true);
+                blockDisplayToPos.getA().setGlowColorOverride(intCol);
+            }
         }
         else
         {
@@ -355,7 +595,20 @@ public class Payload extends Gamemode {
 
             entity.lookAt(EntityAnchorArgument.Anchor.EYES, next.position());
 
-            entity.setPos(entity.position().add(entity.getForward().scale(0.05)));
+            double speed = 0.08;
+            int furthestDistance = furthestDistances.getOrDefault(teamWithMostInked, 0);
+            if(nextDiff == 1) {
+                if(nextIdx < furthestDistance) {
+                    speed = 0.18;
+                }
+            }
+            else if(nextDiff == -1) {
+                if(nextIdx > furthestDistance) {
+                    speed = 0.18;
+                }
+            }
+
+            entity.setPos(entity.position().add(entity.getForward().scale(speed)));
 
             if(teamWithMostInked == 0) {
 //                entity.rotate(Rotation.CLOCKWISE_180);
@@ -366,10 +619,52 @@ public class Payload extends Gamemode {
 
             float distance = (float) Math.sqrt(entity.distanceTo(next));
             //Splatoon.LOGGER.info("Distance to next nav point: {}", distance);
-            if(distance < 0.2f) {
+            if(distance < 0.5f) {
                 entity.setPos(next.position());
                 payload.visitedIndex = nextIdx;
-                //Splatoon.LOGGER.info("Set visited index {}", nextIdx);
+
+                if(nextDiff == 1) {
+                    if(payload.visitedIndex > furthestDistance) {
+                        furthestDistances.put(teamWithMostInked, payload.visitedIndex);
+                    }
+                }
+                else if(nextDiff == -1) {
+                    if(payload.visitedIndex < furthestDistance) {
+                        furthestDistances.put(teamWithMostInked, payload.visitedIndex);
+                    }
+                }
+
+                GamemodeMap map = Splatoon.gameFlowManager.getCurrentMap();
+                if(map instanceof PayloadMap payloadMap) {
+                    {
+                        int altSpawnIndex = calculateAltSpawnIndex(0);
+                        if(payload.visitedIndex >= altSpawnIndex) {
+                            // alt spawn
+                            setTeamSpawnpoint(0, payloadMap.altSpawns.get(0));
+                        }
+                        else
+                        {
+                            setTeamSpawnpoint(0, payloadMap.teamSpawns.get(0));
+                        }
+                    }
+
+                    {
+                        int altSpawnIndex = calculateAltSpawnIndex(1);
+
+                        if(payload.visitedIndex <= altSpawnIndex) {
+                            // alt spawn
+                            setTeamSpawnpoint(1, payloadMap.altSpawns.get(1));
+                        }
+                        else
+                        {
+                            setTeamSpawnpoint(1, payloadMap.teamSpawns.get(1));
+                        }
+                    }
+                }
+                else
+                {
+                    Splatoon.LOGGER.error("Current map is not a payload map!");
+                }
             }
         }
 
@@ -379,10 +674,75 @@ public class Payload extends Gamemode {
     @Override
     public void tick(GameFlowManager gameFlowManager, int timer)
     {
+
+
         //Splatoon.LOGGER.info("tick payload");
-        if(gameFlowManager.getCurrentGameState() == GameFlowManager.GameState.GAME_TIME)
+        if(
+                gameFlowManager.getCurrentGameState() == GameFlowManager.GameState.GAME_TIME ||
+                gameFlowManager.getCurrentGameState() == GameFlowManager.GameState.OVERTIME
+        )
         {
             payloads.forEach(this::payloadTick);
+
+            for(int i=0; i<getNumTeams(); i++) {
+                CustomBossEvent bossbar;
+                switch(i) {
+                    case 0: bossbar = getTeam0Bossbar(); break;
+                    case 1: bossbar = getTeam1Bossbar(); break;
+                    default: continue;
+                }
+
+                int distance = calculateTeamFurthestDistance(i);
+                int middleIndex = Math.round(route.size() * 0.5f);
+                bossbar.setMax(middleIndex);
+                bossbar.setValue(distance);
+
+                List<ServerPlayer> serverPlayers = new ArrayList<>();
+                for(Player player : gameFlowManager.getGamersIncludingSpectators()) {
+                    serverPlayers.add((ServerPlayer) player);
+                }
+
+                bossbar.setPlayers(serverPlayers);
+                bossbar.setVisible(true);
+            }
+        }
+
+        if(gameFlowManager.getCurrentGameState() == GameFlowManager.GameState.OVERTIME)
+        {
+            IGameState gameState = gameFlowManager.getCurrentGameState().getGameState();
+            if(gameState instanceof Overtime overtime) {
+                boolean doReplenish = Splatoon.SERVER.getTickCount() % 2 == 0;
+
+                if(doReplenish) {
+                    for(PayloadInstance payloadInstance : payloads) {
+                        int teamInLead = calculateTeamFurthestDistance();
+                        int teamCurrentlyMostInk = calculateTeamWithMostInk(payloadInstance, true);
+                        IPlayerTeamMixin teamMixinInLead = gameFlowManager.getTeamMixinFromTeamIndex(teamInLead);
+
+                        if(teamInLead != teamCurrentlyMostInk) {
+                            // replenish timer
+                            gameFlowManager.addTimer(3);
+                        }
+
+                        // if someone on losing team is near the payload
+                        // make timer go down slower
+                        Entity rootPayloadEntity = payloadInstance.entity.getRootEntity();
+                        if(rootPayloadEntity != null) {
+                            for (Player player : rootPayloadEntity.level().getEntitiesOfClass(Player.class, new AABB(rootPayloadEntity.getOnPos()).inflate(16.0))) {
+                                IPlayerTeamMixin playerTeam = Teams.getTeamMixinFromPlayer(player);
+                                if(playerTeam == null) continue;
+
+                                if(teamMixinInLead != playerTeam) {
+                                    gameFlowManager.addTimer(1);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            else {
+                Splatoon.LOGGER.error("Current game state is overtime, but the instance of the game state isnt of overtime type");
+            }
         }
 
         if(gameFlowManager.getCurrentGameState() == GameFlowManager.GameState.CELEBRATION)
@@ -393,6 +753,21 @@ public class Payload extends Gamemode {
         if(gameFlowManager.getCurrentGameState() == GameFlowManager.GameState.RESULTS)
         {
             Splatoon.gameFlowManager.setGameState(GameFlowManager.GameState.CELEBRATION);
+        }
+
+        if(gameFlowManager.getCurrentGameState() == GameFlowManager.GameState.GAME_TIME)
+        {
+            if(timer == 1) {
+                for(PayloadInstance payloadInstance : payloads) {
+                    int teamInLead = calculateTeamFurthestDistance();
+                    int teamCurrentlyMostInk = calculateTeamWithMostInk(payloadInstance, true);
+
+                    if(teamInLead != teamCurrentlyMostInk) {
+                        Splatoon.gameFlowManager.setGameState(GameFlowManager.GameState.OVERTIME);
+                    }
+
+                }
+            }
         }
     }
 }

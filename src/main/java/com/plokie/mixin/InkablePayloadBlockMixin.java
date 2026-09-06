@@ -31,6 +31,16 @@ public class InkablePayloadBlockMixin implements IInkablePayloadBlock {
     }
 
     @Override
+    public Display.BlockDisplay getLinkedBlockDisplay() {
+        if(this.blockDisplayUUID == null) return null;
+
+        Entity entity = ((Slime)(Object)this).level().getEntity(this.blockDisplayUUID);
+        if(entity == null) return null;
+        if(entity instanceof Display.BlockDisplay blockDisplay) return blockDisplay;
+        return null;
+    }
+
+    @Override
     public IPlayerTeamMixin getTeam() {
         return team;
     }

@@ -66,7 +66,7 @@ public class SuperJump extends Ability {
                     !supportingBlock.is(playerTeam.getGroundBlock()) &&
                             (
                                     Splatoon.gameFlowManager.getCurrentMap()==null ||
-                                    !supportingBlock.is(Splatoon.gameFlowManager.getCurrentMap().groundBlock)
+                                    !supportingBlock.is(Splatoon.gameFlowManager.getCurrentMap().getGroundBlock.apply(0))
                             )
             )
             {

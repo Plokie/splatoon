@@ -7,5 +7,5 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class PayloadMap extends GamemodeMap {
-    Map<Integer, Vec3> altSpawns = new HashMap<>();
+    public Map<Integer, Vec3> altSpawns = new HashMap<>();
 }

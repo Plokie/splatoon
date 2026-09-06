@@ -25,8 +25,8 @@ public class Cyberscape extends GamemodeMap {
 
         this.spectatorZone = new Vec3(4057, 145, 1324);
 
-        this.groundBlock = Blocks.WHITE_CONCRETE_POWDER;
-        this.wallBlock = Blocks.WHITE_WOOL;
+        this.getGroundBlock = y->Blocks.WHITE_CONCRETE_POWDER;
+        this.getWallBlock = y->Blocks.WHITE_WOOL;
 
         for(int i=0;i<5;i++) {
             this.podiums.add(new BlockPos(4064 + (i*4), 109, 1370));
