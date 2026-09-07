@@ -709,6 +709,11 @@ public class Payload extends Gamemode {
 
         if(gameFlowManager.getCurrentGameState() == GameFlowManager.GameState.OVERTIME)
         {
+            if(timer == 1) {
+                int teamInLead = calculateTeamFurthestDistance();
+                gameFlowManager.setWinningTeam(teamInLead);
+            }
+
             IGameState gameState = gameFlowManager.getCurrentGameState().getGameState();
             if(gameState instanceof Overtime overtime) {
                 boolean doReplenish = Splatoon.SERVER.getTickCount() % 2 == 0;
@@ -758,8 +763,11 @@ public class Payload extends Gamemode {
         if(gameFlowManager.getCurrentGameState() == GameFlowManager.GameState.GAME_TIME)
         {
             if(timer == 1) {
+                int teamInLead = calculateTeamFurthestDistance();
+                gameFlowManager.setWinningTeam(teamInLead);
+
                 for(PayloadInstance payloadInstance : payloads) {
-                    int teamInLead = calculateTeamFurthestDistance();
+
                     int teamCurrentlyMostInk = calculateTeamWithMostInk(payloadInstance, true);
 
                     if(teamInLead != teamCurrentlyMostInk) {
@@ -769,5 +777,7 @@ public class Payload extends Gamemode {
                 }
             }
         }
+
+
     }
 }

@@ -322,7 +322,7 @@ public class PlayerMixin implements IPlayerMixin {
             inInk = false;
             onWall = false;
 
-            if(player.isCrouching())
+            if(player.isCrouching() && getSplatoonClass() != null)
             {
                 BlockPos playerPos = player.getBlockPosBelowThatAffectsMyMovement();
 

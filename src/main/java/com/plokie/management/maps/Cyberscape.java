@@ -29,7 +29,7 @@ public class Cyberscape extends GamemodeMap {
         this.getWallBlock = y->Blocks.WHITE_WOOL;
 
         for(int i=0;i<5;i++) {
-            this.podiums.add(new BlockPos(4064 + (i*4), 109, 1370));
+            this.podiums.add(new BlockPos(4064 + (i*4), 109, 1369));
         }
         this.podiumViewerPosition = new Vec3(4072.5, 111.0, 1358.5);
         this.podiumViewerRotation = new Vec2(0.0f, 10.0f);
