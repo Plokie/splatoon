@@ -38,6 +38,8 @@ public class PlayerStatsMixin implements IPlayerStatsMixin {
         forceAdd(stat, delta);
     }
 
+
+
     @Override
     public void forceAdd(PlayerStats stat, int delta)
     {
@@ -113,6 +115,23 @@ public class PlayerStatsMixin implements IPlayerStatsMixin {
     public void resetMatchStats()
     {
         matchStats.clear();
+    }
+
+    @Override
+    public void copyFrom(Player oldPlayer) {
+        IPlayerStatsMixin oldPlayerStats = (IPlayerStatsMixin)oldPlayer;
+        this.stats = oldPlayerStats.getAllStats();
+        this.matchStats = oldPlayerStats.getAllMatchStats();
+    }
+
+    @Override
+    public Map<PlayerStats, Integer> getAllStats() {
+        return stats;
+    }
+
+    @Override
+    public Map<PlayerStats, Integer> getAllMatchStats() {
+        return matchStats;
     }
 
     @Inject(method="<init>", at=@At("TAIL"))

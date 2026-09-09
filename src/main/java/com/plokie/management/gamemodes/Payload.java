@@ -130,6 +130,7 @@ public class Payload extends Gamemode {
     Map<Integer, Integer> furthestDistances = new HashMap<>();
 
     int overrideTeamWithMostInk = -1;
+    int timeInOvertime = 0;
 
     CustomBossEvent getTeam0Bossbar() {
         ResourceLocation barId = ResourceLocation.fromNamespaceAndPath("minecraft", "side1");
@@ -709,6 +710,8 @@ public class Payload extends Gamemode {
 
         if(gameFlowManager.getCurrentGameState() == GameFlowManager.GameState.OVERTIME)
         {
+            timeInOvertime++;
+
             if(timer == 1) {
                 int teamInLead = calculateTeamFurthestDistance();
                 gameFlowManager.setWinningTeam(teamInLead);
@@ -716,34 +719,49 @@ public class Payload extends Gamemode {
 
             IGameState gameState = gameFlowManager.getCurrentGameState().getGameState();
             if(gameState instanceof Overtime overtime) {
-                boolean doReplenish = Splatoon.SERVER.getTickCount() % 2 == 0;
+                boolean doReplenish = Splatoon.SERVER.getTickCount() % 5 == 0;
 
-                if(doReplenish) {
-                    for(PayloadInstance payloadInstance : payloads) {
-                        int teamInLead = calculateTeamFurthestDistance();
-                        int teamCurrentlyMostInk = calculateTeamWithMostInk(payloadInstance, true);
-                        IPlayerTeamMixin teamMixinInLead = gameFlowManager.getTeamMixinFromTeamIndex(teamInLead);
+                for(PayloadInstance payloadInstance : payloads) {
+                    int teamInLead = calculateTeamFurthestDistance();
+                    int teamCurrentlyMostInk = calculateTeamWithMostInk(payloadInstance, true);
+                    IPlayerTeamMixin teamMixinInLead = gameFlowManager.getTeamMixinFromTeamIndex(teamInLead);
 
-                        if(teamInLead != teamCurrentlyMostInk) {
-                            // replenish timer
-                            gameFlowManager.addTimer(3);
-                        }
+                    if (teamInLead != teamCurrentlyMostInk) {
+                        // replenish timer
+                        gameFlowManager.addTimer(2);
+                    }
 
-                        // if someone on losing team is near the payload
-                        // make timer go down slower
-                        Entity rootPayloadEntity = payloadInstance.entity.getRootEntity();
-                        if(rootPayloadEntity != null) {
-                            for (Player player : rootPayloadEntity.level().getEntitiesOfClass(Player.class, new AABB(rootPayloadEntity.getOnPos()).inflate(16.0))) {
-                                IPlayerTeamMixin playerTeam = Teams.getTeamMixinFromPlayer(player);
-                                if(playerTeam == null) continue;
+                    // if someone on losing team is near the payload
+                    // make timer go down slower
+                    Entity rootPayloadEntity = payloadInstance.entity.getRootEntity();
+                    if (rootPayloadEntity != null) {
+                        for (Player player : rootPayloadEntity.level().getEntitiesOfClass(Player.class, new AABB(rootPayloadEntity.getOnPos()).inflate(16.0))) {
+                            IPlayerTeamMixin playerTeam = Teams.getTeamMixinFromPlayer(player);
+                            if (playerTeam == null) continue;
 
-                                if(teamMixinInLead != playerTeam) {
-                                    gameFlowManager.addTimer(1);
+                            if (teamMixinInLead != playerTeam) {
+                                if (doReplenish) {
+                                    if(timeInOvertime < 200) {
+                                        gameFlowManager.addTimer(4);
+                                    }
+                                    else if(timeInOvertime < 400) {
+                                        gameFlowManager.addTimer(3);
+                                    }
+                                    else if(timeInOvertime < 600) {
+                                        gameFlowManager.addTimer(2);
+                                    }
+                                    else if(timeInOvertime < 800) {
+                                        gameFlowManager.addTimer(1);
+                                    }
+
                                 }
                             }
                         }
                     }
+
+                    gameFlowManager.setTimer(Math.clamp(gameFlowManager.getTimer(), 0, 200));
                 }
+
             }
             else {
                 Splatoon.LOGGER.error("Current game state is overtime, but the instance of the game state isnt of overtime type");
@@ -762,15 +780,40 @@ public class Payload extends Gamemode {
 
         if(gameFlowManager.getCurrentGameState() == GameFlowManager.GameState.GAME_TIME)
         {
+//            if(timer == 1) {
+//                timeInOvertime = 0;
+//                Splatoon.gameFlowManager.setGameState(GameFlowManager.GameState.OVERTIME);
+//            }
             if(timer == 1) {
                 int teamInLead = calculateTeamFurthestDistance();
                 gameFlowManager.setWinningTeam(teamInLead);
+                IPlayerTeamMixin teamMixinInLead = gameFlowManager.getTeamMixinFromTeamIndex(teamInLead);
+
+                boolean doOvertime = false;
 
                 for(PayloadInstance payloadInstance : payloads) {
 
                     int teamCurrentlyMostInk = calculateTeamWithMostInk(payloadInstance, true);
 
+                    Entity rootPayloadEntity = payloadInstance.entity.getRootEntity();
+                    if (rootPayloadEntity != null) {
+                        for (Player player : rootPayloadEntity.level().getEntitiesOfClass(Player.class, new AABB(rootPayloadEntity.getOnPos()).inflate(16.0))) {
+                            IPlayerTeamMixin playerTeam = Teams.getTeamMixinFromPlayer(player);
+                            if (playerTeam == null) continue;
+
+                            if (teamMixinInLead != playerTeam) {
+                                doOvertime = true;
+                            }
+                        }
+                    }
+
                     if(teamInLead != teamCurrentlyMostInk) {
+                          doOvertime = true;
+                    }
+
+                    if(doOvertime)
+                    {
+                        timeInOvertime = 0;
                         Splatoon.gameFlowManager.setGameState(GameFlowManager.GameState.OVERTIME);
                     }
 

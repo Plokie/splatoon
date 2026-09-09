@@ -16,10 +16,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.StringRepresentable;
 import net.minecraft.util.Tuple;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.scores.Objective;
-import net.minecraft.world.scores.PlayerTeam;
-import net.minecraft.world.scores.ReadOnlyScoreInfo;
-import net.minecraft.world.scores.ScoreAccess;
+import net.minecraft.world.scores.*;
 import net.minecraft.world.scores.criteria.ObjectiveCriteria;
 import org.jetbrains.annotations.NotNull;
 
@@ -144,7 +141,7 @@ public enum PlayerStats implements StringRepresentable {
                 if(targetTeam == null) return true;
 
                 if(targetTeam != sourceTeam) {
-                    Splatoon.LOGGER.info("Registered dealt damage {} to {} by {}", amount, targetPlayer.getName().getString(), playerSource.getName().getString());
+                    //Splatoon.LOGGER.info("Registered dealt damage {} to {} by {}", amount, targetPlayer.getName().getString(), playerSource.getName().getString());
                     PlayerStats.get(playerSource).add(DAMAGE_DEALT, (int)amount);
                 }
             }
@@ -190,7 +187,7 @@ public enum PlayerStats implements StringRepresentable {
                 }
                 else
                 {
-                    PlayerStats.get(player).forceAdd(stat, delta);
+                    PlayerStats.get(player).forceAddNoMatch(stat, delta);
                     int newValue = PlayerStats.get(player).get(stat);
                     return "Changed player lifetime stat " + stat.toString() + " by " + delta +". Now " + newValue;
                 }
@@ -200,6 +197,58 @@ public enum PlayerStats implements StringRepresentable {
             }
             catch(IllegalArgumentException e) {
                 return "! Unrecognised stat";
+            }
+
+        }).register();
+
+        CommandBuilder.command("playerstat")
+                .subcommand("add_from_scoreboard")
+                .argumentString("type", lifetimeOrMatch)
+                .argumentPlayer("player")
+                .argumentEnum("stat", PlayerStats::values)
+                .argumentString("scoreboard_player")
+                .argumentString("scoreboard_name")
+                .executes(ctx->{
+            try {
+                ServerPlayer player = ctx.getArgumentPlayer("player");
+
+                Splatoon.LOGGER.info("Adding from scoreboard for {}", player.getName());
+
+                Scoreboard scoreboard = player.getScoreboard();
+                Objective objective = scoreboard.getObjective(ctx.getArgumentString("scoreboard_name"));
+                if(objective == null) {
+                    return "! Unrecognised scoreboard objective name";
+                }
+
+                Splatoon.LOGGER.info("\tFound objective {}", objective.getName());
+
+                var scoreInfo = scoreboard.getPlayerScoreInfo(ScoreHolder.forNameOnly(ctx.getArgumentString("scoreboard_player")), objective);
+                if(scoreInfo == null) {
+                    return "! Player does not have a score on this scoreboard";
+                }
+
+                Splatoon.LOGGER.info("\tFound score info {}", scoreInfo.toString());
+
+                PlayerStats stat = ctx.getArgumentEnum("stat", PlayerStats.class);
+                String lifetime = ctx.getArgumentString("type");
+                int delta = scoreInfo.value();
+
+                Splatoon.LOGGER.info("\tGot delta {}", delta);
+
+                if(lifetime.equals("match")) {
+                    PlayerStats.get(player).forceAddOnlyMatchStat(stat, delta);
+                    int newValue = PlayerStats.get(player).getMatchStat(stat);
+                    return "Changed player match stat " + stat.toString() + " by " + delta +". Now " + newValue;
+                }
+                else
+                {
+                    PlayerStats.get(player).forceAddNoMatch(stat, delta);
+                    int newValue = PlayerStats.get(player).get(stat);
+                    return "Changed player lifetime stat " + stat.toString() + " by " + delta +". Now " + newValue;
+                }
+
+            } catch (CommandSyntaxException e) {
+                return "! Unrecognised target";
             }
 
         }).register();

@@ -148,7 +148,6 @@ public class GameFlowManager {
     public void setTimer(int value) { timer = value; }
     public void addTimer(int delta) {
         timer += delta;
-        timer = Math.clamp(timer, 0, getTimerBossbar().getMax());
     }
 
     public void setPlayerTeam(Player player, int teamIndex) {

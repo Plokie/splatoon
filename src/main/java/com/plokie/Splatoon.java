@@ -12,6 +12,7 @@ import com.plokie.helpers.CommandBuilder;
 import com.plokie.helpers.Helpers;
 import com.plokie.helpers.ScheduleEvent;
 import com.plokie.interfaces.IPlayerMixin;
+import com.plokie.interfaces.IPlayerStatsMixin;
 import com.plokie.management.GameFlowManager;
 import com.plokie.management.PlayerStats;
 import com.plokie.management.SkirmishManager;
@@ -86,6 +87,10 @@ public class Splatoon implements ModInitializer {
 			IPlayerMixin newPlayerMixin = (IPlayerMixin)newPlayer;
 
 			newPlayerMixin.setClass(oldPlayerMixin.getSplatoonClass());
+
+
+			IPlayerStatsMixin newPlayerStats = (IPlayerStatsMixin) newPlayer;
+			newPlayerStats.copyFrom(oldPlayer);
 		});
 
 		this.scheduleEvent = new ScheduleEvent();

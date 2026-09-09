@@ -92,7 +92,8 @@ public class Intro implements IGameState {
 
             Vec3 forward = introGuide.getForward();
             Vec3 pos = introGuide.getEyePosition();
-            forward = new Vec3(pos.x + (forward.x * 0.25f), pos.y + (forward.y * 0.25), pos.z + (forward.z * 0.25));
+            float forwardSpeed = 0.20f;
+            forward = new Vec3(pos.x + (forward.x * forwardSpeed), pos.y + (forward.y *forwardSpeed), pos.z + (forward.z * forwardSpeed));
 
             introGuide.setPos(forward);
         }

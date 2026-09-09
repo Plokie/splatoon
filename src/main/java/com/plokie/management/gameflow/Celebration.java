@@ -4,10 +4,7 @@ import com.mojang.datafixers.types.templates.Tag;
 import com.mojang.math.Axis;
 import com.mojang.math.Transformation;
 import com.plokie.Splatoon;
-import com.plokie.helpers.Affects;
-import com.plokie.helpers.Effects;
-import com.plokie.helpers.Fill;
-import com.plokie.helpers.Teams;
+import com.plokie.helpers.*;
 import com.plokie.interfaces.IPlayerMixin;
 import com.plokie.interfaces.IPlayerTeamMixin;
 import com.plokie.management.GameFlowManager;
@@ -194,6 +191,13 @@ public class Celebration implements IGameState {
             player.setDeltaMovement(Vec3.ZERO);
             player.lookAt(EntityAnchorArgument.Anchor.EYES, podiumViewerPos.add(0, 1.5, 0));
             player.teleportTo(podiumPosv3.x, podiumPosv3.y + 1, podiumPosv3.z);
+
+            ScheduleEvent.schedule(5, server->{
+                player.setNoGravity(false);
+                player.setDeltaMovement(Vec3.ZERO);
+                player.lookAt(EntityAnchorArgument.Anchor.EYES, podiumViewerPos.add(0, 1.5, 0));
+                player.teleportTo(podiumPosv3.x, podiumPosv3.y + 1, podiumPosv3.z);
+            });
 
 
             // get axis pointing towards viewers

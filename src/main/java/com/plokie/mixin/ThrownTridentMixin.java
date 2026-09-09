@@ -62,7 +62,7 @@ public class ThrownTridentMixin implements IThrownTrident {
     @Override
     public void setRopedTarget(LivingEntity ropedTarget)
     {
-        hasHit = true;
+        //hasHit = true;
         ropedEntity = ropedTarget;
         //ropedTarget.startRiding((AbstractArrow)(Object)this, true);
         //hookedEntity = ropedTarget;
@@ -73,15 +73,15 @@ public class ThrownTridentMixin implements IThrownTrident {
         AbstractArrow self = (AbstractArrow) (Object)this;
 
         self.ejectPassengers();
-        ropedEntity= null;
+        //ropedEntity = null;
 
-        Splatoon.LOGGER.info("Hit entity {}", entityHitResult.getEntity().getName());
+        Splatoon.LOGGER.info("trident Hit entity {}", entityHitResult.getEntity().getName());
 
         if(!(self instanceof ThrownTrident)) return;
 
         if(!hasHit)
         {
-            Splatoon.LOGGER.info("Hit entity {}", entityHitResult.getEntity().getName());
+            Splatoon.LOGGER.info("trident Hit entity {}", entityHitResult.getEntity().getName());
             hitGround();
         }
     }
@@ -94,11 +94,11 @@ public class ThrownTridentMixin implements IThrownTrident {
         if(!(self instanceof ThrownTrident)) return;
 
         self.ejectPassengers();
-        ropedEntity = null;
+        //ropedEntity = null;
 
         if(!hasHit)
         {
-            Splatoon.LOGGER.info("Hit ground");
+            Splatoon.LOGGER.info("trident Hit ground");
             hitGround();
         }
     }
@@ -169,6 +169,7 @@ public class ThrownTridentMixin implements IThrownTrident {
         {
             for (LivingEntity entity : self.level().getEntitiesOfClass(LivingEntity.class, new AABB(self.getOnPos()).inflate(1.0))) {
                 if(entity == self.getOwner()) continue;
+                if(entity == ropedEntity) continue;
 
                 hitGround();
             }
@@ -235,39 +236,41 @@ public class ThrownTridentMixin implements IThrownTrident {
             float nearestDistance = 9999.f;
             LivingEntity nearestEntity = null;
 
-            AABB aabb = new AABB(self.getOnPos()).inflate(3.5);
-            for(LivingEntity entity : level.getEntitiesOfClass(LivingEntity.class, aabb))
-            {
-                if(entity instanceof Shulker) continue;
-                if(entity instanceof Slime) continue;
-                if(entity == player) continue;
-
-                float distance = entity.distanceTo(self);
-
-                if(distance < 3.5f)
+            if(ropedEntity == null) {
+                AABB aabb = new AABB(self.getOnPos()).inflate(3.5);
+                for(LivingEntity entity : level.getEntitiesOfClass(LivingEntity.class, aabb))
                 {
-                    if(distance < nearestDistance && entity != player) {
-                        nearestDistance = distance;
-                        nearestEntity = entity;
+                    if(entity instanceof Shulker) continue;
+                    if(entity instanceof Slime) continue;
+                    if(entity == player) continue;
+                    if(entity == ropedEntity) continue;
+
+                    float distance = entity.distanceTo(self);
+
+                    if(distance < 3.5f)
+                    {
+                        if(distance < nearestDistance && entity != player) {
+                            nearestDistance = distance;
+                            nearestEntity = entity;
+                        }
+
+                        Effects.givePotionEffect(entity, MobEffects.BLINDNESS, 7, 3, true);
+                        Effects.givePotionEffect(entity, MobEffects.SLOWNESS, 3, 3, true);
+                        Effects.givePotionEffect(entity, MobEffects.WEAKNESS, 3, 3, true);
                     }
-
-                    Effects.givePotionEffect(entity, MobEffects.BLINDNESS, 7, 3, true);
-                    Effects.givePotionEffect(entity, MobEffects.SLOWNESS, 3, 3, true);
-                    Effects.givePotionEffect(entity, MobEffects.WEAKNESS, 3, 3, true);
                 }
-            }
 
-            if(nearestEntity != null)
-            {
-                hookedEntity = nearestEntity;
-            }
-            if(nearestEntity == null)
-            {
-                Splatoon.LOGGER.info("Trident couldnt find nearest entity");
+                if(nearestEntity != null)
+                {
+                    hookedEntity = nearestEntity;
+                }
+                if(nearestEntity == null) {
+                    Splatoon.LOGGER.info("Trident couldnt find nearest entity");
+                }
             }
         }
 
-
+        ropedEntity = null;
         hasHit = true;
     }
 

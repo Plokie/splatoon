@@ -414,11 +414,11 @@ public class PlayerMixin implements IPlayerMixin {
             {
                 if(input.jump())
                 {
-                    Effects.givePotionEffect(player, MobEffects.LEVITATION, 10, 5, true);
+                    Effects.givePotionEffect(player, MobEffects.LEVITATION, 10, 8, true);
                 }
                 else {
                     Effects.clearPotionEffect(player, MobEffects.LEVITATION);
-                    Effects.givePotionEffect(player, MobEffects.SLOW_FALLING, 10, 5, true);
+                    Effects.givePotionEffect(player, MobEffects.SLOW_FALLING, 10, 8, true);
                 }
             }
             else {

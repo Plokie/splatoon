@@ -25,6 +25,7 @@
     "ThrownEnderpearlMixin",
     "ThrownTridentMixin",
     "WindChargeMixin",
+    "XpBottleGrenadeHitFixMixin",
     "XpBottleGrenadeMixin"
   ],
   "injectors": {

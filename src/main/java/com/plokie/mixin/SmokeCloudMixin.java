@@ -1,6 +1,7 @@
 package com.plokie.mixin;
 
 import com.plokie.Splatoon;
+import com.plokie.helpers.Effects;
 import com.plokie.helpers.Fill;
 import com.plokie.helpers.Teams;
 import com.plokie.interfaces.IPlayerTeamMixin;
@@ -13,6 +14,7 @@ import net.minecraft.tags.BlockTags;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.damagesource.DamageType;
 import net.minecraft.world.damagesource.DamageTypes;
+import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.AreaEffectCloud;
 import net.minecraft.world.entity.Display;
 import net.minecraft.world.entity.Entity;
@@ -84,6 +86,10 @@ public abstract class SmokeCloudMixin {
             if(entity != getOwner())
             {
                 entity.hurtServer(level, source, 2.0f);
+            }
+            else
+            {
+                Effects.givePotionEffect(entity, MobEffects.INVISIBILITY, 1, 1, true);
             }
         });
 
