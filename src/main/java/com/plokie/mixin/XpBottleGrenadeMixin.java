@@ -6,6 +6,7 @@ import com.plokie.helpers.Effects;
 import com.plokie.helpers.Fill;
 import com.plokie.helpers.Helpers;
 import com.plokie.interfaces.IProjectile;
+import com.plokie.interfaces.IXpBottleGrenadeMixin;
 import com.plokie.management.PlayerStats;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.Registries;
@@ -18,6 +19,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.ThrownExperienceBottle;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.Vec3;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
@@ -27,9 +29,12 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import java.util.UUID;
 
 @Mixin(ThrownExperienceBottle.class)
-public class XpBottleGrenadeMixin implements IProjectile {
+public class XpBottleGrenadeMixin implements IXpBottleGrenadeMixin {
     @Unique
     UUID playerOwnerUUID = null;
+
+    @Unique
+    boolean hasExploded = false;
 
     @Override
     public void setPlayerOwner(Player player)
@@ -40,13 +45,19 @@ public class XpBottleGrenadeMixin implements IProjectile {
     @Inject(method="onHit", at = @At("TAIL"))
     private void onHit(HitResult hitResult, CallbackInfo ci)
     {
+        explode(hitResult.getLocation());
+    }
+
+    @Override
+    public void explode(Vec3 position) {
+        if(hasExploded) return;
         if(playerOwnerUUID == null) return;
 
         ThrownExperienceBottle self = (ThrownExperienceBottle)(Object)this;
         ServerLevel level = (ServerLevel)self.level();
 
 
-        BlockPos blockPos = Helpers.toBlockPos(hitResult.getLocation());
+        BlockPos blockPos = Helpers.toBlockPos(position);
 
         int numReplaced = Fill.replace(
                 level, blockPos,
@@ -74,5 +85,6 @@ public class XpBottleGrenadeMixin implements IProjectile {
             Helpers.cleanSlimesInRadius(self.position(), 5.0f, player);
         }
 
+        hasExploded = true;
     }
 }

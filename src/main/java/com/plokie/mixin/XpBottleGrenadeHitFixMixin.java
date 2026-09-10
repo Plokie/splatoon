@@ -1,6 +1,7 @@
 package com.plokie.mixin;
 
 import com.plokie.Splatoon;
+import com.plokie.interfaces.IXpBottleGrenadeMixin;
 import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.entity.projectile.ThrowableItemProjectile;
 import net.minecraft.world.entity.projectile.ThrowableProjectile;
@@ -21,6 +22,9 @@ public class XpBottleGrenadeHitFixMixin {
         Projectile projectile = (Projectile) (Object) this;
         if(projectile instanceof ThrownExperienceBottle experienceBottle) {
             Splatoon.LOGGER.info("Hit entity xp bottle");
+
+            // fixes bug where hitting a shield doesnt trigger explosion of xp bomb hit
+            ((IXpBottleGrenadeMixin)experienceBottle).explode(projectile.position());
         }
     }
 
