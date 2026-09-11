@@ -1,6 +1,7 @@
 package com.plokie.interfaces;
 
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.scores.PlayerTeam;
 
 public interface IPlayerTeamMixin {
     Block getGroundBlock();
@@ -17,4 +18,8 @@ public interface IPlayerTeamMixin {
 
     String getBossbarColour();
     void setBossbarColour(String teamBossbarColour);
+
+    default PlayerTeam getPlayerTeam() {
+        return (PlayerTeam) this;
+    }
 }

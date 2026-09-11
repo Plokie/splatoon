@@ -6,6 +6,7 @@ import com.plokie.interfaces.IPlayerTeamMixin;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
@@ -95,6 +96,15 @@ public class TeamSelector {
         //PlayerTeam team = Splatoon.SERVER.getScoreboard().getPlayerTeam(clickedItem.getItemName().getString());
         Splatoon.LOGGER.info("Clicked {}", clickedItem.getItemName());
 
+        if(TournamentManager.Instance.isAnyOngoing())
+        {
+            if(player.getPermissionLevel() < 2) {
+                ((ServerPlayer)player).sendSystemMessage(Component.literal("Can't change team while there's a tournament ongoing"));
+                Splatoon.LOGGER.info("Attempted to change team, but cant because theres a tournament ongoing");
+                return;
+            }
+        }
+
         PlayerTeam team = null;
         for(PlayerTeam checkTeam : Splatoon.SERVER.getScoreboard().getPlayerTeams())
         {
@@ -110,7 +120,8 @@ public class TeamSelector {
         if(type == Type.OwnTeam)
         {
             Splatoon.SERVER.getScoreboard().addPlayerToTeam(player.getScoreboardName(), team);
-            Splatoon.LOGGER.info("Joined?");
+            Splatoon.LOGGER.info("Joined {}", team.getName());
+            ((ServerPlayer)player).sendSystemMessage(Component.literal("Joined ").append(team.getFormattedDisplayName()));
         }
         else
         {

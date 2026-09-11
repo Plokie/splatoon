@@ -250,6 +250,12 @@ public class CommandBuilder {
         return this;
     }
 
+    public CommandBuilder argumentString(String name, Supplier<List<String>> callback)
+    {
+        commandStackQueue.add(CommandStackNode.argumentString(name, callback));
+        return this;
+    }
+
     public CommandBuilder argumentString(String name, List<String> autocomplete)
     {
         commandStackQueue.add(CommandStackNode.argumentString(name, autocomplete));

@@ -416,6 +416,9 @@ public class GameFlowManager {
 
             spectators.add(player.getUUID());
 
+            getTimerBossbar().addPlayer(player);
+            getTimerBossbar().setVisible(true);
+
             String song = this.currentGameState.gameState.getStateMusic();
             playSong(song, player);
 

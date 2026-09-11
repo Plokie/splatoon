@@ -8,6 +8,7 @@ import com.plokie.interfaces.IPlayerTeamMixin;
 import com.plokie.management.GameFlowManager;
 import com.plokie.management.PlayerStats;
 import com.plokie.management.TeamSelector;
+import com.plokie.management.TournamentManager;
 import com.plokie.management.gamemodes.Gamemode;
 import com.plokie.management.maps.GamemodeMap;
 import net.minecraft.ChatFormatting;
@@ -21,6 +22,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.scores.PlayerTeam;
 
 import java.text.DecimalFormat;
 
@@ -30,7 +32,17 @@ public class None implements IGameState {
     @Override
     public void onStateEnter(Gamemode currentGamemode, GamemodeMap currentMap) {
 //        this.winningTeam = -1;
+
+        if(TournamentManager.Instance.isAnyOngoing())
+        {
+            PlayerTeam team = Splatoon.gameFlowManager.getTeamMixinFromTeamIndex(Splatoon.gameFlowManager.getWinningTeam()).getPlayerTeam();
+            if(team != null) {
+                TournamentManager.Instance.declareWinnerOfMatchup(team);
+            }
+        }
         Splatoon.gameFlowManager.setWinningTeam(-1);
+
+
         Vec3 hubSpawn = Splatoon.gameFlowManager.hubSpawn;
 
         for(Player player : Splatoon.gameFlowManager.getGamersIncludingSpectators())

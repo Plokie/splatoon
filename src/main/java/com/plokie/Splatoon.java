@@ -16,6 +16,7 @@ import com.plokie.interfaces.IPlayerStatsMixin;
 import com.plokie.management.GameFlowManager;
 import com.plokie.management.PlayerStats;
 import com.plokie.management.SkirmishManager;
+import com.plokie.management.TournamentManager;
 import com.plokie.management.maps.GamemodeMaps;
 import com.plokie.moving_blocks.MovingBlocksEntity;
 import com.plokie.moving_blocks.MovingBlocksEntityManager;
@@ -71,6 +72,7 @@ public class Splatoon implements ModInitializer {
 	ScheduleEvent scheduleEvent = null;
 	MovingBlocksEntityManager movingBlocksEntityManager = null;
 	public static GameFlowManager gameFlowManager = null;
+	TournamentManager tournamentManager = null;
 
 	@Override
 	public void onInitialize() {
@@ -100,6 +102,7 @@ public class Splatoon implements ModInitializer {
 		gameFlowManager = new GameFlowManager();
 		this.skirmishManager = new SkirmishManager();
 		this.movingBlocksEntityManager = new MovingBlocksEntityManager();
+		this.tournamentManager = new TournamentManager();
 
 		PlayerStats.initialise();
 

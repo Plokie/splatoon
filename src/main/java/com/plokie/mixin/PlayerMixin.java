@@ -18,6 +18,7 @@ import net.minecraft.core.particles.BlockParticleOption;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.game.ClientboundSetExperiencePacket;
+import net.minecraft.network.protocol.game.ClientboundTeleportEntityPacket;
 import net.minecraft.network.protocol.game.ServerboundPlayerInputPacket;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
@@ -29,6 +30,7 @@ import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.EquipmentSlotGroup;
+import net.minecraft.world.entity.PositionMoveRotation;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.monster.Zombie;
@@ -44,6 +46,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.portal.TeleportTransition;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.BlockHitResult;
@@ -511,6 +514,23 @@ public class PlayerMixin implements IPlayerMixin {
         {
             if(splatoonClass != null)
             {
+                if(player.onGround() && player.isCrouching())
+                {
+                    BlockPos blockPos = player.getBlockPosBelowThatAffectsMyMovement();
+                    BlockState blockBelow = player.level().getBlockState(blockPos);
+                    if(blockBelow.is(Blocks.WAXED_COPPER_GRATE)) {
+                        player.snapTo(player.position().subtract(new Vec3(0, 0.1, 0)));
+
+                        ((ServerPlayer)player).connection.send(new ClientboundTeleportEntityPacket(
+                                player.getId(),
+                                new PositionMoveRotation(player.position(), player.getDeltaMovement(), player.getYRot(), player.getXRot()),
+                                Set.of(),
+                                player.onGround()
+                        ));
+
+                    }
+                }
+
                 idx=0;
                 for(CustomItem customItem : splatoonClass.definition.customItems)
                 {
