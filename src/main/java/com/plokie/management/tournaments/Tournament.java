@@ -33,7 +33,7 @@ public abstract class Tournament {
                         Tournament.PLAYERTEAM_CODEC.fieldOf("team0").forGetter(Matchup::getTeam0),
                         Tournament.PLAYERTEAM_CODEC.fieldOf("team1").forGetter(Matchup::getTeam1),
                         Codec.STRING.optionalFieldOf("winner", "").forGetter((inst)-> inst.getWinner()==null?"":inst.getWinner().getName() ),
-                        Codec.STRING.optionalFieldOf("gamemode", "").forGetter(inst-> inst.getSpecifiedGamemode()==null?"":inst.getSpecifiedGamemode().getName())
+                        Codec.STRING.optionalFieldOf("gamemode", "").forGetter(inst-> inst.getSpecifiedGamemode()==null?"":inst.getSpecifiedGamemode().toString())
                 ).apply(instance, (team0, team1, winner, gamemode)->{
                     Matchup matchup = new Matchup(team0, team1);
                     if(!winner.isEmpty()) {
@@ -298,6 +298,11 @@ public abstract class Tournament {
             message = message.append(nextMatchup.team0.getFormattedDisplayName());
             message = message.append(" vs ");
             message = message.append(nextMatchup.team1.getFormattedDisplayName());
+
+            if(nextMatchup.getSpecifiedGamemode() != null) {
+                message = message.append(" on ");
+                message = message.append(nextMatchup.getSpecifiedGamemode().toString());
+            }
         }
 
         Splatoon.LOGGER.info(message.getString());
@@ -338,14 +343,22 @@ public abstract class Tournament {
             thisMessage = thisMessage.append(team0.getFormattedDisplayName());
             thisMessage = thisMessage.append(" vs ");
             thisMessage = thisMessage.append(team1.getFormattedDisplayName());
+
+            if(matchup.getSpecifiedGamemode() != null) {
+                thisMessage = thisMessage.append(" | ");
+//                thisMessage = thisMessage.append(matchup.getSpecifiedGamemode().getName());
+                thisMessage = thisMessage.append(matchup.getSpecifiedGamemode().toString());
+            }
+
             return thisMessage;
         };
 
         for(Matchup matchup : previousMatchups) {
+            message = message.append("- ");
             message = message.append(addMatchup.apply(matchup));
 
             if(matchup.getWinner() != null) {
-                message = message.append(" : ");
+                message = message.append(" == ");
                 message = message.append(matchup.getWinner().getFormattedDisplayName());
                 message = message.append(" wins!");
             }
@@ -354,17 +367,23 @@ public abstract class Tournament {
         }
 
         for(Matchup matchup : matchupQueue) {
-            message = message.append(addMatchup.apply(matchup));
-
             if(matchupQueue.peek() == matchup) {
                 if(Splatoon.gameFlowManager.getCurrentGameState() == GameFlowManager.GameState.NONE) {
-                    message = message.append(" <- Upcoming");
+                    message = message.append("> "); // upcoming
                 }
                 else
                 {
-                    message = message.append(" <- Current");
+                    message = message.append("> "); // current
                 }
             }
+            else
+            {
+                    message = message.append(" ");
+                    message = message.append(" ");
+            }
+
+            message = message.append(addMatchup.apply(matchup));
+
 
             message = message.append("\n");
         }

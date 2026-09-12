@@ -19,11 +19,14 @@ import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.SharedSuggestionProvider;
+import net.minecraft.commands.arguments.ComponentArgument;
 import net.minecraft.commands.arguments.EntityArgument;
+import net.minecraft.commands.arguments.ResourceLocationArgument;
 import net.minecraft.commands.arguments.coordinates.BlockPosArgument;
 import net.minecraft.commands.arguments.coordinates.Vec3Argument;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
@@ -46,6 +49,10 @@ public class CommandBuilder {
 
         public ServerPlayer getArgumentPlayer(String name) throws CommandSyntaxException {
             return EntityArgument.getPlayer(stack, name);
+        }
+
+        public ResourceLocation getArgumentResourceLocation(String name) {
+            return ResourceLocationArgument.getId(stack, name);
         }
 
         public Entity getArgumentEntity(String name) throws CommandSyntaxException {
@@ -132,17 +139,24 @@ public class CommandBuilder {
             return node;
         }
 
+//        public static CommandStackNode argumentComponent(String name)
+//        {
+//            CommandStackNode node = new CommandStackNode(Type.Argument);
+//            node.name = name;
+////            node.argumentSupplier = ()->Commands.argument(name, StringArgumentType.string());
+//        }
+
         public static CommandStackNode argumentString(String name) {
             CommandStackNode node = new CommandStackNode(Type.Argument);
             node.name = name;
-            node.argumentSupplier = ()->Commands.argument(name, StringArgumentType.word());
+            node.argumentSupplier = ()->Commands.argument(name, StringArgumentType.string());
             return node;
         }
 
         public static CommandStackNode argumentString(String name, List<String> autocomplete) {
             CommandStackNode node = new CommandStackNode(Type.Argument);
             node.name = name;
-            node.argumentSupplier = ()->Commands.argument(name, StringArgumentType.word()).suggests(
+            node.argumentSupplier = ()->Commands.argument(name, StringArgumentType.string()).suggests(
             (ctx, builder)->{
                 return SharedSuggestionProvider.suggest(autocomplete, builder);
             });
@@ -152,10 +166,30 @@ public class CommandBuilder {
         public static CommandStackNode argumentString(String name, Supplier<List<String>> autocomplete) {
             CommandStackNode node = new CommandStackNode(Type.Argument);
             node.name = name;
-            node.argumentSupplier = ()->Commands.argument(name, StringArgumentType.word()).suggests(
+            node.argumentSupplier = ()->Commands.argument(name, StringArgumentType.string()).suggests(
                     (ctx, builder)->{
                         return SharedSuggestionProvider.suggest(autocomplete.get(), builder);
                     });
+            return node;
+        }
+
+        public static CommandStackNode argumentResourceLocation(String name)
+        {
+            CommandStackNode node = new CommandStackNode(Type.Argument);
+            node.name = name;
+            node.argumentSupplier = ()->Commands.argument(name, ResourceLocationArgument.id());
+            return node;
+        }
+
+        public static CommandStackNode argumentResourceLocation(String name, Supplier<List<String>> autocomplete)
+        {
+            CommandStackNode node = new CommandStackNode(Type.Argument);
+            node.name = name;
+            node.argumentSupplier = ()->Commands.argument(name, ResourceLocationArgument.id()).suggests(
+                    (ctx, builder)-> {
+                        return SharedSuggestionProvider.suggest(autocomplete.get(), builder);
+                    }
+            );
             return node;
         }
 
@@ -253,6 +287,24 @@ public class CommandBuilder {
     public CommandBuilder argumentString(String name, Supplier<List<String>> callback)
     {
         commandStackQueue.add(CommandStackNode.argumentString(name, callback));
+        return this;
+    }
+
+//    public CommandBuilder argumentComponent(String name)
+//    {
+//        commandStackQueue.add(CommandStackNode.argumentComponent(name));
+//        return this;
+//    }
+
+    public CommandBuilder argumentResourceLocation(String name)
+    {
+        commandStackQueue.add(CommandStackNode.argumentResourceLocation(name));
+        return this;
+    }
+
+    public CommandBuilder argumentResourceLocation(String name, Supplier<List<String>> autocompleteCallback)
+    {
+        commandStackQueue.add(CommandStackNode.argumentResourceLocation(name, autocompleteCallback));
         return this;
     }
 

@@ -1,6 +1,8 @@
 package com.plokie.management.tournaments;
 
 import com.plokie.Splatoon;
+import com.plokie.management.gamemodes.Gamemode;
+import com.plokie.management.gamemodes.Gamemodes;
 import net.minecraft.world.scores.PlayerTeam;
 
 import java.util.ArrayList;
@@ -23,8 +25,20 @@ public class DoubleRoundRobin extends Tournament {
         for(PlayerTeam team0 : teams) {
             for(PlayerTeam team1 : teams) {
                 if(team0 == team1) continue;
+
+                Matchup matchup = new Matchup(team0, team1);
+
+                boolean alreadyFought = matchupListContainsCommutativeMatchup(matchups, team0, team1);
+                if(alreadyFought) {
+                    matchup.setSpecifiedGamemode(Gamemodes.Payload);
+                }
+                else
+                {
+                    matchup.setSpecifiedGamemode(Gamemodes.TurfWar);
+                }
+
                 //Splatoon.LOGGER.info("adding team matchup {} vs {}", team0.getName(), team1.getName());
-                matchups.add(new Matchup(team0, team1));
+                matchups.add(matchup);
             }
         }
 

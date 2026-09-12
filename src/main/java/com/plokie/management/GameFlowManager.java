@@ -239,6 +239,10 @@ public class GameFlowManager {
 //        for(UUID spectatorUUID : spectators) {
 //
 //        }
+        for(Player player : getSpectators())
+        {
+            toggleSpectator((ServerPlayer)player);
+        }
         spectators.clear();
 
         for(Map.Entry<Integer, Boolean> entry : readyState.entrySet())
@@ -403,6 +407,8 @@ public class GameFlowManager {
                 player.teleportTo(hubSpawn.x, hubSpawn.y, hubSpawn.z);
             });
 
+            Effects.clearPotionEffect(player, MobEffects.SPEED);
+
             ServerPlayer.RespawnConfig respawnConfig = new ServerPlayer.RespawnConfig(ServerLevel.OVERWORLD, Helpers.toBlockPos(hubSpawn), 0.0f, true);
             player.setRespawnPosition(respawnConfig, false);
 
@@ -418,6 +424,8 @@ public class GameFlowManager {
 
             getTimerBossbar().addPlayer(player);
             getTimerBossbar().setVisible(true);
+
+            Effects.givePotionEffect(player, MobEffects.SPEED, 9999, 1, true);
 
             String song = this.currentGameState.gameState.getStateMusic();
             playSong(song, player);

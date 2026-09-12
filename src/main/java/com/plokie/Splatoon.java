@@ -13,10 +13,8 @@ import com.plokie.helpers.Helpers;
 import com.plokie.helpers.ScheduleEvent;
 import com.plokie.interfaces.IPlayerMixin;
 import com.plokie.interfaces.IPlayerStatsMixin;
-import com.plokie.management.GameFlowManager;
-import com.plokie.management.PlayerStats;
-import com.plokie.management.SkirmishManager;
-import com.plokie.management.TournamentManager;
+import com.plokie.management.*;
+import com.plokie.management.hats.HatDatabase;
 import com.plokie.management.maps.GamemodeMaps;
 import com.plokie.moving_blocks.MovingBlocksEntity;
 import com.plokie.moving_blocks.MovingBlocksEntityManager;
@@ -72,6 +70,7 @@ public class Splatoon implements ModInitializer {
 	ScheduleEvent scheduleEvent = null;
 	MovingBlocksEntityManager movingBlocksEntityManager = null;
 	public static GameFlowManager gameFlowManager = null;
+	GambaManager gambaManager = null;
 	TournamentManager tournamentManager = null;
 
 	@Override
@@ -102,7 +101,10 @@ public class Splatoon implements ModInitializer {
 		gameFlowManager = new GameFlowManager();
 		this.skirmishManager = new SkirmishManager();
 		this.movingBlocksEntityManager = new MovingBlocksEntityManager();
+		this.gambaManager = new GambaManager();
 		this.tournamentManager = new TournamentManager();
+
+		HatDatabase.setup();
 
 		PlayerStats.initialise();
 

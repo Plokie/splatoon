@@ -1,16 +1,25 @@
 package com.plokie.helpers;
 
+import com.mojang.serialization.Codec;
+import com.plokie.Splatoon;
 import com.plokie.interfaces.IInkablePayloadBlock;
 import com.plokie.interfaces.IPlayerTeamMixin;
 import com.plokie.management.PlayerStats;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.util.Mth;
 import net.minecraft.util.ProblemReporter;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.monster.Slime;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.projectile.FireworkRocketEntity;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.component.FireworkExplosion;
+import net.minecraft.world.item.component.Fireworks;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.storage.TagValueInput;
 import net.minecraft.world.level.storage.TagValueOutput;
@@ -22,8 +31,16 @@ import org.joml.Vector3f;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 public class Helpers {
+    //public static final Codec<UUID> UUID_CODEC = Codec.stringResolver(UUID::toString, UUID::fromString);
+
+    public static Vec3 toVec3(BlockPos blockPos)
+    {
+        return new Vec3(blockPos.getX() + 0.5, blockPos.getY(), blockPos.getZ() + 0.5);
+    }
+
     public static BlockPos toBlockPos(Vec3 vec3) {
         return new BlockPos(
                 (int)Math.floor(vec3.x()),
@@ -145,5 +162,27 @@ public class Helpers {
                 PlayerStats.get(cleanedBy).add(PlayerStats.PAYLOAD_INKED, 1);
             }
         }
+    }
+
+    public static void summonBasicFirework(Level level, Vec3 position, int intCol, int duration)
+    {
+        ItemStack rocketItem = new ItemStack(Items.FIREWORK_ROCKET);
+        IntArrayList explosionColors = new IntArrayList(new int[]{intCol});
+        IntArrayList fadeColors = new IntArrayList(new int[]{});
+
+        FireworkExplosion explosion = new FireworkExplosion(
+                FireworkExplosion.Shape.SMALL_BALL,
+                explosionColors,
+                fadeColors,
+                false,// hasTrail
+                false //hasTwinkle
+        );
+
+        Fireworks fireworksComponent = new Fireworks(duration, List.of(explosion));
+
+        rocketItem.set(DataComponents.FIREWORKS, fireworksComponent);
+
+        FireworkRocketEntity firework = new FireworkRocketEntity(Splatoon.SERVER.overworld(), position.x, position.y, position.z, rocketItem);
+        level.addFreshEntity(firework);
     }
 }
