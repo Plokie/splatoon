@@ -167,7 +167,7 @@ public enum CustomItem {
             Builder
                     .item(Items.WARPED_FUNGUS_ON_A_STICK)
                     .name("Toggle spectating")
-                    .model(ResourceLocation.fromNamespaceAndPath("splatoon", "spectate"))
+                    .model(ResourceLocation.fromNamespaceAndPath("splatoon", "spectate_item"))
                     .behaviour(new SpectateItem())
             .build()
     ),

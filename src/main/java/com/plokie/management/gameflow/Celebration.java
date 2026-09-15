@@ -179,7 +179,10 @@ public class Celebration implements IGameState {
                 }
             }
 
-
+            if(player.getItemBySlot(EquipmentSlot.HEAD).is(Items.AIR)) {
+                player.setItemSlot(EquipmentSlot.HEAD, player.getItemBySlot(EquipmentSlot.FEET));
+                player.setItemSlot(EquipmentSlot.FEET, new ItemStack(Items.AIR));
+            }
 
             int podiumIdx = idxToPodiumIdx(idx);
             BlockPos podiumPos = currentMap.podiums.get(podiumIdx);

@@ -109,6 +109,14 @@ public class HatDatabase extends SavedData {
             this.rarity = rarity;
         }
 
+        public Hat(String name, String id, Rarity rarity, List<String> lore)
+        {
+            this.name = name;
+            this.id = id;
+            this.rarity = rarity;
+            this.lore.addAll(lore);
+        }
+
         String name;
         String id;
         Rarity rarity;
@@ -123,7 +131,8 @@ public class HatDatabase extends SavedData {
                 instance.group(
                         Codec.STRING.fieldOf("name").forGetter(Hat::getName),
                         Codec.STRING.fieldOf("id").forGetter(Hat::getId),
-                        StringRepresentable.fromEnum(Rarity::values).fieldOf("rarity").forGetter(Hat::getRarity)
+                        StringRepresentable.fromEnum(Rarity::values).fieldOf("rarity").forGetter(Hat::getRarity),
+                        Codec.list(Codec.STRING).optionalFieldOf("lore", new ArrayList<>()).forGetter(Hat::getLore)
                 ).apply(instance, Hat::new)
         );
 

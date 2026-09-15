@@ -35,9 +35,12 @@ public class None implements IGameState {
 
         if(TournamentManager.Instance.isAnyOngoing())
         {
-            PlayerTeam team = Splatoon.gameFlowManager.getTeamMixinFromTeamIndex(Splatoon.gameFlowManager.getWinningTeam()).getPlayerTeam();
-            if(team != null) {
-                TournamentManager.Instance.declareWinnerOfMatchup(team);
+            IPlayerTeamMixin teamMixin = Splatoon.gameFlowManager.getTeamMixinFromTeamIndex(Splatoon.gameFlowManager.getWinningTeam());
+            if(teamMixin != null) {
+                PlayerTeam team = teamMixin.getPlayerTeam();
+                if(team != null) {
+                    TournamentManager.Instance.declareWinnerOfMatchup(team);
+                }
             }
         }
         Splatoon.gameFlowManager.setWinningTeam(-1);

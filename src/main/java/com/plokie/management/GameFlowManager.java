@@ -1,5 +1,6 @@
 package com.plokie.management;
 
+import com.mojang.authlib.minecraft.TelemetrySession;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.plokie.Splatoon;
 import com.plokie.classes.SplatoonClasses;
@@ -425,7 +426,7 @@ public class GameFlowManager {
             getTimerBossbar().addPlayer(player);
             getTimerBossbar().setVisible(true);
 
-            Effects.givePotionEffect(player, MobEffects.SPEED, 9999, 1, true);
+            Effects.givePotionEffect(player, MobEffects.SPEED, 9999, 40, true);
 
             String song = this.currentGameState.gameState.getStateMusic();
             playSong(song, player);
@@ -769,11 +770,20 @@ public class GameFlowManager {
                     if(!getTeamPlayers().contains(player)) {
                         if(!player.getTags().contains("Skirmish"))
                         {
-                            if(!player.getInventory().getItem(8).is(Items.WARPED_FUNGUS_ON_A_STICK))
+
+                            if(getSpectators().contains(player) && (getCurrentGameState() == GameState.CELEBRATION || getCurrentGameState() == GameState.RESULTS || getCurrentGameState() == GameState.INTRO) )
                             {
-                                ItemStack item = CustomItem.SpectateItem.getItem().copy();
-                                player.getInventory().setItem(8, item);
+                                player.getInventory().clearOrCountMatchingItems(i -> CustomItem.SpectateItem.is(i), 64, player.getInventory());
                             }
+                            else
+                            {
+                                if(!player.getInventory().getItem(8).is(Items.WARPED_FUNGUS_ON_A_STICK))
+                                {
+                                    ItemStack item = CustomItem.SpectateItem.getItem().copy();
+                                    player.getInventory().setItem(8, item);
+                                }
+                            }
+
                         }
                     }
                 }
