@@ -726,7 +726,11 @@ public class Payload extends Gamemode {
                     int teamCurrentlyMostInk = calculateTeamWithMostInk(payloadInstance, true);
                     IPlayerTeamMixin teamMixinInLead = gameFlowManager.getTeamMixinFromTeamIndex(teamInLead);
 
-                    if (teamInLead != teamCurrentlyMostInk) {
+                    if(teamCurrentlyMostInk == -1)
+                    {
+                        gameFlowManager.addTimer(1);
+                    }
+                    else if (teamInLead != teamCurrentlyMostInk) {
                         // replenish timer
                         gameFlowManager.addTimer(2);
                     }

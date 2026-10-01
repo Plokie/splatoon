@@ -26,11 +26,13 @@ public class Ability {
 
     final AbilityManager.AbilityEnum enumVal;
 
+
     int rechargeTime = -1;
     int maxCount = -1;
 
     int rechargeTimer = -1;
     int count = 1;
+    int initialCount = 0;
 
     int usageTypeFlags = 0;
     boolean hideWhileInInk = true;
@@ -49,14 +51,32 @@ public class Ability {
     Ability(AbilityManager.AbilityEnum enumVal){
         this.enumVal = enumVal;
     }
-    Ability(AbilityManager.AbilityEnum enumVal, CustomItem customItem, int usageTypeFlags, float rechargeTimeSeconds, int maxCount)
+    Ability(AbilityManager.AbilityEnum enumVal, CustomItem customItem, int usageTypeFlags, float rechargeTimeSeconds, int maxCount, int initialCount)
     {
         this.enumVal = enumVal;
         this.item = customItem;
         this.rechargeTime = (int)Math.floor(rechargeTimeSeconds * 20);
         this.maxCount = maxCount;
         this.usageTypeFlags = usageTypeFlags;
+        this.initialCount = initialCount;
     }
+
+    public int getCount() { return count; }
+
+    public void setCount(int count)
+    {
+        this.count = count;
+        if(this.count < maxCount)
+        {
+            if(rechargeTimer <= -1) {
+                rechargeTimer = 0;
+            }
+        }
+    }
+
+    public int getMaxCount() { return maxCount; }
+
+    public int getInitialCount() { return this.initialCount; }
 
     public void onGranted(Player player, int abilityIndex)
     {
@@ -120,6 +140,9 @@ public class Ability {
             if(count == 0)
             {
                 int secondsLeft = (int)Math.ceil((rechargeTime - rechargeTimer) / 20.0);
+                if(rechargeTime < 0) {
+                    secondsLeft = 1;
+                }
 
                 if(!currentItem.is(Items.BARRIER) || currentItem.getCount() != secondsLeft) {
                     ItemStack customItem = new ItemStack(Items.BARRIER);

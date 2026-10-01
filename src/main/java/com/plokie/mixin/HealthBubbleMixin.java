@@ -20,6 +20,8 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Vector3f;
 import org.spongepowered.asm.mixin.Mixin;
@@ -28,7 +30,9 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+import javax.security.auth.callback.Callback;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Mixin(Shulker.class)
@@ -42,7 +46,8 @@ public class HealthBubbleMixin implements IProjectile {
         this.playerUUID = player.getUUID();
     }
 
-    @Unique Display.TextDisplay textDisplay = null;
+//    @Unique Display.TextDisplay textDisplay = null;
+    @Unique UUID textDisplayUUID;
     @Unique Shulker self = null;
 
     @Unique int dustCol = -1;
@@ -57,8 +62,40 @@ public class HealthBubbleMixin implements IProjectile {
         this.self = (Shulker)(Object)this;
     }
 
+    @Inject(method = "addAdditionalSaveData", at=@At("TAIL"))
+    void onSaveData(ValueOutput valueOutput, CallbackInfo ci)
+    {
+        if(textDisplayUUID != null) {
+            valueOutput.putString("textDisplay", textDisplayUUID.toString());
+        }
+        if(playerUUID != null) {
+            valueOutput.putString("playerOwner", playerUUID.toString());
+        }
+    }
+
+    @Inject(method = "readAdditionalSaveData", at=@At("TAIL"))
+    void onReadData(ValueInput valueInput, CallbackInfo ci)
+    {
+        java.util.Optional<String> uuidString = valueInput.getString("textDisplay");
+        if(uuidString.isPresent())
+        {
+            textDisplayUUID = UUID.fromString(uuidString.get());
+        }
+
+        Optional<String> playerUuidString = valueInput.getString("playerOwner");
+        if(playerUuidString.isPresent())
+        {
+            playerUUID = UUID.fromString(playerUuidString.get());
+        }
+    }
+
     void setup()
     {
+        if(this.textDisplayUUID != null) {
+            hasSetup = true;
+            return;
+        }
+
         Display.TextDisplay textDisplay = EntityType.TEXT_DISPLAY.create(self.level(), EntitySpawnReason.SPAWN_ITEM_USE);
         if(textDisplay == null) return;
 
@@ -84,7 +121,7 @@ public class HealthBubbleMixin implements IProjectile {
 
         textDisplay.setPos(self.getEyePosition());
 
-        this.textDisplay = textDisplay;
+        this.textDisplayUUID = textDisplay.getUUID();
 
         hasSetup = true;
     }
@@ -103,7 +140,17 @@ public class HealthBubbleMixin implements IProjectile {
             setup();
         }
 
-        if(this.textDisplay == null) return;
+        Display.TextDisplay textDisplay = (Display.TextDisplay)level.getEntity(textDisplayUUID);
+        if(textDisplay == null) {
+            if(textDisplayUUID == null) {
+                Splatoon.LOGGER.info("Failed to get shield bubble text display becaue textdisplayuuid was null");
+            }
+            else
+            {
+                Splatoon.LOGGER.info("Failed to get shield bubble text display by uuid {}", textDisplayUUID.toString());
+            }
+            return;
+        }
 
         if(playerUUID == null) return;
 

@@ -1,27 +1,34 @@
 package com.plokie.mixin;
 
 import com.plokie.Splatoon;
-import com.plokie.helpers.Fill;
-import com.plokie.helpers.Teams;
+import com.plokie.helpers.*;
+import com.plokie.interfaces.IPlayerMixin;
 import com.plokie.interfaces.IPlayerTeamMixin;
 import com.plokie.interfaces.IProjectile;
 import com.plokie.management.PlayerStats;
 import net.fabricmc.fabric.api.networking.v1.PlayerLookup;
 import net.minecraft.commands.arguments.EntityAnchorArgument;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
 import net.minecraft.network.protocol.game.ClientboundTeleportEntityPacket;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.Mth;
+import net.minecraft.world.damagesource.DamageTypes;
+import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Display;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.PositionMoveRotation;
 import net.minecraft.world.entity.monster.Silverfish;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
@@ -33,6 +40,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
@@ -54,15 +62,26 @@ public class InkPuckMixin implements IProjectile {
         self = (Display)(Object)this;
     }
 
-    @Inject(method="tick", at=@At("TAIL"))
-    void tick(CallbackInfo ci)
+    @Inject(method = "addAdditionalSaveData", at=@At("TAIL"))
+    void onSaveData(ValueOutput valueOutput, CallbackInfo ci)
     {
-        if(self == null ){
-            return;
+        if(ownerUUID != null) {
+            valueOutput.putString("playerOwner", ownerUUID.toString());
         }
-        if(!self.getTags().contains("InkPuck")) {
-            return;
+    }
+
+    @Inject(method = "readAdditionalSaveData", at=@At("TAIL"))
+    void onReadData(ValueInput valueInput, CallbackInfo ci)
+    {
+        Optional<String> playerUuidString = valueInput.getString("playerOwner");
+        if(playerUuidString.isPresent())
+        {
+            ownerUUID = UUID.fromString(playerUuidString.get());
         }
+    }
+
+    void inkPuckTick()
+    {
         if(ownerUUID==null) {
             Splatoon.LOGGER.warn("Puck with no owner UUID");
             self.discard();
@@ -90,10 +109,10 @@ public class InkPuckMixin implements IProjectile {
             to = to.add(fwd.multiply(speed, speed, speed));
 
             BlockHitResult hit = self.level().clip(new ClipContext(
-                    from, to,
-                    ClipContext.Block.COLLIDER,
-                    ClipContext.Fluid.NONE,
-                    CollisionContext.empty()
+                            from, to,
+                            ClipContext.Block.COLLIDER,
+                            ClipContext.Fluid.NONE,
+                            CollisionContext.empty()
                     )
             );
 
@@ -186,6 +205,139 @@ public class InkPuckMixin implements IProjectile {
 
         if(self.tickCount > 100) {
             self.discard();
+        }
+    }
+
+    void remoteWindCharge()
+    {
+        if(ownerUUID==null) {
+            Splatoon.LOGGER.warn("Remote wind charge with no owner UUID");
+            self.discard();
+            return;
+        }
+        Player owner = self.level().getPlayerByUUID(ownerUUID);
+        if(owner == null) {
+            Splatoon.LOGGER.warn("Remote wind charge with no owner but with owner UUID");
+            self.discard();
+            return;
+        }
+
+        IPlayerMixin playerMixin = (IPlayerMixin) owner;
+
+        if(playerMixin.getItemDroppedThisTick() != null)
+        {
+            Splatoon.LOGGER.info("Explode remote wind charge");
+
+            ServerLevel level = (ServerLevel)self.level();
+            Vec3 pos = self.position();
+
+            level.playSound(
+                    null, // everyone
+                    pos.x, pos.y, pos.z,
+                    SoundEvents.ENDER_DRAGON_FLAP,
+                    SoundSource.HOSTILE,
+                    4.0f, // volume
+                    1.0f // pitch
+            );
+
+            level.playSound(
+                    null, // everyone
+                    pos.x, pos.y, pos.z,
+                    SoundEvents.BREEZE_WIND_CHARGE_BURST,
+                    SoundSource.HOSTILE,
+                    4.0f, // volume
+                    1.0f // pitch
+            );
+
+            level.sendParticles(ParticleTypes.EXPLOSION_EMITTER,
+                    pos.x, pos.y, pos.z,
+                    1, // count
+                    0.0, 0.0, 0.0, // delta
+                    0.0 // speed
+            );
+
+            IPlayerTeamMixin team = Teams.getTeamMixinFromPlayer(owner);
+            if(team != null) {
+                BlockPos blockPos = self.getOnPos();
+                int numReplaced = Fill.replace(
+                        (ServerLevel)self.level(),
+                        blockPos.offset(1,1,1),
+                        blockPos.offset(-1,-1,-1),
+                        team.getGroundBlock(),
+                        Splatoon.Tags.GROUND_BLOCKS
+                );
+                numReplaced += Fill.replace(
+                        (ServerLevel)self.level(),
+                        blockPos.offset(1,1,1),
+                        blockPos.offset(-1,-1,-1),
+                        team.getWallBlock(),
+                        Splatoon.Tags.WALL_BLOCKS
+                );
+                PlayerStats.get(owner).add(PlayerStats.BLOCKS_INKED, numReplaced);
+            }
+
+            for (LivingEntity target : Helpers.getEntitiesInRadius(level, LivingEntity.class, pos, 4.5f))
+            {
+                Splatoon.LOGGER.info("\tTarget {}", target.getDisplayName().getString());
+
+                Vec3 diff = target.position().subtract(pos);
+                Vec3 dir = diff.normalize();
+
+                float force = 1.8f;
+                Vec3 forceDir = dir.multiply(force, force, force);
+
+                target.setDeltaMovement(forceDir);
+
+                if(target != owner) {
+                    Affects.hurtEntity(target, 5.0f, owner, DamageTypes.PLAYER_EXPLOSION);
+                }
+
+                if(target instanceof Player playerTarget) {
+                    if(team!=null) {
+                        IPlayerTeamMixin targetTeam = Teams.getTeamMixinFromPlayer(playerTarget);
+                        if(targetTeam != team) {
+                            Effects.givePotionEffect(target, MobEffects.BLINDNESS, 5, 5, true);
+                            Effects.givePotionEffect(target, MobEffects.SLOWNESS, 5, 2, true);
+                        }
+                    }
+                }
+
+//                var packet = ClientboundTeleportEntityPacket.teleport(
+//                        target.getId(),
+//                        new PositionMoveRotation(target.position(), target.getDeltaMovement(), target.getYRot(), target.getXRot()),
+//                        Set.of(),
+//                        target.onGround()
+//                );
+                if(target instanceof ServerPlayer player)
+                {
+                    player.connection.send(new ClientboundSetEntityMotionPacket(target));
+                }
+
+                for (ServerPlayer player : PlayerLookup.tracking(target)) {
+                    player.connection.send(new ClientboundSetEntityMotionPacket(target));
+                }
+            }
+
+
+
+            self.discard();
+        }
+    }
+
+    @Inject(method="tick", at=@At("TAIL"))
+    void tick(CallbackInfo ci)
+    {
+        if(self == null ){
+            return;
+        }
+        if(self.getTags().contains("InkPuck"))
+        {
+            inkPuckTick();
+        }
+
+        if(self.getTags().contains("RemoteWindCharge"))
+        {
+            remoteWindCharge();
         }
     }
 }

@@ -6,6 +6,7 @@ import com.plokie.classes.abilities.AbilityManager;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Input;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.BlockHitResult;
 
 import java.util.List;
@@ -26,6 +27,9 @@ public interface IPlayerMixin {
 
     void setPunched();
     boolean punchedThisTick();
+
+    void setDroppedItem(ItemStack item);
+    ItemStack getItemDroppedThisTick();
 
     int getTimeNotInInk();
     float getInk();

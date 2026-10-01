@@ -101,6 +101,17 @@ public class PlayerMixin implements IPlayerMixin {
         return punchedThisTick;
     }
 
+    ItemStack droppedItemThisTick = null;
+    @Override
+    public void setDroppedItem(ItemStack item) {
+        Splatoon.LOGGER.info("Set dropped item {}", item.getDisplayName().getString());
+        droppedItemThisTick = item;
+    }
+    @Override
+    public ItemStack getItemDroppedThisTick() {
+        return droppedItemThisTick;
+    }
+
     @Unique
     SplatoonClasses.SplatoonClass splatoonClass;
 
@@ -596,6 +607,7 @@ public class PlayerMixin implements IPlayerMixin {
 //            Splatoon.LOGGER.info("{} Reset punched flag", level.getServer().getTickCount());
 //        }
         this.punchedThisTick = false;
+        this.droppedItemThisTick = null;
     }
 
     @Override
@@ -603,6 +615,7 @@ public class PlayerMixin implements IPlayerMixin {
     {
         ability.onGranted(player, abilities.size());
         abilities.add(ability);
+        ability.setCount(ability.getInitialCount());
     }
 
     @Override

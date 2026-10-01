@@ -85,6 +85,17 @@ public class PlayerTeamMixin implements IPlayerTeamMixin {
     {
         setData(data -> data.setWallBlock(block));
     }
+
+    @Override public Block getAuxBlock()
+    {
+        return getData(TeamData::getAuxBlock);
+    }
+    @Override public void setAuxBlock(Block block)
+    {
+        setData(data -> data.setAuxBlock(block));
+    }
+
+
     @Override public int getTeamColourInt()
     {
         return getData(TeamData::getTeamColourInt);

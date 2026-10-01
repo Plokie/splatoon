@@ -47,6 +47,7 @@ public class Splatoon implements ModInitializer {
 	public static class Tags {
 		public static final TagKey<Block> GROUND_BLOCKS =  create("ground_blocks");
 		public static final TagKey<Block> WALL_BLOCKS =  create("wall_blocks");
+		public static final TagKey<Block> AUX_BLOCKS =  create("aux_blocks");
 
 		private static TagKey<Block> create(String string) {
 			return TagKey.create(Registries.BLOCK, ResourceLocation.fromNamespaceAndPath("splatoon", string));

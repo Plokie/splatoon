@@ -14,6 +14,7 @@ import java.util.Optional;
 public class TeamData {
     String groundBlockId = "minecraft:black_concrete_powder";
     String wallBlockId = "minecraft:black_wool";
+    String auxBlockId = "minecraft:black_glazed_terracotta";
     int teamColourInt = 0;
     byte teamColourByte = 0;
     String bossbarColour = "black";
@@ -24,6 +25,8 @@ public class TeamData {
                             .forGetter(TeamData::getGroundBlockId),
                     Codec.STRING.optionalFieldOf("wallBlock", "minecraft:black_wool")
                             .forGetter(TeamData::getWallBlockId),
+                    Codec.STRING.optionalFieldOf("auxBlock", "minecraft:black_glazed_terracotta")
+                            .forGetter(TeamData::getAuxBlockId),
                     Codec.INT.optionalFieldOf("teamColourInt", 0)
                             .forGetter(TeamData::getTeamColourInt),
                     Codec.BYTE.optionalFieldOf("teamColourByte", (byte)0)
@@ -38,10 +41,11 @@ public class TeamData {
 
     }
 
-    TeamData(String groundBlock, String wallBlock, int teamColourInt, byte teamColourByte, String bossbarColour)
+    TeamData(String groundBlock, String wallBlock, String auxBlock, int teamColourInt, byte teamColourByte, String bossbarColour)
     {
         this.groundBlockId = groundBlock;
         this.wallBlockId = wallBlock;
+        this.auxBlockId = auxBlock;
         this.teamColourInt = teamColourInt;
         this.teamColourByte = teamColourByte;
         this.bossbarColour = bossbarColour;
@@ -92,6 +96,29 @@ public class TeamData {
         wallBlockId = BuiltInRegistries.BLOCK.getKey(block).toString();
 
         //Splatoon.LOGGER.info("TeamData:Set wall block to {}", this.wallBlockId);
+    }
+
+    public String getAuxBlockId()
+    {
+        return auxBlockId;
+    }
+
+    public Block getAuxBlock()
+    {
+        Optional<Holder.Reference<Block>> block = BuiltInRegistries.BLOCK.get(ResourceLocation.parse(auxBlockId));
+
+        if(block.isEmpty()) {
+            return Blocks.AIR;
+        }
+
+        return block.get().value();
+    }
+
+    public void setAuxBlock(Block block)
+    {
+        auxBlockId = BuiltInRegistries.BLOCK.getKey(block).toString();
+
+        //Splatoon.LOGGER.info("TeamData:Set aux block to {}", this.auxBlockId);
     }
 
     public int getTeamColourInt()

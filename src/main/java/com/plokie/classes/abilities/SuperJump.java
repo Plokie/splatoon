@@ -71,7 +71,7 @@ public class SuperJump extends Ability {
             )
             {
                 Affects.setAttributeModifier(player, "movement_speed", "jumperslow", -0.5, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
-                Affects.setAttributeModifier(player, "jump_strength", "jumperslow", -0.7, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
+                Affects.setAttributeModifier(player, "jump_strength", "jumperslow", -1.0, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
             }
             else
             {

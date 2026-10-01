@@ -7,6 +7,7 @@ import net.minecraft.world.entity.PositionMoveRotation;
 import net.minecraft.world.entity.projectile.Snowball;
 import net.minecraft.world.entity.projectile.ThrowableItemProjectile;
 import net.minecraft.world.entity.projectile.ThrowableProjectile;
+import net.minecraft.world.entity.projectile.ThrownEgg;
 import net.minecraft.world.phys.Vec3;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -23,10 +24,17 @@ public class GunProjectileGravityMixin {
     {
         ThrowableProjectile selfProj = (ThrowableProjectile)(Object)this;
 
-        if(!(selfProj instanceof Snowball self)) return;
+        float velSub = 0.0f;
+
+        if(selfProj instanceof Snowball self) velSub = 0.1f;
+        if(selfProj instanceof ThrownEgg self) velSub = 0.05f;
+
+        if(velSub == 0.0f) return;
+
+        ThrowableProjectile self = (ThrowableProjectile)(Object)this;
 
         Vec3 vel = self.getDeltaMovement();
-        vel = new Vec3(vel.x, vel.y - 0.1f, vel.z);
+        vel = new Vec3(vel.x, vel.y - velSub, vel.z);
 
         self.setDeltaMovement(vel);
 

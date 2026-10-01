@@ -73,15 +73,16 @@ public class SplatoonClasses {
         .build()),
         Jumper("Jumper", SplatoonClassDefinition.Builder.start()
                 .customItem(CustomItem.JumperMace)
-                .customItem(CustomItem.Revolver)
-                .ability(AbilityManager.AbilityEnum.WindCharges)
+                .customItem(CustomItem.WindChargeLauncher)
+                .ability(AbilityManager.AbilityEnum.RemoteWindCharge)
                 .ability(AbilityManager.AbilityEnum.SuperJump)
                 .attribute("scale", 0.3, AttributeModifier.Operation.ADD_VALUE)
                 .attribute("step_height", 0.6, AttributeModifier.Operation.ADD_VALUE)
+                .attribute("explosion_knockback_resistance", -1.0, AttributeModifier.Operation.ADD_VALUE)
                 .effect(MobEffects.HEALTH_BOOST, 4)
                 .effect(MobEffects.HASTE, 5)
         .build()),
-        Sniper("SniperGun", SplatoonClassDefinition.Builder.start()
+        Sniper("Sniper", SplatoonClassDefinition.Builder.start()
                 .customItem(CustomItem.SniperSword)
                 .customItem(CustomItem.SniperGun)
                 .ability(AbilityManager.AbilityEnum.FocusApple)
@@ -89,7 +90,19 @@ public class SplatoonClasses {
                 .attribute("scale", 0.3, AttributeModifier.Operation.ADD_VALUE)
                 .attribute("step_height", 0.6, AttributeModifier.Operation.ADD_VALUE)
                 .effect(MobEffects.HEALTH_BOOST, 4)
-        .build());
+        .build()),
+        Builder("Builder", SplatoonClassDefinition.Builder.start()
+                .customItem(CustomItem.BuilderPickaxe)
+                .customItem(CustomItem.Burstshot)
+                .ability(AbilityManager.AbilityEnum.BuildingBlocks)
+//                .customItem(CustomItem)
+                //.ability(AbilityManager.AbilityEnum.FocusApple)
+                //.ability(AbilityManager.AbilityEnum.SmokeGrenade)
+                .attribute("scale", 0.3, AttributeModifier.Operation.ADD_VALUE)
+                .attribute("step_height", 0.6, AttributeModifier.Operation.ADD_VALUE)
+                .effect(MobEffects.HEALTH_BOOST, 4)
+                .build()),
+        ;
 
         public final String name;
         public final SplatoonClassDefinition definition;

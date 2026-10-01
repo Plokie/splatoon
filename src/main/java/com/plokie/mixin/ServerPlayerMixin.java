@@ -1,5 +1,7 @@
 package com.plokie.mixin;
 
+import com.plokie.Splatoon;
+import com.plokie.interfaces.IPlayerMixin;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
@@ -18,6 +20,10 @@ public class ServerPlayerMixin {
     void onPlayerDropItemStack(ItemStack stack, boolean throwRandomly, boolean retainOwnership, CallbackInfoReturnable<ItemEntity> cir)
     {
         ServerPlayer player = (ServerPlayer) (Object) this;
+
+        Splatoon.LOGGER.info("{} tried to drop an item", player.getDisplayName().getString());
+
+        ((IPlayerMixin)player).setDroppedItem(stack);
 
         cir.setReturnValue(null);
 

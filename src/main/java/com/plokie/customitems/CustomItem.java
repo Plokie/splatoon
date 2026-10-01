@@ -6,6 +6,7 @@ import com.plokie.customitems.items.guns.*;
 import com.plokie.helpers.Teams;
 import com.plokie.helpers.items.Enchantments;
 import com.plokie.interfaces.IPlayerTeamMixin;
+import net.minecraft.core.component.DataComponentMap;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
@@ -20,6 +21,7 @@ import net.minecraft.world.item.alchemy.PotionContents;
 import net.minecraft.world.item.alchemy.Potions;
 import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.item.component.DyedItemColor;
+import net.minecraft.world.item.component.ItemLore;
 import net.minecraft.world.scores.PlayerTeam;
 import org.jetbrains.annotations.Nullable;
 
@@ -50,6 +52,8 @@ public enum CustomItem {
             Builder
                     .item(Items.IRON_AXE)
                     .name("Ink Roller")
+                    .lore("Hold right click while in hand to ink the floor in front")
+                    .lore("Consumes ink supply while inking")
                     .enchant("sharpness", 1)
                     .enchant("smite", 3)
                     .behaviour(new InkRoller())
@@ -85,6 +89,25 @@ public enum CustomItem {
                     .name("Diamond Sword")
                     .enchant("sharpness", 4)
                     .enchant("knockback", 2)
+            .build()
+    ),
+    BuilderPickaxe(Builder
+            .item(Items.DIAMOND_PICKAXE)
+            .name("Diamond Pickaxe")
+            .enchant("sharpness", 8)
+            .enchant("efficiency", 5)
+            .dataCallback(com.plokie.customitems.items.BuilderPickaxe::dataCallback)
+            .build()
+    ),
+    BuildingBlock(Builder
+            .item(Items.ENDER_EYE)
+            .name("Building Block")
+            .dataCallback(com.plokie.customitems.items.BuildingBlock::dataCallback)
+            .behaviour(new BuildingBlock())
+            .lore("A 3-block tall wall, can be placed on any floor")
+            .lore("Can be placed on other non-floor Building Block wall surfaces")
+            .lore("Slowly decays over time")
+            .lore("Can be destroyed by enemies")
             .build()
     ),
     Splattershot(
@@ -135,6 +158,14 @@ public enum CustomItem {
                     .behaviour(new SniperGun())
             .build()
     ),
+    WindChargeLauncher(
+            Builder
+                    .item(Items.CARROT_ON_A_STICK)
+                    .name("Wind Charge Launcher")
+                    .model(ResourceLocation.fromNamespaceAndPath("splatoon", "wind_charge_launcher"))
+                    .behaviour(new WindChargeLauncher())
+            .build()
+    ),
     KnockbackBrush(
             Builder
                     .item(Items.BRUSH)
@@ -163,34 +194,51 @@ public enum CustomItem {
 //                    })
 //            .build()
 //    ),
-    SpectateItem(
-            Builder
-                    .item(Items.WARPED_FUNGUS_ON_A_STICK)
-                    .name("Toggle spectating")
-                    .model(ResourceLocation.fromNamespaceAndPath("splatoon", "spectate_item"))
-                    .behaviour(new SpectateItem())
+    SpectateItem(Builder
+            .item(Items.WARPED_FUNGUS_ON_A_STICK)
+            .name("Toggle spectating")
+            .model(ResourceLocation.fromNamespaceAndPath("splatoon", "spectate_item"))
+            .behaviour(new SpectateItem())
             .build()
     ),
-    InkPuck(
-            Builder
-                    .item(Items.FIREWORK_STAR)
-                    .name("Ink Puck")
-                    .behaviour(new InkPuck())
-                    //.model()
+    InkPuck(Builder
+            .item(Items.FIREWORK_STAR)
+            .name("Ink Puck")
+            .lore("Place on ground, and will run forward for 5 seconds")
+            .lore("Bounces off walls, losing speed with each bounce")
+            .lore("Inks the floor below it as it moves")
+            .behaviour(new InkPuck())
             .build()
     ),
-    EnderPearl(Builder.item(Items.ENDER_PEARL).name("Ender Pearl").build()),
-    WindCharge(Builder.item(Items.WIND_CHARGE).name("Wind Charge").build()),
-    CleansingGrenade(Builder.item(Items.EXPERIENCE_BOTTLE).name("Cleansing Grenade").behaviour(new CleansingGrenade()).build()),
+    EnderPearl(Builder
+            .item(Items.ENDER_PEARL)
+            .name("Ender Pearl")
+            .build()
+    ),
+    WindCharge(Builder
+            .item(Items.WIND_CHARGE)
+            .name("Wind Charge")
+            .build()
+    ),
+    CleansingGrenade(Builder
+            .item(Items.EXPERIENCE_BOTTLE)
+            .name("Cleansing Grenade")
+            .behaviour(new CleansingGrenade())
+            .build()
+    ),
     Hook(Builder
             .item(Items.TRIDENT)
             .enchant("loyalty", 3)
+            .lore("Throw at players to bring them towards you")
+            .lore("Hooked players get brief weakness when hooked")
+            .lore("You can punch a player and then throw the hook to throw them instead")
             .behaviour(new Hook())
             .build()
     ),
     HealthPotion(Builder
             .item(Items.SPLASH_POTION)
             .name("Health Potion")
+            .lore("Speaks for itself, standard health splash potion")
             .dataCallback((player, item)->{
                 item.set(
                         DataComponents.POTION_CONTENTS,
@@ -203,6 +251,8 @@ public enum CustomItem {
             .item(Items.SHULKER_SPAWN_EGG)
             .name("Health Bubble")
             .behaviour(new HealthBubble())
+            .lore("A health bubble which heals teammates inside it")
+            .lore("Acts as a deposit of health, which can be refilled with health potions")
             .dataCallback(com.plokie.customitems.items.HealthBubble::dataCallback)
             .build()
     ),
@@ -210,6 +260,8 @@ public enum CustomItem {
             .item(Items.LINGERING_POTION)
             .name("Smoke Grenade")
             .behaviour(new SmokeGrenade())
+            .lore("Creates a Smoke Cloud visible only to everyone else")
+            .lore("And is toxic to everyone else")
             .dataCallback(com.plokie.customitems.items.SmokeGrenade::dataCallback)
             .build()
     ),
@@ -219,16 +271,35 @@ public enum CustomItem {
             .enchant("knockback", 5)
             .model(ResourceLocation.fromNamespaceAndPath("minecraft", "tnt"))
             .behaviour(new InkBomb())
+            .lore("Place on ground, will explode after 5 seconds")
+            .lore("Ink Bombs can be hit around with knockack")
+            .lore("This item has knockback only useful on Ink Bombs")
             .dataCallback(com.plokie.customitems.items.InkBomb::dataCallback)
             .build()
     ),
     FocusApple(Builder
             .item(Items.GOLDEN_APPLE)
             .name("Apple of Focus")
+            .lore("Provides 14 seconds of 2x Sniper focus speed")
             .behaviour(new FocusApple())
             .build()
     ),
-    SuperJumpIndicator(Builder.item(Items.FEATHER).name("Super Jump").build())
+    SuperJumpIndicator(Builder
+            .item(Items.FEATHER)
+            .name("Super Jump")
+            .lore("Jump while in ink to trigger Super Jump")
+            .build()
+    ),
+    RemoteWindCharge(Builder
+            .item(Items.PHANTOM_MEMBRANE)
+            .name("Remote Wind Charge")
+            .lore("Throw on wall or floor for later")
+            .lore("Press [DROP] at any time to explode")
+            .lore("Enemies in explosion get temporary blindness and slowness")
+            .behaviour(new RemoteWindCharge())
+            .model(ResourceLocation.fromNamespaceAndPath("splatoon", "remote_charge"))
+            .build()
+    )
     ;
 
 
@@ -306,6 +377,7 @@ public enum CustomItem {
         ItemStack baseItem;
         ICustomItem itemInterface = null;
         List<BiConsumer<Player, ItemStack>> dataCallbacks = new ArrayList<>();
+        List<Component> loreList = new ArrayList<>();
 
         public static CustomItem.Builder item(Item item)
         {
@@ -351,8 +423,27 @@ public enum CustomItem {
             return this;
         }
 
+        public Builder lore(String lore)
+        {
+            loreList.add(Component.literal(lore));
+            return this;
+        }
+
+        public Builder lore(Component lore) {
+            loreList.add(lore);
+            return this;
+        }
+
+        public Builder lore(List<Component> lore) {
+            loreList.addAll(lore);
+            return this;
+        }
+
         public CustomItemDefinition build()
         {
+            if(!loreList.isEmpty()) {
+                baseItem.set(DataComponents.LORE, new ItemLore(loreList));
+            }
             return new CustomItemDefinition(this.name, baseItem, itemInterface, this.dataCallbacks);
         }
 

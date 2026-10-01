@@ -3,6 +3,8 @@
   "package": "com.plokie.mixin",
   "compatibilityLevel": "JAVA_21",
   "mixins": [
+    "ChickenMixin",
+    "DisplayProjectileMixin",
     "ExampleZombieMixin",
     "GunProjectileGravityMixin",
     "GunProjectileMixin",
@@ -15,6 +17,7 @@
     "PlayerMixin",
     "PlayerStatsMixin",
     "PlayerTeamMixin",
+    "RemoteWindChargeMixin",
     "RideablePlayerMixin",
     "ServerPlayerMixin",
     "SheepBombMixin",

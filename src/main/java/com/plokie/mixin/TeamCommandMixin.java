@@ -76,6 +76,21 @@ public class TeamCommandMixin {
                         .requires(source -> source.hasPermission(2))
                         .then(Commands.literal("modify")
                                 .then(Commands.argument("team", TeamArgument.team())
+                                        .then(Commands.literal("auxBlock")
+                                                .then(Commands.argument("block", ResourceArgument.resource(context, Registries.BLOCK))
+                                                        .requires(source -> source.hasPermission(2))
+                                                        .executes(TeamCommandMixin::setTeamAuxBlock)
+                                                )
+                                        )
+                                )
+                        )
+        );
+
+        dispatcher.register(
+                Commands.literal("team")
+                        .requires(source -> source.hasPermission(2))
+                        .then(Commands.literal("modify")
+                                .then(Commands.argument("team", TeamArgument.team())
                                         .then(Commands.literal("integerCol")
                                                 .then(Commands.argument("int", IntegerArgumentType.integer())
                                                         .requires(source -> source.hasPermission(2))
@@ -130,6 +145,10 @@ public class TeamCommandMixin {
                                         .then(Commands.literal("wallBlock")
                                                 .requires(source -> source.hasPermission(2))
                                                 .executes(TeamCommandMixin::getTeamWallBlock)
+                                        )
+                                        .then(Commands.literal("auxBlock")
+                                                .requires(source -> source.hasPermission(2))
+                                                .executes(TeamCommandMixin::getTeamAuxBlock)
                                         )
                                 )
                         )
@@ -193,6 +212,38 @@ public class TeamCommandMixin {
         PlayerTeam team = TeamArgument.getTeam(ctx, "team");
 
         Block block = ((IPlayerTeamMixin)team).getWallBlock();
+        String blockId = BuiltInRegistries.BLOCK.getKey(block).toString();
+
+        ctx.getSource().sendSuccess(()->Component.literal("Got: " + blockId), false);
+
+        return 1;
+    }
+
+    @Unique
+    private static int setTeamAuxBlock(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        PlayerTeam team = TeamArgument.getTeam(ctx, "team");
+
+        Holder.Reference<Block> blockHolder = ResourceArgument.getResource(ctx, "block", Registries.BLOCK);
+        Block block = blockHolder.value();
+
+        ((IPlayerTeamMixin)team).setAuxBlock(block);
+
+        ctx.getSource().sendSuccess(() ->
+                        Component.literal("Set aux block for team ")
+                                .append(team.getFormattedDisplayName())
+                                .append(" to ")
+                                .append(block.getName())
+                , true
+        );
+
+        return 1;
+    }
+
+    @Unique
+    private static int getTeamAuxBlock(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        PlayerTeam team = TeamArgument.getTeam(ctx, "team");
+
+        Block block = ((IPlayerTeamMixin)team).getAuxBlock();
         String blockId = BuiltInRegistries.BLOCK.getKey(block).toString();
 
         ctx.getSource().sendSuccess(()->Component.literal("Got: " + blockId), false);
