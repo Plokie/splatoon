@@ -7,9 +7,14 @@ import com.plokie.interfaces.IPlayerTeamMixin;
 import com.plokie.management.PlayerStats;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.component.DataComponents;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.core.particles.SimpleParticleType;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.Mth;
 import net.minecraft.util.ProblemReporter;
 import net.minecraft.world.entity.Entity;
@@ -23,9 +28,7 @@ import net.minecraft.world.item.component.Fireworks;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.storage.TagValueInput;
 import net.minecraft.world.level.storage.TagValueOutput;
-import net.minecraft.world.phys.AABB;
-import net.minecraft.world.phys.Vec2;
-import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.phys.*;
 import org.joml.Vector3d;
 import org.joml.Vector3f;
 
@@ -184,5 +187,64 @@ public class Helpers {
 
         FireworkRocketEntity firework = new FireworkRocketEntity(Splatoon.SERVER.overworld(), position.x, position.y, position.z, rocketItem);
         level.addFreshEntity(firework);
+    }
+
+    public static void particleLine(Level level, Vec3 a, Vec3 b, SimpleParticleType type, float density) {
+        particleLine(level, a, b, type, density, null);
+    }
+
+    public static void particleLine(Level level, Vec3 a, Vec3 b, SimpleParticleType type, float density, Player visibleTo) {
+        float length = (float)a.distanceTo(b);
+        Vec3 dir = b.subtract(a).normalize();
+
+
+        for(float i=0; i < length; i += density)
+        {
+            Vec3 p = a.add(dir.scale(i));
+
+            if(visibleTo != null) {
+                ((ServerLevel)level).sendParticles(
+                        (ServerPlayer) visibleTo,
+                        type,
+                        true,
+                        true,
+                        p.x, p.y, p.z,
+                        1,
+                        0.0, 0.0, 0.0,
+                        0.0
+                );
+            }
+            else
+            {
+                ((ServerLevel)level).sendParticles(
+                        type,
+                        p.x, p.y, p.z,
+                        1, // count
+                        0.0, 0.0, 0.0, // delta
+                        0.0 // speed
+                );
+            }
+        }
+    }
+
+    public static BlockPos calculateDesiredPlacement(BlockHitResult hit)
+    {
+        return calculateDesiredPlacement(hit.getBlockPos(), hit.getDirection());
+    }
+
+    public static BlockPos calculateDesiredPlacement(BlockPos hitPos, Direction direction)
+    {
+        Vec3 pos = hitPos.getCenter();
+        Vec3 dir = direction.getUnitVec3();
+        pos = pos.add(dir);
+        return Helpers.toBlockPos(pos);
+    }
+
+    public static BlockPos calculateDesiredPlacement(Vec3 hitPos, Direction direction)
+    {
+        Vec3 pos = Helpers.toBlockPos(hitPos).getCenter();
+        Vec3 dir = direction.getUnitVec3();
+        pos = pos.add(dir);
+        return Helpers.toBlockPos(pos);
     }
 }

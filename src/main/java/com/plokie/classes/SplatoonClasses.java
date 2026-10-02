@@ -95,6 +95,7 @@ public class SplatoonClasses {
                 .customItem(CustomItem.BuilderPickaxe)
                 .customItem(CustomItem.Burstshot)
                 .ability(AbilityManager.AbilityEnum.BuildingBlocks)
+                .ability(AbilityManager.AbilityEnum.BuildingRails)
 //                .customItem(CustomItem)
                 //.ability(AbilityManager.AbilityEnum.FocusApple)
                 //.ability(AbilityManager.AbilityEnum.SmokeGrenade)

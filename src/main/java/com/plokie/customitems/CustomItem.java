@@ -110,6 +110,13 @@ public enum CustomItem {
             .lore("Can be destroyed by enemies")
             .build()
     ),
+    BuildingRails(Builder
+            .item(Items.ENDER_EYE)
+            .name("Building Rails")
+            .dataCallback(com.plokie.customitems.items.BuildingRails::dataCallback)
+            .behaviour(new BuildingRails())
+            .build()
+    ),
     Splattershot(
             Builder
                     .item(Items.CARROT_ON_A_STICK)

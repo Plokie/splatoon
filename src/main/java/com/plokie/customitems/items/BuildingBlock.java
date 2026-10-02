@@ -39,13 +39,13 @@ public class BuildingBlock extends ICustomItem {
     static class BuildingBlockInstance {
         public BuildingBlockInstance(ServerPlayer player, BlockPos position, int tickPlaced, Level level)
         {
-            this.player = player;
+            this.playerUUID = player.getUUID();
             this.position = position;
             this.tickPlaced = tickPlaced;
             this.level = level;
         }
 
-        ServerPlayer player;
+        UUID playerUUID;
         BlockPos position;
         int tickPlaced;
         Level level;

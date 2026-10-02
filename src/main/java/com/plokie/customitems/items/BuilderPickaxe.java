@@ -6,9 +6,11 @@ import com.plokie.interfaces.IPlayerTeamMixin;
 import net.minecraft.advancements.critereon.BlockPredicate;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.world.entity.ai.navigation.PathNavigation;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.AdventureModePredicate;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.pathfinder.PathFinder;
 
 import java.util.List;
 
