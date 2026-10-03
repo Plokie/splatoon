@@ -9,6 +9,7 @@ import com.plokie.interfaces.IPlayerMixin;
 import com.plokie.interfaces.IPlayerTeamMixin;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import net.minecraft.advancements.critereon.BlockPredicate;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.component.DataComponents;
@@ -20,6 +21,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.AdventureModePredicate;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
@@ -70,6 +72,13 @@ public class BuildingBlock extends ICustomItem {
             ResourceLocation model = BuiltInRegistries.BLOCK.getKey(wallBlock);
             item.set(DataComponents.ITEM_MODEL, model);
         }
+
+        BlockPredicate blockPredicate = BlockPredicate.Builder.block().build();
+        AdventureModePredicate canPlaceOn = new AdventureModePredicate(List.of(blockPredicate));
+        item.set(
+                DataComponents.CAN_PLACE_ON,
+                canPlaceOn
+        );
     }
 
     public void onUseItem(Player player)

@@ -17,13 +17,14 @@ public class CustomItemDefinition {
     public ItemStack baseItem;
     ICustomItem itemInterface = null;
     List<BiConsumer<Player, ItemStack>> dataCallbacks = new ArrayList<>();
+    boolean lenientDetection = false;
 
     public ICustomItem getItemInterface()
     {
         return itemInterface;
     }
 
-    public CustomItemDefinition(String itemName, ItemStack baseItem, ICustomItem itemInterface, List<BiConsumer<Player, ItemStack>> dataCallbacks)
+    public CustomItemDefinition(String itemName, ItemStack baseItem, ICustomItem itemInterface, List<BiConsumer<Player, ItemStack>> dataCallbacks, boolean lenientDetection)
     {
         this.baseItem = baseItem;
 
@@ -38,5 +39,6 @@ public class CustomItemDefinition {
 
         this.itemInterface = itemInterface;
         this.dataCallbacks = dataCallbacks;
+        this.lenientDetection = lenientDetection;
     }
 }

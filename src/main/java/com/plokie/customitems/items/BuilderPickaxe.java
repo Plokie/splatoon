@@ -10,6 +10,7 @@ import net.minecraft.world.entity.ai.navigation.PathNavigation;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.AdventureModePredicate;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.pathfinder.PathFinder;
 
 import java.util.List;
@@ -21,7 +22,7 @@ public class BuilderPickaxe extends ICustomItem {
         IPlayerTeamMixin playerTeam = Teams.getTeamMixinFromPlayer(player);
         if(playerTeam != null)
         {
-            blockPredicate = BlockPredicate.Builder.block().of(BuiltInRegistries.BLOCK, playerTeam.getAuxBlock()).build();
+            blockPredicate = BlockPredicate.Builder.block().of(BuiltInRegistries.BLOCK, playerTeam.getAuxBlock(), Blocks.RAIL).build();
         }
 
         AdventureModePredicate canBreak = new AdventureModePredicate(List.of(blockPredicate));

@@ -38,7 +38,7 @@ public class AbilityManager {
         InkPuck("Ink Puck", CustomItem.InkPuck, Ability.UsageTypeFlags.Block.value,10.0f, 3, 1),
         RemoteWindCharge("Remote Wind Charge", CustomItem.RemoteWindCharge, Ability.UsageTypeFlags.Item.value,15.0f, 1, 1),
         BuildingBlocks("Building Blocks", BuildingBlocks::new),
-        BuildingRails("Building Rails", CustomItem.BuildingRails, Ability.UsageTypeFlags.Block.value, -1.0f, 32, 32),
+        BuildingRails("Building Rails", CustomItem.BuildingRails, Ability.UsageTypeFlags.Block.value, -1.0f, 48, 48),
         ;
 
         public static final Codec<AbilityEnum> CODEC = StringRepresentable.fromEnum(AbilityEnum::values);

@@ -2,6 +2,7 @@ package com.plokie.mixin;
 
 import com.plokie.Splatoon;
 import com.plokie.customitems.CustomItem;
+import com.plokie.customitems.items.BuildingRails;
 import com.plokie.customitems.items.guns.Gun;
 import com.plokie.helpers.Affects;
 import com.plokie.helpers.Fill;
@@ -11,6 +12,8 @@ import com.plokie.interfaces.IInkablePayloadBlock;
 import com.plokie.interfaces.IPlayerTeamMixin;
 import com.plokie.management.PlayerStats;
 import net.minecraft.core.BlockPos;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.entity.Entity;
@@ -22,11 +25,14 @@ import net.minecraft.world.entity.projectile.ThrowableItemProjectile;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.Vec3;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+
+import java.util.List;
 
 @Mixin(Snowball.class)
 public class GunProjectileMixin implements IGunProjectileMixin {
@@ -91,6 +97,42 @@ public class GunProjectileMixin implements IGunProjectileMixin {
            {
                Affects.hurtEntity(livingEntity, gun.getDamage(), player, DamageTypes.ARROW);
            }
+        }
+
+        Vec3 pos = snowball.position();
+
+        BlockPos blockAbove = snowball.getOnPos();
+        blockAbove = new BlockPos(blockAbove.getX(), blockAbove.getY() + 1, blockAbove.getZ());
+        BuildingRails.FetchedRail rail = BuildingRails.getRailNodeForPosition(blockAbove);
+        if(rail != null) {
+            BuildingRails.PlacedRails placedRails = rail.placedRails();
+            List<BuildingRails.RailNode> channel = placedRails.channels.get(rail.channelIndex());
+            BuildingRails.RailNode node = channel.get(rail.nodeIndex());
+            BuildingRails.RailNode nextNode = channel.get(rail.nodeIndex() + 1);
+
+            boolean wasBroken = node.isBroken;
+
+            node.changeHealth(snowball.level(), -0.02f, nextNode);
+
+            level.playSound(
+                    null,
+                    pos.x, pos.y, pos.z,
+                    SoundEvents.ANVIL_LAND,
+                    SoundSource.HOSTILE,
+                    1.0f,
+                    1.0f
+            );
+
+            if(!wasBroken && node.isBroken) {
+                level.playSound(
+                        null,
+                        pos.x, pos.y, pos.z,
+                        SoundEvents.ITEM_BREAK,
+                        SoundSource.HOSTILE,
+                        4.0f,
+                        1.0f
+                );
+            }
         }
 
 

@@ -115,6 +115,7 @@ public enum CustomItem {
             .name("Building Rails")
             .dataCallback(com.plokie.customitems.items.BuildingRails::dataCallback)
             .behaviour(new BuildingRails())
+            .lenientDetection(true)
             .build()
     ),
     Splattershot(
@@ -326,6 +327,13 @@ public enum CustomItem {
 
     public boolean is(ItemStack item)
     {
+        if(itemInstance.lenientDetection) {
+            String baseItemName = getItem().getDisplayName().getString();
+            String checkItemName = item.getDisplayName().getString();
+//            Splatoon.LOGGER.info("check {} == {}", baseItem, checkItemName);
+            return baseItemName.equals(checkItemName);
+        }
+
         if(item.getItem()!=this.itemInstance.baseItem.getItem()) return false;
 
         if(!item.has(DataComponents.CUSTOM_DATA)) return false;
@@ -385,6 +393,7 @@ public enum CustomItem {
         ICustomItem itemInterface = null;
         List<BiConsumer<Player, ItemStack>> dataCallbacks = new ArrayList<>();
         List<Component> loreList = new ArrayList<>();
+        private boolean lenientDetection = false;
 
         public static CustomItem.Builder item(Item item)
         {
@@ -446,12 +455,18 @@ public enum CustomItem {
             return this;
         }
 
+        public Builder lenientDetection(boolean value)
+        {
+            lenientDetection = value;
+            return this;
+        }
+
         public CustomItemDefinition build()
         {
             if(!loreList.isEmpty()) {
                 baseItem.set(DataComponents.LORE, new ItemLore(loreList));
             }
-            return new CustomItemDefinition(this.name, baseItem, itemInterface, this.dataCallbacks);
+            return new CustomItemDefinition(this.name, baseItem, itemInterface, this.dataCallbacks, this.lenientDetection);
         }
 
     }

@@ -3,15 +3,18 @@ package com.plokie.customitems;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.plokie.Splatoon;
+import com.plokie.customitems.items.BuildingRails;
 import com.plokie.helpers.CommandBuilder;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.event.player.AttackEntityCallback;
+import net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents;
 import net.fabricmc.fabric.api.event.player.UseBlockCallback;
 import net.fabricmc.fabric.api.event.player.UseItemCallback;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.SharedSuggestionProvider;
 import net.minecraft.commands.arguments.EntityArgument;
+import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.protocol.game.ClientboundSetActionBarTextPacket;
@@ -24,6 +27,10 @@ import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
 
 import java.util.*;
 import java.util.stream.Stream;
@@ -183,6 +190,12 @@ public class CustomItemManager {
                 }
             });
             return InteractionResult.PASS;
+        });
+
+        PlayerBlockBreakEvents.AFTER.register((Level level, Player player, BlockPos pos, BlockState state, BlockEntity blockEntity)->{
+            if(state.is(Blocks.RAIL)) {
+                BuildingRails.railBlockBroken(player, pos);
+            }
         });
 
         AttackEntityCallback.EVENT.register((player, level, hand, entity, hitResult)->{
