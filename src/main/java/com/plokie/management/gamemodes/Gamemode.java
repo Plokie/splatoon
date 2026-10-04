@@ -13,6 +13,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -83,6 +84,15 @@ public abstract class Gamemode {
                         new BlockPos(clearIndex,y,(int)gameFlowManager.getCurrentMap().mapSize.z),
                         wallBlock,
                         Splatoon.Tags.WALL_BLOCKS
+                );
+
+                Fill.replace(
+                        Splatoon.SERVER.overworld(),
+                        Helpers.toBlockPos(gameFlowManager.getCurrentMap().mapCorner),
+                        new BlockPos(clearIndex,y,0),
+                        new BlockPos(clearIndex,y,(int)gameFlowManager.getCurrentMap().mapSize.z),
+                        Blocks.AIR,
+                        Splatoon.Tags.AUX_BLOCKS
                 );
 
             }

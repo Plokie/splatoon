@@ -2,10 +2,12 @@ package com.plokie.mixin;
 
 import com.plokie.Splatoon;
 import com.plokie.customitems.CustomItem;
+import com.plokie.customitems.items.BuildingBlock;
 import com.plokie.customitems.items.BuildingRails;
 import com.plokie.customitems.items.guns.Gun;
 import com.plokie.helpers.Affects;
 import com.plokie.helpers.Fill;
+import com.plokie.helpers.Helpers;
 import com.plokie.helpers.Teams;
 import com.plokie.interfaces.IGunProjectileMixin;
 import com.plokie.interfaces.IInkablePayloadBlock;
@@ -22,10 +24,15 @@ import net.minecraft.world.entity.monster.Slime;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.Snowball;
 import net.minecraft.world.entity.projectile.ThrowableItemProjectile;
+import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.phys.shapes.CollisionContext;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
@@ -100,38 +107,71 @@ public class GunProjectileMixin implements IGunProjectileMixin {
         }
 
         Vec3 pos = snowball.position();
+        Vec3 moveDir = snowball.getDeltaMovement().normalize();
 
-        BlockPos blockAbove = snowball.getOnPos();
-        blockAbove = new BlockPos(blockAbove.getX(), blockAbove.getY() + 1, blockAbove.getZ());
-        BuildingRails.FetchedRail rail = BuildingRails.getRailNodeForPosition(blockAbove);
-        if(rail != null) {
-            BuildingRails.PlacedRails placedRails = rail.placedRails();
-            List<BuildingRails.RailNode> channel = placedRails.channels.get(rail.channelIndex());
-            BuildingRails.RailNode node = channel.get(rail.nodeIndex());
-            BuildingRails.RailNode nextNode = channel.get(rail.nodeIndex() + 1);
+        //BlockPos hitBlockPos = Helpers.toBlockPos(pos.add(moveDir.scale(0.5)));
+        BlockHitResult hitBlockResult = snowball.level().clip(new ClipContext(
+                pos, pos.add(moveDir),
+                ClipContext.Block.COLLIDER,
+                ClipContext.Fluid.NONE,
+                CollisionContext.empty()
+        ));
+        BlockState hitBlock = snowball.level().getBlockState(hitBlockResult.getBlockPos());
 
-            boolean wasBroken = node.isBroken;
+        //Splatoon.LOGGER.info("Snowball onhit block here: {}", hitBlock.getBlock().getName().getString());
 
-            node.changeHealth(snowball.level(), -0.02f, nextNode);
-
+        if(hitBlock.is(Splatoon.Tags.AUX_BLOCKS)) {
             level.playSound(
                     null,
                     pos.x, pos.y, pos.z,
-                    SoundEvents.ANVIL_LAND,
+                    SoundEvents.BONE_BLOCK_HIT,
                     SoundSource.HOSTILE,
                     1.0f,
                     1.0f
             );
 
-            if(!wasBroken && node.isBroken) {
+            BuildingBlock.damageWall(hitBlockResult.getBlockPos(), gun.getDamage() * 0.00625f);
+        }
+
+
+        BlockPos blockAbove = snowball.getOnPos();
+        blockAbove = new BlockPos(blockAbove.getX(), blockAbove.getY() + 1, blockAbove.getZ());
+        if(snowball.level().getBlockState(snowball.getOnPos()).is(Blocks.RAIL) || snowball.level().getBlockState(blockAbove).is(Blocks.RAIL))
+        {
+            BuildingRails.FetchedRail rail = BuildingRails.getRailNodeForPosition(blockAbove);
+            if(rail != null) {
+                BuildingRails.PlacedRails placedRails = rail.placedRails();
+                List<BuildingRails.RailNode> channel = placedRails.channels.get(rail.channelIndex());
+                BuildingRails.RailNode node = channel.get(rail.calculateNodeIndex());
+                BuildingRails.RailNode nextNode = channel.get(rail.calculateNodeIndex() + 1);
+
+                boolean wasBroken = node.isBroken;
+
+                float length = (float)node.position.getCenter().distanceTo(nextNode.position.getCenter());
+
+
+//                node.changeHealth(snowball.level(), -gun.getDamage() * 0.003333333333f, nextNode);
+                node.changeHealth(snowball.level(), -((gun.getDamage() * 0.015f) / length), nextNode);
+
                 level.playSound(
                         null,
                         pos.x, pos.y, pos.z,
-                        SoundEvents.ITEM_BREAK,
+                        SoundEvents.PLAYER_ATTACK_STRONG,
                         SoundSource.HOSTILE,
-                        4.0f,
+                        1.0f,
                         1.0f
                 );
+
+                if(!wasBroken && node.isBroken) {
+                    level.playSound(
+                            null,
+                            pos.x, pos.y, pos.z,
+                            SoundEvents.ITEM_BREAK,
+                            SoundSource.HOSTILE,
+                            4.0f,
+                            1.0f
+                    );
+                }
             }
         }
 

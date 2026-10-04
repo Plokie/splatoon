@@ -19,6 +19,8 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.AdventureModePredicate;
@@ -59,7 +61,7 @@ public class BuildingBlock extends ICustomItem {
     static HashMap<UUID, List<BuildingBlockInstance>> blockInstances = new HashMap<>();
     static boolean hasSetupTick = false;
 
-    final static int blockBaseLifetime = 800; // number of ticks before natural crumble begins
+    final static int blockBaseLifetime = 2400; // number of ticks before natural crumble begins, -1 = no decay
     final static float crumblePerTick = 0.0025f;
 
     final static int wallHeight = 3;
@@ -79,6 +81,25 @@ public class BuildingBlock extends ICustomItem {
                 DataComponents.CAN_PLACE_ON,
                 canPlaceOn
         );
+    }
+
+    public static void damageWall(BlockPos position, float damageAmount)
+    {
+        for(var entry : blockInstances.entrySet()) {
+            for(BuildingBlockInstance wall : entry.getValue()) {
+                for(int i=0; i<wallHeight; i++) {
+                    BlockPos checkPos = new BlockPos(position.getX(), position.getY() - i, position.getZ());
+                    if(wall.position.equals(checkPos))
+                    {
+                        wall.crumbleProgress += damageAmount;
+                        wall.crumbleProgress = Math.clamp(wall.crumbleProgress, 0.0f, 2.0f);
+
+
+                        break;
+                    }
+                }
+            }
+        }
     }
 
     public void onUseItem(Player player)
@@ -101,6 +122,8 @@ public class BuildingBlock extends ICustomItem {
     void onBlockDestroyed(BuildingBlockInstance blockInstance)
     {
         BlockPos pos = blockInstance.position;
+
+        Splatoon.LOGGER.info("onBlockDestroyed {} fill {}", pos, wallHeight);
         //BlockPos posAbove = new BlockPos(pos.getX(), pos.getY() + 1, pos.getZ());
 
         sendDestructionStage((ServerLevel) blockInstance.level, pos, 15);
@@ -139,7 +162,7 @@ public class BuildingBlock extends ICustomItem {
             if(player != null) {
                 Ability ability = ((IPlayerMixin)player).getAbility(AbilityManager.AbilityEnum.BuildingBlocks);
                 if(ability != null) {
-                    int count = 16 - playerEntry.getValue().size();
+                    int count = 24 - playerEntry.getValue().size();
 
                     int currentCount = ability.getCount();
                     if(currentCount != count) {
@@ -166,13 +189,13 @@ public class BuildingBlock extends ICustomItem {
                 if(isAnyAir)
                 {
                     Splatoon.LOGGER.info("Detect manually destroyed BuildingBlock at {}", pos);
-                    playerEntry.getValue().remove(blockInstance);
                     onBlockDestroyed(blockInstance);
+                    playerEntry.getValue().remove(blockInstance);
                     break;
                 }
 
                 int totalTimeAlive = currentTick - blockInstance.tickPlaced;
-                if(totalTimeAlive > blockBaseLifetime) {
+                if(blockBaseLifetime >= 0 && totalTimeAlive > blockBaseLifetime) {
                     blockInstance.crumbleProgress += crumblePerTick;
                 }
                 //float crumbleProgress = (totalTimeAlive - blockBaseLifetime) / (float)(blockDestrTime);
@@ -183,9 +206,18 @@ public class BuildingBlock extends ICustomItem {
                 if(destructionStage < 0) continue;
 
                 if(destructionStage >= 10) {
+                    level.playSound(
+                            null,
+                            pos.getX(), pos.getY(), pos.getZ(),
+                            SoundEvents.ZOMBIE_BREAK_WOODEN_DOOR,
+                            SoundSource.HOSTILE,
+                            2.0f,
+                            1.0f
+                    );
+
                     Splatoon.LOGGER.info("Destroy BuildingBlock at {}", pos);
-                    playerEntry.getValue().remove(blockInstance);
                     onBlockDestroyed(blockInstance);
+                    playerEntry.getValue().remove(blockInstance);
                     break;
                 }
                 else if(destructionStage != blockInstance.previousDestrStage)
@@ -227,11 +259,11 @@ public class BuildingBlock extends ICustomItem {
 
         boolean validPlacement = false;
         if(coreDir == Direction.UP) validPlacement = true;
-        else {
-            if(player.level().getBlockState(hit.getBlockPos()).is(auxBlock)) {
-                validPlacement = true;
-            }
-        }
+//        else {
+//            if(player.level().getBlockState(hit.getBlockPos()).is(auxBlock)) {
+//                validPlacement = true;
+//            }
+//        }
 
         Vec3 newPos = hitPos.add(hitDir.multiply(0.5, 0.5, 0.5));
         BlockPos newBlockPos = Helpers.toBlockPos(newPos);

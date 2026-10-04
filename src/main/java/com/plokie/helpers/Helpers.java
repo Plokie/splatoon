@@ -39,6 +39,10 @@ import java.util.UUID;
 public class Helpers {
     //public static final Codec<UUID> UUID_CODEC = Codec.stringResolver(UUID::toString, UUID::fromString);
 
+    public static float lerp(float a, float b, float t) {
+        return a + t * (b - a);
+    }
+
     public static Vec3 toVec3(BlockPos blockPos)
     {
         return new Vec3(blockPos.getX() + 0.5, blockPos.getY(), blockPos.getZ() + 0.5);

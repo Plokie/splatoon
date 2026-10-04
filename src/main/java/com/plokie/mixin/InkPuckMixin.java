@@ -6,6 +6,8 @@ import com.plokie.interfaces.IPlayerMixin;
 import com.plokie.interfaces.IPlayerTeamMixin;
 import com.plokie.interfaces.IProjectile;
 import com.plokie.management.PlayerStats;
+import com.plokie.management.maps.GamemodeMap;
+import io.netty.util.internal.MathUtil;
 import net.fabricmc.fabric.api.networking.v1.PlayerLookup;
 import net.minecraft.commands.arguments.EntityAnchorArgument;
 import net.minecraft.core.BlockPos;
@@ -27,22 +29,23 @@ import net.minecraft.world.entity.monster.Silverfish;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.CollisionContext;
+import org.apache.logging.log4j.core.jmx.Server;
+import org.apache.logging.log4j.core.tools.picocli.CommandLine;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 
 @Mixin(Display.class)
 public class InkPuckMixin implements IProjectile {
@@ -324,6 +327,67 @@ public class InkPuckMixin implements IProjectile {
         }
     }
 
+    void cleansingCloud()
+    {
+        float timeToExpand = 1.0f;
+        float expandTime = Math.clamp(self.tickCount / (20.0f*timeToExpand), 0.0f, 1.0f);
+
+//        float radius =  expandTime * 5.0f; // expand over time
+//        float radius = 8.0f;
+
+        float radius = Helpers.lerp(5.0f, 8.0f, expandTime);
+
+//        Splatoon.LOGGER.info("Cleansing cloud radius {}", radius);
+
+        Random random = new Random();
+
+        Block floorBlock = Blocks.CYAN_TERRACOTTA;
+//        GamemodeMap map = Splatoon.gameFlowManager.getCurrentMap();
+//        if(map != null) {
+//
+//        }
+
+        for(int i=0; i<50; i++)
+        {
+            double theta = random.nextDouble() * 2.0 * Math.PI;
+            double zSurface = random.nextDouble() * 2.0 - 1.0;
+            double rSurface = Math.sqrt(1.0 - zSurface * zSurface);
+
+            double xSurface = rSurface * Math.cos(theta);
+            double ySurface = rSurface * Math.sin(theta);
+
+            double r = Math.cbrt(random.nextDouble());
+
+            Vec3 randPoint = new Vec3(xSurface,ySurface,zSurface).scale(r).scale(radius).add(self.position());
+
+            Vec3 randPointBelow = randPoint.subtract(0, radius, 0);
+
+            Fill.replace((ServerLevel)self.level(), Helpers.toBlockPos(randPoint), Helpers.toBlockPos(randPointBelow), floorBlock, Splatoon.Tags.GROUND_BLOCKS);
+
+            ((ServerLevel)self.level()).sendParticles(
+                    ParticleTypes.END_ROD,
+                    randPoint.x, randPoint.y, randPoint.z,
+                    3,
+                    0.1, 0.1, 0.1,
+                    0.0
+            );
+        }
+
+        //(Level level, Vector3d pos, double radius, float amount)
+
+        if(self.tickCount % 2 == 0) {
+            Affects.hurtLivingEntitiesInRange(self.level(), self.position(), radius, 13.5f);
+//            for (LivingEntity livingEntity : Helpers.getEntitiesInRadius(self.level(), LivingEntity.class, self.position(), radius)) {
+//
+//            }
+
+        }
+
+        if(self.tickCount > 20*10) {
+            self.discard();
+        }
+    }
+
     @Inject(method="tick", at=@At("TAIL"))
     void tick(CallbackInfo ci)
     {
@@ -338,6 +402,11 @@ public class InkPuckMixin implements IProjectile {
         if(self.getTags().contains("RemoteWindCharge"))
         {
             remoteWindCharge();
+        }
+
+        if(self.getTags().contains("CleansingCloud"))
+        {
+            cleansingCloud();
         }
     }
 }

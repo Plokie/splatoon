@@ -1,43 +1,36 @@
 package com.plokie.mixin;
 
-import com.mojang.math.Transformation;
 import com.plokie.Splatoon;
+import com.plokie.customitems.CustomItem;
+import com.plokie.helpers.Affects;
 import com.plokie.interfaces.IProjectile;
 import net.minecraft.commands.arguments.EntityAnchorArgument;
 import net.minecraft.core.component.DataComponents;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.entity.Display;
-import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.EntitySpawnReason;
-import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.entity.monster.MagmaCube;
-import net.minecraft.world.entity.monster.Slime;
+import net.minecraft.world.damagesource.DamageTypes;
+import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.entity.projectile.ThrowableItemProjectile;
 import net.minecraft.world.entity.projectile.ThrownEgg;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.ClipContext;
-import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.CollisionContext;
-import org.joml.Vector3f;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
 @Mixin(ThrownEgg.class)
-public class RemoteWindChargeMixin implements IProjectile {
+public class ThrownEggMixin implements IProjectile {
     @Unique
     UUID ownerUUID;
 
@@ -72,9 +65,53 @@ public class RemoteWindChargeMixin implements IProjectile {
 //        }
 //    }
 //
+    @Inject(method = "onHitEntity", at=@At("TAIL"))
+    void onHitEntity(EntityHitResult entityHitResult, CallbackInfo ci)
+    {
+        ThrownEgg self = (ThrownEgg)(Object)this;
+
+        if(self.getTags().contains("ThrownPickaxe"))
+        {
+            if(entityHitResult.getEntity() instanceof LivingEntity livingEntity)
+            {
+                Entity owner = self.level().getEntity(ownerUUID);
+                if(owner != null) {
+                    if(owner instanceof Player playerOwner)
+                    {
+                        Affects.hurtEntity(livingEntity, 10, playerOwner, DamageTypes.PLAYER_ATTACK);
+                    }
+
+                }
+
+            }
+        }
+
+        onHit(ci);
+    }
+
     @Inject(method = "onHit", at=@At("TAIL"))
     void onHit(CallbackInfo ci) {
         ThrownEgg self = (ThrownEgg)(Object)this;
+
+        if(self.getTags().contains("ThrownPickaxe")) {
+            Entity owner = self.level().getEntity(ownerUUID);
+            if(owner == null) {
+                Splatoon.LOGGER.info("ThrownPickaxe Couldnt find owner by uuid");
+                return;
+            }
+            if(owner instanceof Player player) {
+                for(int i=0; i<9; i++) {
+                    ItemStack item = player.getInventory().getItem(i);
+                    if(CustomItem.BuilderPickaxe.is(item))
+                    {
+                        item.set(DataComponents.ITEM_MODEL, ResourceLocation.fromNamespaceAndPath("minecraft", "diamond_pickaxe"));
+                        ResourceLocation diamondPickaxe = BuiltInRegistries.ITEM.getKey(Items.DIAMOND_PICKAXE);
+                        player.getCooldowns().removeCooldown(diamondPickaxe);
+                        player.getCooldowns().addCooldown(diamondPickaxe, 12);
+                    }
+                }
+            }
+        }
 
         if(!self.getTags().contains("RemoteWindCharge")) return;
 

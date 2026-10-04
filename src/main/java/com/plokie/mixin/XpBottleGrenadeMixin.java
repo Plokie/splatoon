@@ -15,6 +15,9 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.damagesource.DamageTypes;
+import net.minecraft.world.entity.Display;
+import net.minecraft.world.entity.EntitySpawnReason;
+import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.ThrownExperienceBottle;
 import net.minecraft.world.level.block.Blocks;
@@ -76,7 +79,14 @@ public class XpBottleGrenadeMixin implements IXpBottleGrenadeMixin {
 
         Effects.explosionEffect(level, blockPos);
 
-        int numHurtEntities = Affects.hurtLivingEntitiesInRange(level, blockPos, 5.5f, 400.f, level.getPlayerByUUID(playerOwnerUUID), DamageTypes.PLAYER_EXPLOSION);
+        Display.BlockDisplay explosion = EntityType.BLOCK_DISPLAY.create(level, EntitySpawnReason.SPAWN_ITEM_USE);
+        if(explosion != null) {
+            explosion.addTag("CleansingCloud");
+            explosion.setPos(self.position());
+            level.addFreshEntity(explosion);
+        }
+
+//        int numHurtEntities = Affects.hurtLivingEntitiesInRange(level, blockPos, 5.5f, 400.f, level.getPlayerByUUID(playerOwnerUUID), DamageTypes.PLAYER_EXPLOSION);
 
         Player player = level.getPlayerByUUID(playerOwnerUUID);
         if(player != null) {

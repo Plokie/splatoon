@@ -6,6 +6,7 @@ import com.plokie.classes.SplatoonClasses;
 import com.plokie.classes.abilities.Ability;
 import com.plokie.classes.abilities.AbilityManager;
 import com.plokie.customitems.CustomItem;
+import com.plokie.customitems.items.BuildingRails;
 import com.plokie.helpers.Affects;
 import com.plokie.helpers.Effects;
 import com.plokie.helpers.Teams;
@@ -132,6 +133,10 @@ public class PlayerMixin implements IPlayerMixin {
         if(klass != null)
         {
             lastClassChangeTime = player.tickCount;
+        }
+        else
+        {
+            BuildingRails.deleteAllRailsPlacedByPlayer(player.level(), player.getUUID());
         }
 
         if(splatoonClass != null)
@@ -633,6 +638,13 @@ public class PlayerMixin implements IPlayerMixin {
             idx++;
         }
         //abilities.removeIf(ability -> ability.getClass().getSimpleName().equals(abilityId));
+    }
+
+    @Override
+    public void setAbilities(List<Ability> abilities)
+    {
+        this.abilities.clear();
+        this.abilities.addAll(abilities);
     }
 
     @Override

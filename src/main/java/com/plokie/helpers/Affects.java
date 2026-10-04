@@ -45,6 +45,11 @@ public class Affects {
         return hurtLivingEntitiesInRange(level, pos, radius, amount, null, DamageTypes.GENERIC);
     }
 
+    public static int hurtLivingEntitiesInRange(Level level, Vec3 pos, double radius, float amount)
+    {
+        return hurtLivingEntitiesInRange(level, new Vector3d(pos.x, pos.y, pos.z), radius, amount, null, DamageTypes.GENERIC);
+    }
+
     public static int hurtLivingEntitiesInRange(Level level, Vector3d pos, double radius, float amount, Entity damageBy, ResourceKey<DamageType> damageType)
     {
         int numHurtEntities = 0;

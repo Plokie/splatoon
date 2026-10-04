@@ -38,7 +38,7 @@ public enum CustomItem {
             Builder
                     .item(Items.EMERALD)
                     .name("Invalid item")
-                    .model(ResourceLocation.fromNamespaceAndPath("splatoon", "splattershot"))
+                    .model(ResourceLocation.fromNamespaceAndPath("minecraft", "barrier"))
                     .build()
     ),
     StandardSword(
@@ -93,29 +93,37 @@ public enum CustomItem {
     ),
     BuilderPickaxe(Builder
             .item(Items.DIAMOND_PICKAXE)
-            .name("Diamond Pickaxe")
+            .name("Throwable Pickaxe")
             .enchant("sharpness", 8)
             .enchant("efficiency", 5)
             .dataCallback(com.plokie.customitems.items.BuilderPickaxe::dataCallback)
+            .behaviour(new BuilderPickaxe())
+            .lore("Functionally used to destroy walls and rails")
             .build()
     ),
     BuildingBlock(Builder
             .item(Items.ENDER_EYE)
-            .name("Building Block")
+            .name("Brick Wall")
             .dataCallback(com.plokie.customitems.items.BuildingBlock::dataCallback)
             .behaviour(new BuildingBlock())
             .lore("A 3-block tall wall, can be placed on any floor")
             .lore("Can be placed on other non-floor Building Block wall surfaces")
-            .lore("Slowly decays over time")
-            .lore("Can be destroyed by enemies")
+            .lore("Decays very slowly over time (~2 minutes)")
+            .lore("Can be shot and destroyed by enemies")
             .build()
     ),
     BuildingRails(Builder
             .item(Items.ENDER_EYE)
-            .name("Building Rails")
+            .name("Rideable Rails")
             .dataCallback(com.plokie.customitems.items.BuildingRails::dataCallback)
             .behaviour(new BuildingRails())
             .lenientDetection(true)
+            .lore("Placeable rails *anyone* can ride for faster bidirectional movement")
+            .lore("You have 3 \"networks\" of rails available. Press [DROP] to switch.")
+            .lore("Rails can be attacked/shot. When broken, that section will become unusable until repaired")
+            .lore("You can repair rails by clicking on broken rails with this item")
+            .lore("Rails can be picked back up when mined with a pickaxe")
+            .lore("While riding, you can press [SPACE] to launch eject off the rail. Or [SNEAK] to exit normally")
             .build()
     ),
     Splattershot(

@@ -93,7 +93,7 @@ public class SplatoonClasses {
         .build()),
         Builder("Builder", SplatoonClassDefinition.Builder.start()
                 .customItem(CustomItem.BuilderPickaxe)
-                .customItem(CustomItem.Burstshot)
+                .customItem(CustomItem.Splattershot)
                 .ability(AbilityManager.AbilityEnum.BuildingBlocks)
                 .ability(AbilityManager.AbilityEnum.BuildingRails)
 //                .customItem(CustomItem)

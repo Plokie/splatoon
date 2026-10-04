@@ -18,6 +18,8 @@ public interface IPlayerMixin {
     void grantAbility(Ability ability);
     void revokeAbility(String abilityId);
 
+    void setAbilities(List<Ability> abilities);
+
     void setClass(SplatoonClasses.SplatoonClass klass);
     SplatoonClasses.SplatoonClass getSplatoonClass();
 

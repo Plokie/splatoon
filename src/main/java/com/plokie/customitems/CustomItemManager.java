@@ -150,6 +150,10 @@ public class CustomItemManager {
                 //Splatoon.LOGGER.info("\tCheck if {}", item.getItem().getItemName());
                 if(item.is(player.getItemBySlot(EquipmentSlot.MAINHAND)))
                 {
+                    if(player.getCooldowns().isOnCooldown(item.getItem())) {
+                        return;
+                    }
+
                     //Splatoon.LOGGER.info("\tit is");
                     int useDuration = item.getItemDefinition().getItemInterface().getUseDuration();
 
@@ -180,6 +184,10 @@ public class CustomItemManager {
         });
 
         UseBlockCallback.EVENT.register((player, world, hand, hitResult) -> {
+            if(world.getBlockState(hitResult.getBlockPos()).is(Blocks.RAIL)) {
+                BuildingRails.playerUseRail(player, hitResult.getBlockPos());
+            }
+
             if(hand != InteractionHand.MAIN_HAND) return InteractionResult.PASS;
 
             Arrays.stream(CustomItem.values()).forEach(item->{

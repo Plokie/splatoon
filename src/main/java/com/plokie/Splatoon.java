@@ -8,6 +8,7 @@ import com.plokie.commands.Command;
 import com.plokie.commands.PingCommand;
 
 import com.plokie.customitems.CustomItemManager;
+import com.plokie.customitems.items.BuildingRails;
 import com.plokie.helpers.CommandBuilder;
 import com.plokie.helpers.Helpers;
 import com.plokie.helpers.ScheduleEvent;
@@ -33,6 +34,8 @@ import net.minecraft.world.entity.Display;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.Vec2;
@@ -84,11 +87,17 @@ public class Splatoon implements ModInitializer {
 			SERVER = null;
 		});
 
+		ServerLifecycleEvents.SERVER_STOPPING.register(server->{
+			BuildingRails.deleteAllRails(server.overworld());
+		});
+
 		ServerPlayerEvents.COPY_FROM.register((oldPlayer, newPlayer, alive) -> {
 			IPlayerMixin oldPlayerMixin = (IPlayerMixin)oldPlayer;
 			IPlayerMixin newPlayerMixin = (IPlayerMixin)newPlayer;
 
 			newPlayerMixin.setClass(oldPlayerMixin.getSplatoonClass());
+
+			ScheduleEvent.schedule(10, server->{ newPlayerMixin.setAbilities(oldPlayerMixin.getAbilities()); });
 
 
 			IPlayerStatsMixin newPlayerStats = (IPlayerStatsMixin) newPlayer;
@@ -112,6 +121,19 @@ public class Splatoon implements ModInitializer {
 		CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
 			dispatcher.register(Commands.literal("ping").executes(PingCommand::execute));
 		});
+
+		CommandBuilder.command("removeallrails").argumentPlayer("player").executes(ctx->{
+			try {
+				Level level = ctx.getStack().getSource().getLevel();
+				Player player = ctx.getArgumentPlayer("player");
+				BuildingRails.deleteAllRailsPlacedByPlayer(level, player.getUUID());
+				return "Deleted placed rails for " + player.getName().getString();
+			}
+			catch(CommandSyntaxException e)
+			{
+				return "! Invalid player";
+			}
+		}).register();
 
 		CommandBuilder.command("forceride").argumentEntity("passenger").argumentEntity("vehicle").executes(ctx->{
 			try {

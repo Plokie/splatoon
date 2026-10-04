@@ -37,8 +37,8 @@ public class AbilityManager {
         FocusApple("Focus Apple", CustomItem.FocusApple, Ability.UsageTypeFlags.Item.value, 30.f, 1, 0),
         InkPuck("Ink Puck", CustomItem.InkPuck, Ability.UsageTypeFlags.Block.value,10.0f, 3, 1),
         RemoteWindCharge("Remote Wind Charge", CustomItem.RemoteWindCharge, Ability.UsageTypeFlags.Item.value,15.0f, 1, 1),
-        BuildingBlocks("Building Blocks", BuildingBlocks::new),
-        BuildingRails("Building Rails", CustomItem.BuildingRails, Ability.UsageTypeFlags.Block.value, -1.0f, 48, 48),
+        BuildingBlocks("Brick Walls", CustomItem.BuildingBlock, Ability.UsageTypeFlags.Block.value, -1.0f, 24, 24),
+        BuildingRails("Rideable Rails", CustomItem.BuildingRails, Ability.UsageTypeFlags.Block.value, -1.0f, 64, 64),
         ;
 
         public static final Codec<AbilityEnum> CODEC = StringRepresentable.fromEnum(AbilityEnum::values);
