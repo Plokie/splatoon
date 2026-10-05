@@ -28,6 +28,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.item.component.ItemLore;
 import net.minecraft.world.item.equipment.Equippable;
 import net.minecraft.world.level.block.Block;
@@ -35,11 +36,15 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.saveddata.SavedData;
 import net.minecraft.world.level.saveddata.SavedDataType;
 import net.minecraft.world.level.storage.CommandStorage;
+import net.minecraft.world.phys.Vec3;
 import org.apache.commons.codec.binary.Hex;
 import org.jetbrains.annotations.NotNull;
+import org.spongepowered.asm.mixin.injection.invoke.arg.ArgumentIndexOutOfBoundsException;
 
 import java.nio.ByteBuffer;
 import java.util.*;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 public class HatDatabase extends SavedData {
@@ -102,6 +107,55 @@ public class HatDatabase extends SavedData {
     }
 
     public static class Hat {
+        public static class ParticleOptions {
+            public ParticleOptions(String particleId)
+            {
+                this.particleId = particleId;
+            }
+
+            public ParticleOptions(String particleId, int rate, Vec3 offset, int count, Vec3 delta, float speed)
+            {
+                this.rate = rate;
+                this.particleId = particleId;
+                this.offset = offset;
+                this.count = count;
+                this.delta = delta;
+                this.speed = speed;
+            }
+
+            String particleId;
+            int rate = 2;
+            Vec3 offset = Vec3.ZERO;
+            int count = 1;
+            Vec3 delta = Vec3.ZERO;
+            float speed;
+
+            public String getParticleId() { return particleId; }
+            public int getRate() { return rate; }
+            public Vec3 getOffset() { return offset; }
+            public int getCount() { return count; }
+            public Vec3 getDelta() { return delta; }
+            public float getSpeed() { return speed; }
+
+            void setParticleId(String value) { particleId = value; }
+            void setRate(int value) { rate = value; }
+            void setOffset(Vec3 value) { offset = value; }
+            void setCount(int value) { count = value; }
+            void setDelta(Vec3 value) { delta = value; }
+            void setSpeed(float value) { speed = value; }
+
+            public static final Codec<ParticleOptions> CODEC = RecordCodecBuilder.create(instance->
+                    instance.group(
+                            Codec.STRING.fieldOf("particleId").forGetter(ParticleOptions::getParticleId),
+                            Codec.INT.fieldOf("rate").forGetter(ParticleOptions::getRate),
+                            Vec3.CODEC.fieldOf("offset").forGetter(ParticleOptions::getOffset),
+                            Codec.INT.fieldOf("count").forGetter(ParticleOptions::getCount),
+                            Vec3.CODEC.fieldOf("delta").forGetter(ParticleOptions::getDelta),
+                            Codec.FLOAT.optionalFieldOf("speed", 0.0f).forGetter(ParticleOptions::getSpeed)
+                    ).apply(instance, ParticleOptions::new)
+            );
+        }
+
         public Hat(String name, String id, Rarity rarity)
         {
             this.name = name;
@@ -109,30 +163,34 @@ public class HatDatabase extends SavedData {
             this.rarity = rarity;
         }
 
-        public Hat(String name, String id, Rarity rarity, List<String> lore)
+        public Hat(String name, String id, Rarity rarity, List<String> lore, List<ParticleOptions> particles)
         {
             this.name = name;
             this.id = id;
             this.rarity = rarity;
             this.lore.addAll(lore);
+            this.particles.addAll(particles);
         }
 
         String name;
         String id;
         Rarity rarity;
         List<String> lore = new ArrayList<>();
+        List<ParticleOptions> particles = new ArrayList<>();
 
         public String getName() { return name; }
         public String getId() { return id; }
         public Rarity getRarity() { return rarity; }
         public List<String> getLore() { return lore; }
+        public List<ParticleOptions> getParticles() { return particles; }
 
         public static final Codec<Hat> CODEC = RecordCodecBuilder.create(instance->
                 instance.group(
                         Codec.STRING.fieldOf("name").forGetter(Hat::getName),
                         Codec.STRING.fieldOf("id").forGetter(Hat::getId),
                         StringRepresentable.fromEnum(Rarity::values).fieldOf("rarity").forGetter(Hat::getRarity),
-                        Codec.list(Codec.STRING).optionalFieldOf("lore", new ArrayList<>()).forGetter(Hat::getLore)
+                        Codec.list(Codec.STRING).optionalFieldOf("lore", new ArrayList<>()).forGetter(Hat::getLore),
+                        Codec.list(ParticleOptions.CODEC).optionalFieldOf("particles", new ArrayList<>()).forGetter(Hat::getParticles)
                 ).apply(instance, Hat::new)
         );
 
@@ -142,7 +200,16 @@ public class HatDatabase extends SavedData {
         {
             ItemStack item = new ItemStack(hatItem);
 
-            item.set(DataComponents.ITEM_MODEL, ResourceLocation.fromNamespaceAndPath(id.split(":")[0], id.split(":")[1]));
+//            CustomData.update(DataComponents.CUSTOM_DATA, item, tag->{
+//                tag.putString("hatId", id);
+//            });
+
+            CompoundTag customData = new CompoundTag();
+            customData.putString("hatId", id);
+            item.set(DataComponents.CUSTOM_DATA, CustomData.of(customData));
+
+//            item.set(DataComponents.ITEM_MODEL, ResourceLocation.fromNamespaceAndPath(id.split(":")[0], id.split(":")[1]));
+            item.set(DataComponents.ITEM_MODEL, ResourceLocation.parse(id));
 
             item.set(DataComponents.ITEM_NAME, Component.literal(name).withStyle(rarity.formatCol()));
 
@@ -156,6 +223,9 @@ public class HatDatabase extends SavedData {
             item.set(DataComponents.LORE, new ItemLore(loreList));
 
             item.set(DataComponents.EQUIPPABLE, Equippable.builder(EquipmentSlot.HEAD).build());
+
+
+//            item.set(DataComponents.CUSTOM_DATA, this)
 
             return item;
         }
@@ -930,6 +1000,274 @@ public class HatDatabase extends SavedData {
 
             return "Removed hat " + hatId + " lore index " + loreIndex;
         }).register();
+
+        CommandBuilder.command("hats")
+                .subcommand("admin")
+                .subcommand("database")
+                .subcommand("modify_hat")
+                .argumentResourceLocation("hat_id", HatDatabase::getAllHatIds)
+                .subcommand("particles")
+                .subcommand("add")
+                .argumentResourceLocation("particle_id")
+                .executes(ctx->
+                {
+
+                    String hatId = ctx.getArgumentResourceLocation("hat_id").toString();
+                    String particleId = ctx.getArgumentResourceLocation("particle_id").toString();
+
+                    Splatoon.LOGGER.info("Add hat particle {}: {}", hatId, particleId);
+
+                    Instance.hats.forEach(hat->{
+                        if(hat.id.equals(hatId)) {
+                            hat.particles.add(new Hat.ParticleOptions(particleId));
+                        }
+                    });
+
+                    return "Added hat " + hatId + " particle " + particleId;
+                }).register();
+
+        CommandBuilder.command("hats")
+                .subcommand("admin")
+                .subcommand("database")
+                .subcommand("modify_hat")
+                .argumentResourceLocation("hat_id", HatDatabase::getAllHatIds)
+                .subcommand("particles")
+                .subcommand("remove")
+                .argumentInteger("particle_index")
+                .executes(ctx->
+                {
+
+                    String hatId = ctx.getArgumentResourceLocation("hat_id").toString();
+                    int index = ctx.getArgumentInteger("particle_index");
+
+                    Splatoon.LOGGER.info("Remove hat particle {} {}", index, hatId);
+
+                    Instance.hats.forEach(hat->{
+                        if(hat.id.equals(hatId)) {
+                            if(index == -1) {
+                                if(!hat.particles.isEmpty())
+                                {
+                                    hat.particles.removeLast();
+                                }
+                            }
+                            else
+                            {
+                                if(index < hat.lore.size()) {
+                                    hat.particles.remove(index);
+                                }
+                            }
+
+                        }
+                    });
+
+                    return "Removed hat " + hatId + " particle index " + index;
+                }).register();
+
+        CommandBuilder.command("hats")
+                .subcommand("admin")
+                .subcommand("database")
+                .subcommand("modify_hat")
+                .argumentResourceLocation("hat_id", HatDatabase::getAllHatIds)
+                .subcommand("particles")
+                .subcommand("modify")
+                .argumentInteger("particle_index")
+                .subcommand("particle_id")
+                .argumentString("value")
+                .executes(ctx->
+                {
+
+                    String hatId = ctx.getArgumentResourceLocation("hat_id").toString();
+                    int index = ctx.getArgumentInteger("particle_index");
+
+                    String particleId = ctx.getArgumentString("value");
+
+                    Instance.hats.forEach(hat->{
+                        if(hat.id.equals(hatId)) {
+                            try {
+                                Hat.ParticleOptions particleOptions = hat.particles.get(index);
+                                particleOptions.particleId = particleId;
+                            }
+                            catch(ArgumentIndexOutOfBoundsException e) {
+                                ctx.getStack().getSource().sendSystemMessage(Component.literal("Invalid index, ignore following message:"));
+                            }
+                        }
+                    });
+
+                    return "Modified hat " + hatId + " particle " + index;
+                }).register();
+
+        CommandBuilder.command("hats")
+                .subcommand("admin")
+                .subcommand("database")
+                .subcommand("modify_hat")
+                .argumentResourceLocation("hat_id", HatDatabase::getAllHatIds)
+                .subcommand("particles")
+                .subcommand("modify")
+                .argumentInteger("particle_index")
+                .subcommand("rate")
+                .argumentInteger("value")
+                .executes(ctx->
+                {
+
+                    String hatId = ctx.getArgumentResourceLocation("hat_id").toString();
+                    int index = ctx.getArgumentInteger("particle_index");
+
+                    int rate = ctx.getArgumentInteger("value");
+
+                    Instance.hats.forEach(hat->{
+                        if(hat.id.equals(hatId)) {
+                            try {
+                                Hat.ParticleOptions particleOptions = hat.particles.get(index);
+                                particleOptions.rate = rate;
+                            }
+                            catch(ArgumentIndexOutOfBoundsException e) {
+                                ctx.getStack().getSource().sendSystemMessage(Component.literal("Invalid index, ignore following message:"));
+                            }
+                        }
+                    });
+
+                    return "Modified hat " + hatId + " particle " + index;
+                }).register();
+
+        CommandBuilder.command("hats")
+                .subcommand("admin")
+                .subcommand("database")
+                .subcommand("modify_hat")
+                .argumentResourceLocation("hat_id", HatDatabase::getAllHatIds)
+                .subcommand("particles")
+                .subcommand("modify")
+                .argumentInteger("particle_index")
+                .subcommand("offset")
+                .argumentFloat("x")
+                .argumentFloat("y")
+                .argumentFloat("z")
+                .executes(ctx->
+                {
+
+                    String hatId = ctx.getArgumentResourceLocation("hat_id").toString();
+                    int index = ctx.getArgumentInteger("particle_index");
+
+                    float x = ctx.getArgumentFloat("x");
+                    float y = ctx.getArgumentFloat("y");
+                    float z = ctx.getArgumentFloat("z");
+
+                    Instance.hats.forEach(hat->{
+                        if(hat.id.equals(hatId)) {
+                            try {
+                                Hat.ParticleOptions particleOptions = hat.particles.get(index);
+                                particleOptions.setOffset(new Vec3(x,y,z));
+                            }
+                            catch(ArgumentIndexOutOfBoundsException e) {
+                                ctx.getStack().getSource().sendSystemMessage(Component.literal("Invalid index, ignore following message:"));
+                            }
+                        }
+                    });
+
+                    return "Modified hat " + hatId + " particle " + index;
+                }).register();
+
+        CommandBuilder.command("hats")
+                .subcommand("admin")
+                .subcommand("database")
+                .subcommand("modify_hat")
+                .argumentResourceLocation("hat_id", HatDatabase::getAllHatIds)
+                .subcommand("particles")
+                .subcommand("modify")
+                .argumentInteger("particle_index")
+                .subcommand("count")
+                .argumentInteger("value")
+                .executes(ctx->
+                {
+
+                    String hatId = ctx.getArgumentResourceLocation("hat_id").toString();
+                    int index = ctx.getArgumentInteger("particle_index");
+
+                    int count = ctx.getArgumentInteger("value");
+
+                    Instance.hats.forEach(hat->{
+                        if(hat.id.equals(hatId)) {
+                            try {
+                                Hat.ParticleOptions particleOptions = hat.particles.get(index);
+                                particleOptions.setCount(count);
+                            }
+                            catch(ArgumentIndexOutOfBoundsException e) {
+                                ctx.getStack().getSource().sendSystemMessage(Component.literal("Invalid index, ignore following message:"));
+                            }
+                        }
+                    });
+
+                    return "Modified hat " + hatId + " particle " + index;
+                }).register();
+
+        CommandBuilder.command("hats")
+                .subcommand("admin")
+                .subcommand("database")
+                .subcommand("modify_hat")
+                .argumentResourceLocation("hat_id", HatDatabase::getAllHatIds)
+                .subcommand("particles")
+                .subcommand("modify")
+                .argumentInteger("particle_index")
+                .subcommand("delta")
+                .argumentFloat("x")
+                .argumentFloat("y")
+                .argumentFloat("z")
+                .executes(ctx->
+                {
+
+                    String hatId = ctx.getArgumentResourceLocation("hat_id").toString();
+                    int index = ctx.getArgumentInteger("particle_index");
+
+                    float x = ctx.getArgumentFloat("x");
+                    float y = ctx.getArgumentFloat("y");
+                    float z = ctx.getArgumentFloat("z");
+
+                    Instance.hats.forEach(hat->{
+                        if(hat.id.equals(hatId)) {
+                            try {
+                                Hat.ParticleOptions particleOptions = hat.particles.get(index);
+                                particleOptions.setDelta(new Vec3(x,y,z));
+                            }
+                            catch(ArgumentIndexOutOfBoundsException e) {
+                                ctx.getStack().getSource().sendSystemMessage(Component.literal("Invalid index, ignore following message:"));
+                            }
+                        }
+                    });
+
+                    return "Modified hat " + hatId + " particle " + index;
+                }).register();
+
+        CommandBuilder.command("hats")
+                .subcommand("admin")
+                .subcommand("database")
+                .subcommand("modify_hat")
+                .argumentResourceLocation("hat_id", HatDatabase::getAllHatIds)
+                .subcommand("particles")
+                .subcommand("modify")
+                .argumentInteger("particle_index")
+                .subcommand("speed")
+                .argumentFloat("value")
+                .executes(ctx->
+                {
+
+                    String hatId = ctx.getArgumentResourceLocation("hat_id").toString();
+                    int index = ctx.getArgumentInteger("particle_index");
+
+                    float speed = ctx.getArgumentFloat("value");
+
+                    Instance.hats.forEach(hat->{
+                        if(hat.id.equals(hatId)) {
+                            try {
+                                Hat.ParticleOptions particleOptions = hat.particles.get(index);
+                                particleOptions.setSpeed(speed);
+                            }
+                            catch(ArgumentIndexOutOfBoundsException e) {
+                                ctx.getStack().getSource().sendSystemMessage(Component.literal("Invalid index, ignore following message:"));
+                            }
+                        }
+                    });
+
+                    return "Modified hat " + hatId + " particle " + index;
+                }).register();
 
         ServerLifecycleEvents.SERVER_STARTED.register(server->{
             load();

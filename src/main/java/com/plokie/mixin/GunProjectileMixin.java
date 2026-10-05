@@ -151,7 +151,7 @@ public class GunProjectileMixin implements IGunProjectileMixin {
 
 
 //                node.changeHealth(snowball.level(), -gun.getDamage() * 0.003333333333f, nextNode);
-                node.changeHealth(snowball.level(), -((gun.getDamage() * 0.015f) / length), nextNode);
+                node.changeHealth(snowball.level(), -((gun.getDamage() * 0.0275f) / length), nextNode);
 
                 level.playSound(
                         null,

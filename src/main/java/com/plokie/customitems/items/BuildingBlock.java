@@ -40,7 +40,7 @@ import java.util.List;
 import java.util.UUID;
 
 public class BuildingBlock extends ICustomItem {
-    static class BuildingBlockInstance {
+    public static class BuildingBlockInstance {
         public BuildingBlockInstance(ServerPlayer player, BlockPos position, int tickPlaced, Level level)
         {
             this.playerUUID = player.getUUID();
@@ -81,6 +81,38 @@ public class BuildingBlock extends ICustomItem {
                 DataComponents.CAN_PLACE_ON,
                 canPlaceOn
         );
+    }
+
+    public static List<BuildingBlockInstance> getWallsInRadius(Vec3 pos, float radius)
+    {
+        List<BuildingBlockInstance> ret = new ArrayList<>();
+
+        for(var entry : blockInstances.entrySet())
+        {
+            for(BuildingBlockInstance instance : entry.getValue())
+            {
+                Vec3 wallPos = instance.position.getCenter();
+
+                float dist = (float)pos.distanceTo(wallPos);
+
+                if(dist < radius)
+                {
+                   ret.add(instance);
+                }
+            }
+        }
+
+        return ret;
+    }
+
+    public static void damageWallsInRadius(Vec3 pos, float radius, float damageAmount)
+    {
+        List<BuildingBlockInstance> walls = getWallsInRadius(pos, radius);
+        for(BuildingBlockInstance wall : walls)
+        {
+            wall.crumbleProgress += damageAmount;
+            wall.crumbleProgress = Math.clamp(wall.crumbleProgress, 0.0f, 2.0f);
+        }
     }
 
     public static void damageWall(BlockPos position, float damageAmount)

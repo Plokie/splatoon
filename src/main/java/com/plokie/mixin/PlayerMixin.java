@@ -12,11 +12,14 @@ import com.plokie.helpers.Effects;
 import com.plokie.helpers.Teams;
 import com.plokie.interfaces.IPlayerMixin;
 import com.plokie.interfaces.IPlayerTeamMixin;
+import com.plokie.management.hats.HatDatabase;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.particles.BlockParticleOption;
 import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.core.particles.SimpleParticleType;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.game.ClientboundSetExperiencePacket;
 import net.minecraft.network.protocol.game.ClientboundTeleportEntityPacket;
@@ -41,6 +44,7 @@ import net.minecraft.world.entity.player.Player;
 
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.item.component.DyedItemColor;
 import net.minecraft.world.item.component.ItemAttributeModifiers;
 import net.minecraft.world.level.Level;
@@ -52,6 +56,7 @@ import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.phys.shapes.CollisionContext;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -583,6 +588,7 @@ public class PlayerMixin implements IPlayerMixin {
                     }
                 }
 
+
 //                ItemStack offhandItem;
 
 //                if(splatoonClass.definition.offhandItem == null) {
@@ -603,6 +609,62 @@ public class PlayerMixin implements IPlayerMixin {
 //                {
 //                    player.setItemSlot(EquipmentSlot.OFFHAND, offhandItem);
 //                }
+            }
+        }
+
+        ItemStack headItem = player.getItemBySlot(EquipmentSlot.HEAD);
+//        Splatoon.LOGGER.info("Item '{}' on head", headItem.getItem().getName().getString());
+        if(headItem.is(HatDatabase.Hat.hatItem))
+        {
+            CustomData customData = headItem.get(DataComponents.CUSTOM_DATA);
+//            Splatoon.LOGGER.info("Wearing hat pseudo item");
+            if(customData != null) {
+//                Splatoon.LOGGER.info("\tCustom data isnt null");
+
+                if(customData.contains("hatId")) {
+//                    Splatoon.LOGGER.info("\tHas a hatId");
+                    Optional<String> opt = customData.getUnsafe().getString("hatId");
+                    if(opt.isPresent())
+                    {
+                        String hatId = opt.get();
+
+//                        Splatoon.LOGGER.info("\tCustom data contains hatId {}", hatId);
+
+                        HatDatabase.Hat hat = HatDatabase.getHatById(hatId);
+                        if(hat != null)
+                        {
+//                            Splatoon.LOGGER.info("\tRecognised as hat {}", hat.getName());
+                            Vec3 pos = player.position();
+
+                            for(HatDatabase.Hat.ParticleOptions particleOptions : hat.getParticles())
+                            {
+                                if(player.tickCount % particleOptions.getRate() != 0 ) continue;
+
+//                                Splatoon.LOGGER.info("\t\tParticle {}", particleOptions.getParticleId());
+
+                                var particleType = BuiltInRegistries.PARTICLE_TYPE.get(ResourceLocation.parse(particleOptions.getParticleId()));
+
+                                if(particleType.isEmpty()) {
+//                                    Splatoon.LOGGER.info("\t\t\t! Invalid Particle");
+                                    continue;
+                                }
+
+                                Vec3 ppos = pos.add(particleOptions.getOffset());
+
+//                                        particleType.get().value()
+
+                                level.sendParticles(
+                                        (SimpleParticleType)particleType.get().value(),
+                                        ppos.x, ppos.y, ppos.z,
+                                        particleOptions.getCount(),
+                                        particleOptions.getDelta().x, particleOptions.getDelta().y, particleOptions.getDelta().z,
+                                        particleOptions.getSpeed()
+                                );
+                            }
+
+                        }
+                    }
+                }
             }
         }
 
@@ -668,9 +730,9 @@ public class PlayerMixin implements IPlayerMixin {
     @Inject(method="addAdditionalSaveData", at=@At("TAIL"))
     void onSaveData(ValueOutput valueOutput, CallbackInfo ci)
     {
-        Stream<String> abilitiesList = abilities.stream().map(ability -> ability.getClass().getSimpleName());
-
-        valueOutput.store("abilities", Codec.list(Codec.STRING), abilitiesList.toList());
+        valueOutput.store("abilities", Codec.list(Ability.CODEC), abilities);
+//        Stream<String> abilitiesList = abilities.stream().map(ability -> ability.getClass().getSimpleName());
+//        valueOutput.store("abilities", Codec.list(Codec.STRING), abilitiesList.toList());
 
         String classString = "none";
         if(splatoonClass != null) classString = splatoonClass.getID();
@@ -680,18 +742,19 @@ public class PlayerMixin implements IPlayerMixin {
     @Inject(method="readAdditionalSaveData", at=@At("TAIL"))
     void onReadData(ValueInput valueInput, CallbackInfo ci)
     {
-        List<String> abilitiesList = valueInput.read("abilities", Codec.list(Codec.STRING)).orElse(Collections.emptyList());
 
-        for(String abilityId : abilitiesList) {
-            try {
-                AbilityManager.AbilityEnum abilityEnum = AbilityManager.AbilityEnum.valueOf(abilityId);
-                grantAbility(abilityEnum.Construct());
-                Splatoon.LOGGER.info("{} loaded ability '{}'", player.getName(), abilityId);
-            }
-            catch(IllegalArgumentException e) {
-                Splatoon.LOGGER.warn("{} Tried to load unknown ability '{}'", player.getName(), abilityId);
-            }
-        }
+//        List<String> abilitiesList = valueInput.read("abilities", Codec.list(Codec.STRING)).orElse(Collections.emptyList());
+//
+//        for(String abilityId : abilitiesList) {
+//            try {
+//                AbilityManager.AbilityEnum abilityEnum = AbilityManager.AbilityEnum.valueOf(abilityId);
+//                grantAbility(abilityEnum.Construct());
+//                Splatoon.LOGGER.info("{} loaded ability '{}'", player.getName(), abilityId);
+//            }
+//            catch(IllegalArgumentException e) {
+//                Splatoon.LOGGER.warn("{} Tried to load unknown ability '{}'", player.getName(), abilityId);
+//            }
+//        }
 
         String classString = valueInput.getStringOr("class", "none");
         if(!classString.equals("") && !classString.equals("none"))
@@ -706,5 +769,8 @@ public class PlayerMixin implements IPlayerMixin {
                 Splatoon.LOGGER.warn("{} Attempted to load unknown class {}", player.getName(), classString);
             }
         }
+
+        abilities.clear();
+        abilities.addAll(valueInput.read("abilities", Codec.list(Ability.CODEC)).orElse(new ArrayList<>()));
     }
 }

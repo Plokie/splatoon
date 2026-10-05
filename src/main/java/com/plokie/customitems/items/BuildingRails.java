@@ -14,8 +14,10 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.advancements.critereon.BlockPredicate;
 import net.minecraft.commands.arguments.EntityAnchorArgument;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.particles.DustParticleOptions;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
@@ -88,6 +90,8 @@ public class BuildingRails extends ICustomItem {
 
                 BlockGetter.traverseBlocks(a, b, null, (context, bpUnsafe)->{
                     BlockPos bp = new BlockPos(bpUnsafe); // looks like it reuses bpUnsafe. getting weird behaviour otherwise
+
+                    //if(bp.equals(nextNodeOpt.position)) return null;
 
                     if(brokenByPlayer.level().getBlockState(bp).is(Blocks.RAIL)) {
                         brokenByPlayer.level().setBlockAndUpdate(bp, Blocks.AIR.defaultBlockState());
@@ -427,7 +431,7 @@ public class BuildingRails extends ICustomItem {
         }
     }
 
-    public void placeRails(Player placedBy , BlockPos bpa, BlockPos bpb)
+    public void placeRails(Player placedBy , BlockPos bpa, BlockPos bpb, RailNode fromNode)
     {
         Vec3 a = bpa.getCenter();
         Vec3 b = bpb.getCenter();
@@ -462,7 +466,7 @@ public class BuildingRails extends ICustomItem {
 
             int nodeIdx = currentChannel.size() - 1;
 
-            FetchedRail fetchedRail = new FetchedRail(playerPlacedRails, playerPlacedRails.selectedChannel, currentChannel.getLast());
+            FetchedRail fetchedRail = new FetchedRail(playerPlacedRails, playerPlacedRails.selectedChannel, fromNode);
 
             Splatoon.LOGGER.info("Added cached rail block Position={} chunk={}, channel={} size/node={}", bpCopy, chunkPos, playerPlacedRails.selectedChannel, nodeIdx);
 
@@ -555,7 +559,9 @@ public class BuildingRails extends ICustomItem {
             DustParticleOptions dustParticleOptions = new DustParticleOptions(dustCol, 1);
 
             ((ServerLevel)player.level()).sendParticles(
+                    (ServerPlayer)player,
                     dustParticleOptions,
+                    true,true,
                     p.x, p.y, p.z,
                     1, // count
                     0.0, 0.0, 0.0, // delta
@@ -642,27 +648,43 @@ public class BuildingRails extends ICustomItem {
 
             List<RailNode> nodes = rails.channels.get(rails.selectedChannel);
 
-//            for(int i=0; i<nodes.size()-1; i++)
-//            {
-//                RailNode nodeA = nodes.get(i);
-//                RailNode nodeB = nodes.get(i+1);
-//
-//                Vec3 a = nodeA.position.getCenter().add(0, 0.2, 0);
-//                Vec3 b = nodeB.position.getCenter().add(0, 0.2, 0);
-//
-//                //lineFunc.accept(a, b);
-//                Helpers.particleLine(player.level(), a, b, ParticleTypes.HAPPY_VILLAGER, 0.5f, player);
-//            }
+            for(int i=0; i<nodes.size()-1; i++)
+            {
+                RailNode nodeA = nodes.get(i);
+                RailNode nodeB = nodes.get(i+1);
+
+                Vec3 a = nodeA.position.getCenter().add(0, 0.2, 0);
+                Vec3 b = nodeB.position.getCenter().add(0, 0.2, 0);
+
+                //lineFunc.accept(a, b);
+                Helpers.particleLine(player.level(), a, b, ParticleTypes.ELECTRIC_SPARK, 1.0f, player);
+            }
 
             BlockHitResult raycast = (BlockHitResult) player.pick(5.0f, 0.0f, false);
 
             if(raycast.getType() == HitResult.Type.BLOCK)
             {
-                if(!nodes.isEmpty()) {
-                    BlockPos lastNode = nodes.getLast().position;
-                    BlockPos hitBlock = Helpers.calculateDesiredPlacement(raycast);
+                BlockState hitBlock = player.level().getBlockState(raycast.getBlockPos());
 
-                    boolean isValid = plotRailLineFunc(player, lastNode, hitBlock);
+                if(!hitBlock.is(Blocks.RAIL)) {
+                    if(!nodes.isEmpty()) {
+                        BlockPos placePos = Helpers.calculateDesiredPlacement(raycast);
+                        BlockPos attachToPos;
+
+                        BlockPos lastNode = nodes.getLast().position;
+                        BlockPos firstNode = nodes.getFirst().position;
+
+                        double distToLast = placePos.getCenter().distanceTo(lastNode.getCenter());
+                        double distToFirst = placePos.getCenter().distanceTo(firstNode.getCenter());
+                        if(distToLast < distToFirst) {
+                            attachToPos = lastNode;
+                        }
+                        else{
+                            attachToPos = firstNode;
+                        }
+
+                        boolean isValid = plotRailLineFunc(player, attachToPos, placePos);
+                    }
                 }
             }
         }
@@ -767,7 +789,7 @@ public class BuildingRails extends ICustomItem {
 
                 if(node.health < 1.0f) {
 
-                    node.changeHealth(player.level(), ((12.0f * 0.015f) / length), nextNode);
+                    node.changeHealth(player.level(), ((12.0f * 0.03f) / length), nextNode);
 
 
                     Vec3 pos = hit.getBlockPos().getCenter();
@@ -801,6 +823,9 @@ public class BuildingRails extends ICustomItem {
         else
         {
             BlockPos placePos = Helpers.calculateDesiredPlacement(hit);
+            BlockState placeOnBlock = player.level().getBlockState(hit.getBlockPos());
+
+            Splatoon.LOGGER.info("Try place rail on {}", placeOnBlock.getBlock().getName().getString());
 
             if(!s_placedRails.containsKey(playerUUID))
             {
@@ -812,24 +837,57 @@ public class BuildingRails extends ICustomItem {
             PlacedRails placedRails = s_placedRails.get(playerUUID);
             List<RailNode> currentChannel = placedRails.channels.get(placedRails.selectedChannel);
 
+            BlockPos attachToPos;
+            boolean addToFront = false;
+
             boolean isValidPlacement = currentChannel.isEmpty();
             if(!isValidPlacement) {
-                lastNode = currentChannel.getLast();
-                isValidPlacement = plotRailLineFunc(player, lastNode.position, placePos);
+                BlockPos lastNodePos = currentChannel.getLast().position;
+                BlockPos firstNodePos = currentChannel.getFirst().position;
+
+                double distToLast = placePos.getCenter().distanceTo(lastNodePos.getCenter());
+                double distToFirst = placePos.getCenter().distanceTo(firstNodePos.getCenter());
+                if(distToLast <= distToFirst) {
+                    attachToPos = lastNodePos;
+                    lastNode = currentChannel.getLast();
+                    addToFront = false;
+                }
+                else{
+                    attachToPos = firstNodePos;
+                    addToFront = true;
+                    lastNode = currentChannel.getFirst();
+                }
+
+//                lastNode = currentChannel.getLast();
+                isValidPlacement = plotRailLineFunc(player, attachToPos, placePos);
             }
 
-            if(player.level().getBlockState(hit.getBlockPos()).is(Splatoon.Tags.AUX_BLOCKS))
+
+
+            if(hit.getDirection() != Direction.UP) {
+                isValidPlacement = false;
+            }
+
+            if(placeOnBlock.is(Splatoon.Tags.AUX_BLOCKS))
             {
                 isValidPlacement = false;
             }
 
             if(isValidPlacement) {
+                RailNode newNode = new RailNode(placePos);
+
                 if(currentChannel.isEmpty())
                 {
                     player.level().setBlockAndUpdate(placePos, Blocks.RAIL.defaultBlockState());
                 }
                 else {
-                    placeRails(player, lastNode.position, placePos);
+                    if(addToFront) {
+                        placeRails(player, lastNode.position, placePos, newNode);
+                    }
+                    else
+                    {
+                        placeRails(player, lastNode.position, placePos, lastNode);
+                    }
 
                     float length = (float)lastNode.position.getCenter().distanceTo(placePos.getCenter());
                     int intLength = (int)Math.ceil(length);
@@ -843,7 +901,15 @@ public class BuildingRails extends ICustomItem {
                     }
                 }
 
-                currentChannel.add(new RailNode(placePos));
+                if(addToFront) {
+                    Splatoon.LOGGER.info("Add rail to front");
+                    currentChannel.addFirst(newNode);
+                }
+                else
+                {
+                    Splatoon.LOGGER.info("Add rail to back");
+                    currentChannel.addLast(newNode);
+                }
             }
         }
     }
@@ -902,6 +968,11 @@ public class BuildingRails extends ICustomItem {
                 if(passenger instanceof Player player) {
                     Input input = ((IPlayerMixin)player).getInput();
                     if(input.shift()) {
+//                        for(int i=0; i<ridingChannel.size(); i++) {
+//                            Splatoon.LOGGER.info("\tRailNode {}: {}", i, ridingChannel.get(i).position);
+//                        }
+
+
                         Splatoon.LOGGER.info("Minecart ejected by sneak");
                         onEject();
                         return;
@@ -926,7 +997,7 @@ public class BuildingRails extends ICustomItem {
                     passenger.startRiding(vehicle, true);
                 }
 
-                if(passenger.tickCount % 20*4 == 0) {
+                if(passenger.tickCount % Math.round(20*3.5) == 0) {
                     Vec3 ppos = passenger.position();
                     passenger.level().playSound(
                             null,
@@ -957,6 +1028,7 @@ public class BuildingRails extends ICustomItem {
                 onEject();
                 return;
             }
+//            Splatoon.LOGGER.info("\t\t{} -> {} / -> {}", indexOfPrevNode, indexOfNextNode, nextNode.position);
 
             boolean isBroken = movingDir==1&&prevNode.isBroken;
             isBroken |= movingDir==-1&&nextNode.isBroken;

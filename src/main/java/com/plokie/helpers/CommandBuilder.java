@@ -1,6 +1,7 @@
 package com.plokie.helpers;
 
 import com.mojang.brigadier.Command;
+import com.mojang.brigadier.arguments.FloatArgumentType;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.ArgumentBuilder;
@@ -61,6 +62,10 @@ public class CommandBuilder {
 
         public int getArgumentInteger(String name) {
             return IntegerArgumentType.getInteger(stack, name);
+        }
+
+        public float getArgumentFloat(String name) {
+            return FloatArgumentType.getFloat(stack, name);
         }
 
         public String getArgumentString(String name) {
@@ -136,6 +141,13 @@ public class CommandBuilder {
             CommandStackNode node = new CommandStackNode(Type.Argument);
             node.name = name;
             node.argumentSupplier = ()->Commands.argument(name, IntegerArgumentType.integer());
+            return node;
+        }
+
+        public static CommandStackNode argumentFloat(String name) {
+            CommandStackNode node = new CommandStackNode(Type.Argument);
+            node.name = name;
+            node.argumentSupplier = ()->Commands.argument(name, FloatArgumentType.floatArg());
             return node;
         }
 
@@ -249,6 +261,13 @@ public class CommandBuilder {
     {
         //commandStack = commandStack.then(Commands.argument(name, IntegerArgumentType.integer()));
         commandStackQueue.add(CommandStackNode.argumentInteger(name));
+        return this;
+    }
+
+    public CommandBuilder argumentFloat(String name)
+    {
+        //commandStack = commandStack.then(Commands.argument(name, IntegerArgumentType.integer()));
+        commandStackQueue.add(CommandStackNode.argumentFloat(name));
         return this;
     }
 

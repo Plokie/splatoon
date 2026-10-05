@@ -1,5 +1,8 @@
 package com.plokie.classes.abilities;
 
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
+import com.plokie.Splatoon;
 import com.plokie.customitems.CustomItem;
 import com.plokie.interfaces.IPlayerMixin;
 import net.minecraft.core.component.DataComponents;
@@ -25,6 +28,26 @@ public class Ability {
     }
 
     final AbilityManager.AbilityEnum enumVal;
+//
+    public static final Codec<Ability> CODEC = RecordCodecBuilder.create(instance->
+        instance.group(
+                Codec.STRING.fieldOf("id").forGetter(inst->inst.getEnumValue().toString()),
+                Codec.INT.fieldOf("rechargeTimer").forGetter(inst->inst.rechargeTimer),
+                Codec.INT.fieldOf("count").forGetter(Ability::getCount)
+        ).apply(instance, (id, timer, count)->{
+            try {
+                AbilityManager.AbilityEnum abilityEnum = AbilityManager.AbilityEnum.valueOf(id);
+                Ability ability = abilityEnum.Construct();
+                ability.rechargeTimer = timer;
+                ability.count = count;
+                Splatoon.LOGGER.info("Loaded ability {} with timer {} and count {}", id, timer, count);
+                return ability;
+            } catch (IllegalArgumentException e) {
+                Splatoon.LOGGER.warn("Failed to load ability by enum value {}. Filling with bombs", id);
+                return AbilityManager.AbilityEnum.InkBombs.Construct();
+            }
+        })
+    );
 
 
     int rechargeTime = -1;

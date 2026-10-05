@@ -2,6 +2,7 @@ package com.plokie.mixin;
 
 import com.mojang.math.Transformation;
 import com.plokie.Splatoon;
+import com.plokie.customitems.items.BuildingBlock;
 import com.plokie.helpers.*;
 import com.plokie.interfaces.IPlayerTeamMixin;
 import com.plokie.interfaces.IProjectile;
@@ -221,6 +222,8 @@ public class SheepBombMixin implements IProjectile {
                         PlayerStats.get(player).add(PlayerStats.BLOCKS_INKED, numReplaced);
 
                         Helpers.inkSlimesInRadius(sheep.position(), 3.0f, player);
+
+                        BuildingBlock.damageWallsInRadius(sheep.position(), 3.0f, 0.275f);
                     }
                 }
 

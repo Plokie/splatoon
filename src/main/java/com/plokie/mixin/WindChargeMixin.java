@@ -122,7 +122,7 @@ public class WindChargeMixin implements IWindChargeMixin {
 
                             if(doHurt)
                             {
-                                Affects.hurtEntity(target, 5.0f, player, DamageTypes.PLAYER_EXPLOSION);
+                                Affects.hurtEntity(target, 10.0f, player, DamageTypes.PLAYER_EXPLOSION);
                             }
 
                             Vec3 diff = target.position().subtract(pos);

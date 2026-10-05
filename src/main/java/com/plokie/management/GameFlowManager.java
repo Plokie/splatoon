@@ -100,6 +100,7 @@ public class GameFlowManager {
     public Vec3 hubSpawn = new Vec3(-131, 103, -146);
     public final BlockPos readyUpZone = new BlockPos(-136, 103, -160);
     public final BlockPos readyUpZoneSize = new BlockPos(10, 5, 5);
+    BlockPos skirmishSelectorLocation = new BlockPos(-122, 88, -129);
 
     int winningTeam = -1;
     Map<Integer, List<UUID>> players = new HashMap<>();
@@ -302,7 +303,7 @@ public class GameFlowManager {
             this.currentMap = gamemode.getMaps().get(0).getMap();
 
             teamSelectors.clear();
-            teamSelectors.add(new TeamSelector(new BlockPos(-122, 88, -127), TeamSelector.Type.OwnTeam, -1));
+            teamSelectors.add(new TeamSelector(skirmishSelectorLocation, TeamSelector.Type.OwnTeam, -1));
 
             AABB mapAabb = new AABB(readyUpZone).inflate(25.0);
 
