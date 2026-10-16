@@ -1,51 +1,25 @@
 package com.plokie.management.hats;
 
-import com.google.gson.JsonPrimitive;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.serialization.Codec;
-import com.mojang.serialization.JsonOps;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import com.plokie.Splatoon;
 import com.plokie.dialog.DialogBuilder;
 import com.plokie.helpers.CommandBuilder;
-import com.plokie.helpers.Helpers;
 import com.plokie.helpers.ScheduleEvent;
 import com.plokie.management.PlayerStats;
-import com.plokie.mixin.SplashPotionMixin;
-import io.netty.buffer.ByteBuf;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.minecraft.ChatFormatting;
-import net.minecraft.commands.arguments.ResourceOrIdArgument;
-import net.minecraft.core.Holder;
-import net.minecraft.core.HolderSet;
-import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.component.DataComponents;
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
-import net.minecraft.nbt.Tag;
-import net.minecraft.network.chat.ClickEvent;
-import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
-import net.minecraft.network.protocol.common.ClientboundShowDialogPacket;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.dialog.*;
-import net.minecraft.server.dialog.action.ActionTypes;
-import net.minecraft.server.dialog.action.CommandTemplate;
-import net.minecraft.server.dialog.action.ParsedTemplate;
-import net.minecraft.server.dialog.action.StaticAction;
-import net.minecraft.server.dialog.body.DialogBody;
-import net.minecraft.server.dialog.body.DialogBodyTypes;
-import net.minecraft.server.dialog.body.ItemBody;
-import net.minecraft.server.dialog.body.PlainMessage;
-import net.minecraft.server.dialog.input.BooleanInput;
-import net.minecraft.server.dialog.input.SingleOptionInput;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.tags.DialogTags;
 import net.minecraft.util.StringRepresentable;
 import net.minecraft.util.datafix.DataFixTypes;
-import net.minecraft.util.parsing.packrat.commands.CommandArgumentParser;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.player.Player;
@@ -61,14 +35,11 @@ import net.minecraft.world.level.saveddata.SavedData;
 import net.minecraft.world.level.saveddata.SavedDataType;
 import net.minecraft.world.level.storage.CommandStorage;
 import net.minecraft.world.phys.Vec3;
-import org.apache.commons.codec.binary.Hex;
 import org.jetbrains.annotations.NotNull;
 import org.spongepowered.asm.mixin.injection.invoke.arg.ArgumentIndexOutOfBoundsException;
 
 import java.nio.ByteBuffer;
 import java.util.*;
-import java.util.function.BiConsumer;
-import java.util.function.Consumer;
 import java.util.function.Function;
 
 public class HatDatabase extends SavedData {
@@ -220,6 +191,10 @@ public class HatDatabase extends SavedData {
 
         public static Item hatItem = Items.EMERALD;
 
+        public Component getFormattedName() {
+            return Component.literal(name).withStyle(rarity.formatCol());
+        }
+
         public ItemStack createItemStack()
         {
             ItemStack item = new ItemStack(hatItem);
@@ -235,7 +210,7 @@ public class HatDatabase extends SavedData {
 //            item.set(DataComponents.ITEM_MODEL, ResourceLocation.fromNamespaceAndPath(id.split(":")[0], id.split(":")[1]));
             item.set(DataComponents.ITEM_MODEL, ResourceLocation.parse(id));
 
-            item.set(DataComponents.ITEM_NAME, Component.literal(name).withStyle(rarity.formatCol()));
+            item.set(DataComponents.ITEM_NAME, getFormattedName());
 
             List<Component> loreList = new ArrayList<>();
             loreList.add(rarity.formattedName());
@@ -260,15 +235,29 @@ public class HatDatabase extends SavedData {
         {
             this.id = id;
             this.count = count;
+            this.hidden = false;
+        }
+
+        public PlayerHat(String id, int count, boolean hidden)
+        {
+            this.id = id;
+            this.count = count;
+            this.hidden = hidden;
         }
 
         public final String id;
         public int count = 0;
+        public boolean hidden = false;
+
+        public Hat getHat() {
+            return HatDatabase.getHatById(id);
+        }
 
         public static Codec<PlayerHat> CODEC = RecordCodecBuilder.create(instance->
                 instance.group(
                         Codec.STRING.fieldOf("id").forGetter(inst->inst.id),
-                        Codec.INT.fieldOf("count").forGetter(inst->inst.count)
+                        Codec.INT.fieldOf("count").forGetter(inst->inst.count),
+                        Codec.BOOL.optionalFieldOf("hidden", false).forGetter(inst->inst.hidden)
 
                 ).apply(instance, PlayerHat::new)
         );
@@ -361,9 +350,23 @@ public class HatDatabase extends SavedData {
         int maxInvSize = player.getInventory().getContainerSize();
 
         List<PlayerHat> hats = Instance.playerHats.get(player.getUUID());
+
+        hats.sort((a, b)->{
+            Hat hatA = getHatById(a.id);
+            Hat hatB = getHatById(b.id);
+            if(hatA == null || hatB == null) return 0;
+            if(hatB.rarity == Rarity.EXCLUSIVE) return 1;
+            if(hatA.rarity == Rarity.EXCLUSIVE) return -1;
+            return hatB.rarity.value - hatA.rarity.value;
+        });
+
         int idx=0;
         for(PlayerHat playerHat : hats)
         {
+            if(playerHat.hidden) {
+                continue;
+            }
+
             Hat hat = getHatById(playerHat.id);
             if(hat != null) {
                 ItemStack item = hat.createItemStack();
@@ -388,6 +391,12 @@ public class HatDatabase extends SavedData {
         }
 
         return null;
+    }
+
+    public static List<PlayerHat> getPlayerHats(Player player)
+    {
+        if(!Instance.playerHats.containsKey(player.getUUID())) return new ArrayList<>();
+        return Instance.playerHats.get(player.getUUID());
     }
 
     public static boolean giveHat(Player player, String hatId, int count)
@@ -468,12 +477,12 @@ public class HatDatabase extends SavedData {
 
     public static void setup()
     {
-        CommandBuilder.command("hats").subcommand("admin").subcommand("database").subcommand("reload").executes(ctx->{
+        CommandBuilder.command("adminhats").subcommand("admin").subcommand("database").subcommand("reload").executes(ctx->{
             load();
             return "Reloading hat database";
         }).register();
 
-        CommandBuilder.command("hats").subcommand("admin").subcommand("database").subcommand("migrate_hats").executes(ctx->{
+        CommandBuilder.command("adminhats").subcommand("admin").subcommand("database").subcommand("migrate_hats").executes(ctx->{
             CommandStorage commandStorage = Splatoon.SERVER.getCommandStorage();
             ResourceLocation oldStorageId = ResourceLocation.fromNamespaceAndPath("splatoon", "hats");
             CompoundTag oldStorage = commandStorage.get(oldStorageId);
@@ -512,7 +521,7 @@ public class HatDatabase extends SavedData {
             return "";
         }).register();
 
-        CommandBuilder.command("hats").subcommand("admin").subcommand("database").subcommand("migrate_players").executes(ctx->{
+        CommandBuilder.command("adminhats").subcommand("admin").subcommand("database").subcommand("migrate_players").executes(ctx->{
             CommandStorage commandStorage = Splatoon.SERVER.getCommandStorage();
             ResourceLocation oldStorageId = ResourceLocation.fromNamespaceAndPath("emerald", "vars");
             CompoundTag oldStorage = commandStorage.get(oldStorageId);
@@ -644,7 +653,7 @@ public class HatDatabase extends SavedData {
             }
         };
 
-        CommandBuilder.command("hats").subcommand("admin").subcommand("database").subcommand("list").executes(ctx->{
+        CommandBuilder.command("adminhats").subcommand("admin").subcommand("database").subcommand("list").executes(ctx->{
             ScheduleEvent.schedule(1, server->{
                 MutableComponent message = Component.literal("Hats:\n");
                 for(Hat hat : Instance.hats)
@@ -663,115 +672,153 @@ public class HatDatabase extends SavedData {
             return "...";
         }).register();
 
+        var menus = new Object() {
+            Dialog homeMenu = null;
+        };
 
-        CommandBuilder.command("hats").subcommand("list").argumentPlayer("target").executes(ctx->{
-            var ref = new Object() {
-                ServerPlayer target;
-            };
+        DialogBuilder homeMenuBuilder = DialogBuilder
+                .createDialogMultiAction("hatmenu_home", 1)
+                .title(Component.literal("Hats"))
+                .addAction(Component.literal("Reload missing hats"), "reload_missing_hats", 200, (player)->{
+                    reloadPlayerHats(player);
+                })
+                .addAction(Component.literal("View my hats"), "open_view_all", 200, (player)->{
+                    var viewHatsRef = new Object() {
+                        Dialog viewHatsDialog = null;
+                    };
 
-            try {
-                ref.target = ctx.getArgumentPlayer("target");
+                    DialogBuilder dialogBuilder = DialogBuilder.createDialogMultiAction("hatmenu_view_all", 4)
+                            .title("Hats");
 
-            } catch (Exception e) {
-                try {
-                    ref.target = ctx.getStack().getSource().getPlayerOrException();
-                } catch (CommandSyntaxException ex) {
-                    return "! Command must be executed by a player to view own hats";
-                }
-            }
+                    for(PlayerHat playerHat : HatDatabase.getPlayerHats(player))
+                    {
+                        Hat hat = playerHat.getHat();
 
-            ScheduleEvent.schedule(1, server->{
-                MutableComponent message = constructHatsMessage.apply(ref.target.getUUID());
-                ctx.getStack().getSource().sendSystemMessage(message);
-            });
+                        MutableComponent label = Component.literal(playerHat.count + "x ");
+
+                        if(playerHat.hidden)
+                        {
+                            label = label.append(Component.literal(hat.getName()).withStyle(ChatFormatting.GRAY));
+                        }
+                        else {
+                            label = label.append(hat.getFormattedName());
+                        }
+
+                        CompoundTag tag = new CompoundTag();
+                        tag.putString("hat_id", hat.id);
+
+                        dialogBuilder.addAction(label, "view_hat", 100, tag, (player1, viewHatArgs)->{
+                            CompoundTag compoundTag = viewHatArgs.asCompound().orElse(new CompoundTag());
+                            String hatId = compoundTag.getStringOr("hat_id", "no_id");
+                            Hat viewHat = HatDatabase.getHatById(hatId);
+                            if(viewHat == null) return;
+
+                            PlayerHat playerHat1 = HatDatabase.getPlayersHatById(player1, hatId);
+                            if(playerHat1 == null) return;
+
+                            Splatoon.LOGGER.info("view hat {}", hatId);
 
 
-            return "Getting hats...";
-        }).permission(stack->true).register();
 
-        CommandBuilder.command("hats").subcommand("sort").subcommand("rarity_descending").executes(ctx->{
-            ServerPlayer caller = ctx.getStack().getSource().getPlayer();
-            if(caller == null) return "! This command must be called by a player";
+                            int quicksellValue = viewHat.rarity.value;
 
-            if(!Instance.playerHats.containsKey(caller.getUUID())) return "! You dont have any hats";
+                            String sellText = "Quick-sell 1 for $" + quicksellValue;
+                            if(quicksellValue < 0) {
+                                sellText = "Unable to sell unique hats";
+                            }
 
-            List<PlayerHat> hats = Instance.playerHats.get(caller.getUUID());
+                            String hiddenText = "Hidden from inv: " + (playerHat1.hidden ? "Yes" : "No");
 
-            hats.sort((a, b)->{
-                Hat hatA = getHatById(a.id);
-                Hat hatB = getHatById(b.id);
-                if(hatA == null || hatB == null) return 0;
-                if(hatB.rarity == Rarity.EXCLUSIVE) return 1;
-                if(hatA.rarity == Rarity.EXCLUSIVE) return -1;
-                return hatB.rarity.value - hatA.rarity.value;
-            });
+                            var viewHatRef = new Object() {
+                                Dialog viewHatDialog = null;
+                            };
 
-            reloadPlayerHats(caller);
+                            viewHatRef.viewHatDialog = DialogBuilder
+                                    .createDialogMultiAction("hatmenu_view_single", 1)
+                                    .title(viewHat.getFormattedName())
+                                    .addBodyItem(viewHat.createItemStack())
+                                    .addBodyText(viewHat.getFormattedName(), 100)
+                                    .addBodyText(viewHat.rarity.formattedName(), 100)
+                                    .addAction(Component.literal(sellText), "quicksell_hat", 150, compoundTag, (player2, tag2)->{
+                                        CompoundTag compoundTag2 = tag2.asCompound().orElse(new CompoundTag());
+                                        String hatId2 = compoundTag2.getStringOr("hat_id", "no_id");
+                                        Hat hat2 = HatDatabase.getHatById(hatId2);
+                                        if(hat2 == null) return;
+                                        if(hat2.rarity.value < 0) {
+                                            DialogBuilder.triggerAction("view_hat", player2, tag2);
+                                            return;
+                                        }
 
-            return "Sorted hats...";
-        }).permission(stack->true).register();
+                                        DialogBuilder.createDialogConfirmation("quicksell_hat_confirm")
+                                                .title("Quicksell hat?")
+                                                .addBodyItem(hat2.createItemStack())
+                                                .addBodyText(Component.literal("Are you sure you want to sell 1x ").append(hat2.getFormattedName()).append(" for $" + hat2.rarity.value+"?"), 100  )
+                                                .setSubmitAction(Component.literal("Confirm"), 200, tag2,(player3, tag3)->{
+                                                    CompoundTag compoundTag3 = tag3.asCompound().orElse(new CompoundTag());
+                                                    String hatId3 = compoundTag3.getStringOr("hat_id", "no_id");
+                                                    Hat hat3 = HatDatabase.getHatById(hatId3);
+                                                    if(hat3 != null)
+                                                    {
+                                                        if(revokeHat(player3, hat3.id, 1)) {
+                                                            PlayerStats.get(player3).forceAddNoMatch(PlayerStats.MONEY, hat3.rarity.value);
+                                                        }
+                                                    }
 
-        CommandBuilder.command("hats").subcommand("sort").subcommand("rarity_ascending").executes(ctx->{
-            ServerPlayer caller = ctx.getStack().getSource().getPlayer();
-            if(caller == null) return "! This command must be called by a player";
+                                                    DialogBuilder.triggerAction("open_view_all", player2);
+                                                })
+                                                .setCloseAction(Component.literal("Back"), 200, tag2, (player3, tag3) -> {
+                                                    DialogBuilder.triggerAction("view_hat", player3, tag3);
+                                                })
+                                                .buildAndSend(player2);
+                                    })
+                                    .addAction(Component.literal("Sell on market (WIP)"), "market_sell_hat", 150, compoundTag, (player2, tag2)->{
+                                        DialogBuilder.triggerAction("view_hat", player2, tag2);
+                                    })
+                                    .addAction(Component.literal(hiddenText), "toggle_hat_hidden", 150, compoundTag, (player2, tag2)->{
+                                        CompoundTag compoundTag2 = tag2.asCompound().orElse(new CompoundTag());
+                                        String hatId2 = compoundTag2.getStringOr("hat_id", "no_id");
+                                        PlayerHat playerHat2 = HatDatabase.getPlayersHatById(player2, hatId2);
+                                        if(playerHat2 != null) {
+                                            playerHat2.hidden = !playerHat2.hidden;
+                                        }
+                                        reloadPlayerHats(player2);
 
-            if(!Instance.playerHats.containsKey(caller.getUUID())) return "! You dont have any hats";
+                                        DialogBuilder.triggerAction("view_hat", player2, tag2);
+                                    })
+                                    .setCloseAction(Component.literal("Back"), 200, player2->{
+                                        DialogBuilder.triggerAction("open_view_all", player2);
+                                    })
+                                    .buildWithoutSending();
 
-            List<PlayerHat> hats = Instance.playerHats.get(caller.getUUID());
+                            DialogBuilder.send(viewHatRef.viewHatDialog, player1);
+                        });
+                    }
 
-            hats.sort((a, b)->{
-                Hat hatA = getHatById(a.id);
-                Hat hatB = getHatById(b.id);
-                if(hatA == null || hatB == null) return 0;
-                if(hatB.rarity == Rarity.EXCLUSIVE) return -1;
-                if(hatA.rarity == Rarity.EXCLUSIVE) return 1;
-                return hatA.rarity.value - hatB.rarity.value;
-            });
+                    dialogBuilder.setCloseAction(Component.literal("Back"), 200, player1 -> {
+                        DialogBuilder.send(menus.homeMenu, player1);
+                    });
 
-            reloadPlayerHats(caller);
+                    viewHatsRef.viewHatsDialog = dialogBuilder.buildWithoutSending();
+                    DialogBuilder.send(viewHatsRef.viewHatsDialog, player);
+                })
+                .addAction(Component.literal("Hat market (Coming soon)"), "open_hat_market", 200, (player)->{
 
-            return "Sorted hats...";
-        }).permission(stack->true).register();
+                })
+                ;
 
-        CommandBuilder.command("hats").subcommand("sort").subcommand("alphabetically").executes(ctx->{
-            ServerPlayer caller = ctx.getStack().getSource().getPlayer();
-            if(caller == null) return "! This command must be called by a player";
+        menus.homeMenu = homeMenuBuilder.buildWithoutSending();
 
-            if(!Instance.playerHats.containsKey(caller.getUUID())) return "! You dont have any hats";
-
-            List<PlayerHat> hats = Instance.playerHats.get(caller.getUUID());
-
-            hats.sort((a, b)->{
-                Hat hatA = getHatById(a.id);
-                Hat hatB = getHatById(b.id);
-                if(hatA == null || hatB == null) return 0;
-                return hatA.getName().compareTo(hatB.getName());
-            });
-
-            reloadPlayerHats(caller);
-
-            return "Sorted hats...";
-        }).permission(stack->true).register();
-
-        CommandBuilder.command("hats").subcommand("view").executes(ctx->{
+        CommandBuilder.command("hats").executes(ctx->{
             ServerPlayer sendToPlayer = ctx.getStack().getSource().getPlayer();
-            if(sendToPlayer != null)
-            {
-                DialogBuilder.create("hatview").title(Component.literal("Hats"))
-                        .addInputBoolean("my_boolean", Component.literal("Test"), "True", "False", true)
-                        .onSubmit((player, values)->{
-                            String value = values.getOrDefault("my_boolean", "couldnt find!");
-                            Splatoon.LOGGER.info("Response boolean = {}", value);
-                        })
-                .buildAndSend(sendToPlayer);
+            if(sendToPlayer == null) { return "! This command must be executed by a player"; }
 
+            DialogBuilder.send(menus.homeMenu, sendToPlayer);
 
-            }
+            return "Opening Hats menu...";
 
-            return "Opening hat dialog...";
-        }).register();
+        }).permission(ctx->true).register();
 
-        CommandBuilder.command("hats").subcommand("reload").executes(ctx->{
+        CommandBuilder.command("adminhats").subcommand("reload").executes(ctx->{
             ServerPlayer caller = ctx.getStack().getSource().getPlayer();
             if(caller == null) return "! This command must be called by a player";
 
@@ -781,7 +828,7 @@ public class HatDatabase extends SavedData {
 
         }).permission(stack->true).register();
 
-        CommandBuilder.command("hats").subcommand("admin").subcommand("give").argumentPlayer("target").argumentResourceLocation("hat_id", HatDatabase::getAllHatIds).argumentInteger("count").executes(ctx->{
+        CommandBuilder.command("adminhats").subcommand("admin").subcommand("give").argumentPlayer("target").argumentResourceLocation("hat_id", HatDatabase::getAllHatIds).argumentInteger("count").executes(ctx->{
             int count = 1;
             try {
                 count = ctx.getArgumentInteger("count");
@@ -804,7 +851,7 @@ public class HatDatabase extends SavedData {
             }
         }).register();
 
-        CommandBuilder.command("hats").subcommand("admin").subcommand("revoke").argumentPlayer("target").argumentResourceLocation("hat_id", HatDatabase::getAllHatIds).argumentInteger("count").executes(ctx->{
+        CommandBuilder.command("adminhats").subcommand("admin").subcommand("revoke").argumentPlayer("target").argumentResourceLocation("hat_id", HatDatabase::getAllHatIds).argumentInteger("count").executes(ctx->{
             int count = -1;
             try {
                 count = ctx.getArgumentInteger("count");
@@ -827,7 +874,7 @@ public class HatDatabase extends SavedData {
             }
         }).register();
 
-        CommandBuilder.command("hats").subcommand("quicksell_hand").executes(ctx->{
+        CommandBuilder.command("adminhats").subcommand("quicksell_hand").executes(ctx->{
             ServerPlayer caller = ctx.getStack().getSource().getPlayer();
             if(caller == null) return "! This command must be called by a player";
 
@@ -855,7 +902,7 @@ public class HatDatabase extends SavedData {
             return "Sold 1x " + hat.name;
         }).permission(stack->true).register();
 
-        CommandBuilder.command("hats")
+        CommandBuilder.command("adminhats")
                 .subcommand("admin")
                 .subcommand("database")
                 .subcommand("create_new_hat")
@@ -882,7 +929,7 @@ public class HatDatabase extends SavedData {
             }
         }).register();
 
-        CommandBuilder.command("hats")
+        CommandBuilder.command("adminhats")
                 .subcommand("admin")
                 .subcommand("database")
                 .subcommand("delete_hat")
@@ -898,7 +945,7 @@ public class HatDatabase extends SavedData {
             return "Deleted hat " + hatId;
         }).register();
 
-        CommandBuilder.command("hats")
+        CommandBuilder.command("adminhats")
                 .subcommand("admin")
                 .subcommand("database")
                 .subcommand("modify_hat")
@@ -923,7 +970,7 @@ public class HatDatabase extends SavedData {
             return "Renamed hat " + hatId + " to " + newName;
         }).register();
 
-        CommandBuilder.command("hats")
+        CommandBuilder.command("adminhats")
                 .subcommand("admin")
                 .subcommand("database")
                 .subcommand("modify_hat")
@@ -952,7 +999,7 @@ public class HatDatabase extends SavedData {
             }
         }).register();
 
-        CommandBuilder.command("hats")
+        CommandBuilder.command("adminhats")
                 .subcommand("admin")
                 .subcommand("database")
                 .subcommand("modify_hat")
@@ -977,7 +1024,7 @@ public class HatDatabase extends SavedData {
             return "Added hat " + hatId + " lore " + lore;
         }).register();
 
-        CommandBuilder.command("hats")
+        CommandBuilder.command("adminhats")
                 .subcommand("admin")
                 .subcommand("database")
                 .subcommand("modify_hat")
@@ -1006,7 +1053,7 @@ public class HatDatabase extends SavedData {
             return "Set hat " + hatId + " lore index " + loreIndex +" to " + lore;
         }).register();
 
-        CommandBuilder.command("hats")
+        CommandBuilder.command("adminhats")
                 .subcommand("admin")
                 .subcommand("database")
                 .subcommand("modify_hat")
@@ -1043,7 +1090,7 @@ public class HatDatabase extends SavedData {
             return "Removed hat " + hatId + " lore index " + loreIndex;
         }).register();
 
-        CommandBuilder.command("hats")
+        CommandBuilder.command("adminhats")
                 .subcommand("admin")
                 .subcommand("database")
                 .subcommand("modify_hat")
@@ -1068,7 +1115,7 @@ public class HatDatabase extends SavedData {
                     return "Added hat " + hatId + " particle " + particleId;
                 }).register();
 
-        CommandBuilder.command("hats")
+        CommandBuilder.command("adminhats")
                 .subcommand("admin")
                 .subcommand("database")
                 .subcommand("modify_hat")
@@ -1105,7 +1152,7 @@ public class HatDatabase extends SavedData {
                     return "Removed hat " + hatId + " particle index " + index;
                 }).register();
 
-        CommandBuilder.command("hats")
+        CommandBuilder.command("adminhats")
                 .subcommand("admin")
                 .subcommand("database")
                 .subcommand("modify_hat")
@@ -1138,7 +1185,7 @@ public class HatDatabase extends SavedData {
                     return "Modified hat " + hatId + " particle " + index;
                 }).register();
 
-        CommandBuilder.command("hats")
+        CommandBuilder.command("adminhats")
                 .subcommand("admin")
                 .subcommand("database")
                 .subcommand("modify_hat")
@@ -1171,7 +1218,7 @@ public class HatDatabase extends SavedData {
                     return "Modified hat " + hatId + " particle " + index;
                 }).register();
 
-        CommandBuilder.command("hats")
+        CommandBuilder.command("adminhats")
                 .subcommand("admin")
                 .subcommand("database")
                 .subcommand("modify_hat")
@@ -1208,7 +1255,7 @@ public class HatDatabase extends SavedData {
                     return "Modified hat " + hatId + " particle " + index;
                 }).register();
 
-        CommandBuilder.command("hats")
+        CommandBuilder.command("adminhats")
                 .subcommand("admin")
                 .subcommand("database")
                 .subcommand("modify_hat")
@@ -1241,7 +1288,7 @@ public class HatDatabase extends SavedData {
                     return "Modified hat " + hatId + " particle " + index;
                 }).register();
 
-        CommandBuilder.command("hats")
+        CommandBuilder.command("adminhats")
                 .subcommand("admin")
                 .subcommand("database")
                 .subcommand("modify_hat")
@@ -1278,7 +1325,7 @@ public class HatDatabase extends SavedData {
                     return "Modified hat " + hatId + " particle " + index;
                 }).register();
 
-        CommandBuilder.command("hats")
+        CommandBuilder.command("adminhats")
                 .subcommand("admin")
                 .subcommand("database")
                 .subcommand("modify_hat")

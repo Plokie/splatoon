@@ -1,16 +1,22 @@
 package com.plokie.dialog;
 
 import com.google.gson.JsonPrimitive;
+import com.mojang.datafixers.util.Function3;
 import com.mojang.serialization.JsonOps;
 import com.plokie.Splatoon;
 import com.plokie.helpers.CommandBuilder;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.core.Holder;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.Tag;
+import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.common.ClientboundShowDialogPacket;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.dialog.*;
 import net.minecraft.server.dialog.action.CommandTemplate;
 import net.minecraft.server.dialog.action.ParsedTemplate;
+import net.minecraft.server.dialog.action.StaticAction;
 import net.minecraft.server.dialog.body.DialogBody;
 import net.minecraft.server.dialog.body.ItemBody;
 import net.minecraft.server.dialog.body.PlainMessage;
@@ -24,11 +30,15 @@ import net.minecraft.world.item.ItemStack;
 
 import java.util.*;
 import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 public class DialogBuilder {
-    enum DialogType {
-        Confirmation
+    enum DialogType
+    {
+        Confirmation,
+        MultiAction
     }
 
     final DialogType type;
@@ -37,8 +47,14 @@ public class DialogBuilder {
     Component title = Component.literal("Title not set");
     Component externalTitle = Component.literal("External title not set");
 
-    Component submitText = Component.literal("Submit");
-    Component closeText = Component.literal("Close");
+//    Component submitText = Component.literal("Submit");
+//    Component closeText = Component.literal("Close");
+    ActionButton submitButton = new ActionButton(new CommonButtonData(Component.literal("Submit"), 200), Optional.empty());
+    ActionButton closeButton = new ActionButton(new CommonButtonData(Component.literal("Close"), 200), Optional.empty());
+
+    DialogAction dialogAction = DialogAction.CLOSE;
+
+    List<ActionButton> submitActions = new ArrayList<>();
 
 //    Function<CommandSourceStack, Boolean> permissionCallback = (ctx)->true;
 
@@ -47,6 +63,14 @@ public class DialogBuilder {
 //    BiConsumer<ServerPlayer, Map<String, String>> callback = null;
 
     static Map<String, BiConsumer<ServerPlayer, Map<String, String>>> responseCallbacks = new HashMap<>();
+    public static Map<ResourceLocation, BiConsumer<ServerPlayer, Tag>> customActionCallbacks = new HashMap<>();
+
+    final BiFunction<CommonDialogData, DialogBuilder, Dialog> constructorCallback;
+
+    static String safeKey(String key)
+    {
+        return key.replace(':', '_').replace('/', '_');
+    }
 
     public static void initialiseCommand()
     {
@@ -97,16 +121,186 @@ public class DialogBuilder {
         }).permission(ctx->true).register();
     }
 
+    public static void send(Dialog dialog, Player player)
+    {
+        ((ServerPlayer)player).connection.send(new ClientboundShowDialogPacket(Holder.direct(dialog)));
+    }
 
-    private DialogBuilder(String id, DialogType type)
+    public static void triggerAction(String actionId, Player player)
+    {
+        triggerAction(actionId, player, new CompoundTag());
+    }
+
+    public static void triggerAction(String actionId, Player player, Tag tag)
+    {
+        ResourceLocation resourceLocation = ResourceLocation.withDefaultNamespace(actionId);
+        if(customActionCallbacks.containsKey(resourceLocation))
+        {
+            customActionCallbacks.get(resourceLocation).accept((ServerPlayer) player, tag);
+        }
+    }
+
+    private DialogBuilder(String id, DialogType type, BiFunction<CommonDialogData, DialogBuilder, Dialog> constructorCallback)
     {
         this.id = id;
         this.type = type;
+        this.constructorCallback = constructorCallback;
     }
 
-    public static DialogBuilder create(String dialogId)
+    public static DialogBuilder createDialogConfirmation(String dialogId)
     {
-        return new DialogBuilder(dialogId, DialogType.Confirmation);
+        return new DialogBuilder(dialogId, DialogType.Confirmation, (dialogData, self)->{
+            return new ConfirmationDialog(
+                    dialogData,
+                    self.submitButton,
+//                    new ActionButton(new CommonButtonData(Component.literal("Submit"), 200),
+//
+//                            self.dialogInputs.isEmpty() ? Optional.empty() :
+//
+//                            Optional.of(
+//                              new CommandTemplate(self.constructParsedTemplate())
+//                    )),
+                    self.closeButton
+            );
+        });
+    }
+
+    public static DialogBuilder createDialogMultiAction(String dialogId, int columns)
+    {
+        return new DialogBuilder(dialogId, DialogType.MultiAction, (dialogData, self)->{
+            return new MultiActionDialog(
+                    dialogData,
+                    self.submitActions,
+                    Optional.of(self.closeButton),
+                    columns
+            );
+        });
+    }
+
+//    public DialogBuilder makeCloseButtonSubmit()
+//    {
+//        this.closeButton = new ActionButton(new CommonButtonData(Component.literal("Submit"), 200), dialogInputs.isEmpty() ? Optional.empty() :Optional.of(
+//                new CommandTemplate(constructParsedTemplate())
+//        ));
+//        return this;
+//    }
+
+//    public DialogBuilder addDefaultSubmitAction()
+//    {
+//        this.submitActions.add(new ActionButton(new CommonButtonData(this.submitText, 200), Optional.of(
+//                new CommandTemplate(constructParsedTemplate())
+//        )));
+//        return this;
+//    }
+
+    public DialogBuilder setDialogAction(DialogAction action)
+    {
+        this.dialogAction = action;
+        return this;
+    }
+
+    public DialogBuilder addAction(ActionButton actionButton)
+    {
+        this.submitActions.add(actionButton);
+        return this;
+    }
+
+    public DialogBuilder addAction(Component label, ClickEvent event, int width)
+    {
+        return addAction(new ActionButton(new CommonButtonData(label, width), Optional.of(new StaticAction(event)) ) );
+    }
+
+    public DialogBuilder addAction(Component label, String id, int width, Consumer<ServerPlayer> callback)
+    {
+        ResourceLocation resourceLocation = ResourceLocation.withDefaultNamespace(id);
+
+        if(!customActionCallbacks.containsKey(resourceLocation))
+        {
+            customActionCallbacks.put(resourceLocation, (player, tag)->callback.accept(player));
+        }
+
+        return addAction(label, new ClickEvent.Custom(resourceLocation, Optional.empty()), width);
+    }
+
+    public DialogBuilder addAction(Component label, String id, int width, Tag tagArg, BiConsumer<ServerPlayer, Tag> callback)
+    {
+        ResourceLocation resourceLocation = ResourceLocation.withDefaultNamespace(id);
+
+        if(!customActionCallbacks.containsKey(resourceLocation))
+        {
+            customActionCallbacks.put(resourceLocation, callback);
+        }
+
+        return addAction(label, new ClickEvent.Custom(resourceLocation, Optional.of(tagArg)), width);
+    }
+
+    public DialogBuilder setCloseAction(Component label, int width, Consumer<ServerPlayer> callback)
+    {
+        String id = this.id + "_close";
+        ResourceLocation resourceLocation = ResourceLocation.withDefaultNamespace(id);
+
+        if(!customActionCallbacks.containsKey(resourceLocation))
+        {
+            customActionCallbacks.put(resourceLocation, (player, tag)->callback.accept(player));
+        }
+
+        this.closeButton = new ActionButton(new CommonButtonData(label, width), Optional.of(new StaticAction(
+                new ClickEvent.Custom(resourceLocation, Optional.empty())
+        )) );
+        return this;
+    }
+
+    public DialogBuilder setCloseAction(Component label, int width, Tag tag, BiConsumer<ServerPlayer, Tag> callback)
+    {
+        String id = this.id + "_close";
+        ResourceLocation resourceLocation = ResourceLocation.withDefaultNamespace(id);
+
+        if(!customActionCallbacks.containsKey(resourceLocation))
+        {
+            customActionCallbacks.put(resourceLocation, callback);
+        }
+
+        this.closeButton = new ActionButton(new CommonButtonData(label, width), Optional.of(new StaticAction(
+                new ClickEvent.Custom(resourceLocation, Optional.of(tag))
+        )) );
+        return this;
+    }
+
+    public DialogBuilder setSubmitAction(Component label, int width, Consumer<ServerPlayer> callback)
+    {
+        String id = this.id + "_submit";
+        ResourceLocation resourceLocation = ResourceLocation.withDefaultNamespace(id);
+
+        if(!customActionCallbacks.containsKey(resourceLocation))
+        {
+            customActionCallbacks.put(resourceLocation, (player, tag)->callback.accept(player));
+        }
+
+        this.submitButton = new ActionButton(new CommonButtonData(label, width), Optional.of(new StaticAction(
+                new ClickEvent.Custom(resourceLocation, Optional.empty())
+        )) );
+        return this;
+    }
+
+    public DialogBuilder setSubmitAction(Component label, int width, Tag tag, BiConsumer<ServerPlayer, Tag> callback)
+    {
+        String id = this.id + "_submit";
+        ResourceLocation resourceLocation = ResourceLocation.withDefaultNamespace(id);
+
+        if(!customActionCallbacks.containsKey(resourceLocation))
+        {
+            customActionCallbacks.put(resourceLocation, callback);
+        }
+
+        this.submitButton = new ActionButton(new CommonButtonData(label, width), Optional.of(new StaticAction(
+                new ClickEvent.Custom(resourceLocation, Optional.of(tag))
+        )) );
+        return this;
+    }
+
+    public DialogBuilder title(String title)
+    {
+        return title(Component.literal(title));
     }
 
     public DialogBuilder title(Component title)
@@ -118,18 +312,6 @@ public class DialogBuilder {
     public DialogBuilder externalTitle(Component externalTitle)
     {
         this.externalTitle = externalTitle;
-        return this;
-    }
-
-    public DialogBuilder submitText(Component text)
-    {
-        this.submitText = text;
-        return this;
-    }
-
-    public DialogBuilder closeText(Component text)
-    {
-        this.closeText = text;
         return this;
     }
 
@@ -174,7 +356,7 @@ public class DialogBuilder {
 
     public DialogBuilder addInputBoolean(String key, Component label, String trueValue, String falseValue, boolean defaultValue)
     {
-        dialogInputs.put(key, new Input(key, new BooleanInput(label, defaultValue, trueValue, falseValue)));
+        dialogInputs.put(key, new Input(safeKey(key), new BooleanInput(label, defaultValue, trueValue, falseValue)));
         return this;
     }
 
@@ -184,11 +366,11 @@ public class DialogBuilder {
         int idx=0;
         for(Component option : options)
         {
-            entries.add(new SingleOptionInput.Entry("id0", Optional.of(option), idx==defaultValueIndex));
+            entries.add(new SingleOptionInput.Entry(""+idx, Optional.of(option), idx==defaultValueIndex));
             idx++;
         }
 
-        dialogInputs.put(key, new Input(key, new SingleOptionInput(
+        dialogInputs.put(key, new Input(safeKey(key), new SingleOptionInput(
                 300,
                 entries,
                 label,
@@ -200,13 +382,13 @@ public class DialogBuilder {
 
     public DialogBuilder addInputText(String key, Component label, int boxWidth, String initialValue, int maxLength)
     {
-        dialogInputs.put(key, new Input(key, new TextInput(boxWidth, label, true, initialValue, maxLength, Optional.empty())));
+        dialogInputs.put(key, new Input(safeKey(key), new TextInput(boxWidth, label, true, initialValue, maxLength, Optional.empty())));
         return this;
     }
 
     public DialogBuilder addInputTextMultiline(String key, Component label, int boxWidth, int boxHeight, String initialValue, int maxLength, int maxLines)
     {
-        dialogInputs.put(key, new Input(key, new TextInput(boxWidth, label, true, initialValue, maxLength, Optional.of(
+        dialogInputs.put(key, new Input(safeKey(key), new TextInput(boxWidth, label, true, initialValue, maxLength, Optional.of(
                 new TextInput.MultilineOptions(Optional.of(boxHeight), Optional.of(maxLines))
         ))));
         return this;
@@ -222,6 +404,19 @@ public class DialogBuilder {
         return this;
     }
 
+    ParsedTemplate constructParsedTemplate()
+    {
+        String command = "/dialogresponse "+id+" ";
+
+        for(var entry : dialogInputs.entrySet())
+        {
+            String valueKey = entry.getKey();
+            command += valueKey + "=$(" + safeKey(valueKey) + ")¬";
+        }
+
+        return ParsedTemplate.CODEC.parse(JsonOps.INSTANCE, new JsonPrimitive(command)).getOrThrow(IllegalStateException::new);
+    }
+
     public Dialog buildWithoutSending()
     {
         CommonDialogData dialogData = new CommonDialogData(
@@ -234,23 +429,9 @@ public class DialogBuilder {
                 this.dialogInputs.values().stream().toList()
         );
 
-        String command = "/dialogresponse "+id+" ";
 
-        for(var entry : dialogInputs.entrySet())
-        {
-            String valueKey = entry.getKey();
-            command += valueKey + "=$(" + valueKey + ")¬";
-        }
 
-        ParsedTemplate parsedTemplate = ParsedTemplate.CODEC.parse(JsonOps.INSTANCE, new JsonPrimitive(command)).getOrThrow(IllegalStateException::new);
-
-        Dialog dialog = new ConfirmationDialog(
-                dialogData,
-                new ActionButton(new CommonButtonData(this.submitText, 200), Optional.of(
-                        new CommandTemplate(parsedTemplate)
-                )),
-                new ActionButton(new CommonButtonData(this.closeText, 200), Optional.empty())
-        );
+        Dialog dialog = constructorCallback.apply(dialogData, this);
 
         return dialog;
     }
