@@ -3,6 +3,7 @@ package com.plokie.customitems.items.guns;
 import com.plokie.Splatoon;
 import com.plokie.customitems.CustomItem;
 import com.plokie.customitems.ICustomItem;
+import com.plokie.customitems.items.BuildingBlock;
 import com.plokie.helpers.*;
 import com.plokie.interfaces.IPlayerMixin;
 import com.plokie.interfaces.IPlayerTeamMixin;
@@ -85,6 +86,18 @@ public class SniperGun extends ICustomItem {
         Vec3 currentVelocity = player.getDeltaMovement();
         player.setDeltaMovement(new Vec3(direction.x, direction.y + currentVelocity.y, direction.z));
         ((ServerPlayer)player).connection.send(new ClientboundSetEntityMotionPacket(player));
+    }
+
+    static float calculateDamageForCharge(int sniperCharge)
+    {
+        return switch (sniperCharge) {
+            case 1 -> 1;
+            case 2 -> 5;
+            case 3 -> 11;
+            case 4 -> 17;
+            case 5 -> 25;
+            default -> 0;
+        };
     }
 
     @Override
@@ -249,6 +262,16 @@ public class SniperGun extends ICustomItem {
                     }
                 }
 
+                if(hitBlock.getType() == HitResult.Type.BLOCK)
+                {
+                    BlockHitResult blockHitResult = (BlockHitResult)hitBlock;
+
+                    float damage = calculateDamageForCharge(sniperCharge);
+                    float wallDamage = damage / 70.0f;
+
+                    BuildingBlock.damageWall( blockHitResult.getBlockPos(), wallDamage);
+                }
+
                 //Splatoon.LOGGER.info("Punched");
 
                 level.playSound(
@@ -338,15 +361,8 @@ public class SniperGun extends ICustomItem {
                 if(playerTeam == null) return;
 
 
+                float damage = calculateDamageForCharge(sniperCharge);
 
-                float damage = switch (sniperCharge) {
-                    case 1 -> 1;
-                    case 2 -> 5;
-                    case 3 -> 11;
-                    case 4 -> 17;
-                    case 5 -> 25;
-                    default -> 0;
-                };
 
                 entity.invulnerableTime = 0;
                 entity.setInvulnerable(false);

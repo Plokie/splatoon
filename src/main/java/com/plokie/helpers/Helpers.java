@@ -8,6 +8,7 @@ import com.plokie.management.PlayerStats;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.particles.ParticleTypes;
@@ -15,6 +16,8 @@ import net.minecraft.core.particles.SimpleParticleType;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvent;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.Mth;
 import net.minecraft.util.ProblemReporter;
 import net.minecraft.world.entity.Entity;
@@ -106,6 +109,11 @@ public class Helpers {
         TagValueInput vi = (TagValueInput) TagValueInput.create(ProblemReporter.DISCARDING, registries, newNbt);
 
         entity.load(vi);
+    }
+
+    public static void playSoundTo(Player player, Holder<SoundEvent> sound, float gain, float pitch)
+    {
+        player.playSound(sound.value(), gain, pitch);
     }
 
     public static Vec3 localToWorld(Vec3 observerPos, double yawDeg, double pitchDeg, Vec3 localVector)

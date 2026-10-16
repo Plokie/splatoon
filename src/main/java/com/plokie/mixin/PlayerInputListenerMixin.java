@@ -20,7 +20,6 @@ public class PlayerInputListenerMixin {
 
     @Shadow public ServerPlayer player;
 
-
     @Inject(method="handlePlayerInput", at = @At("HEAD"))
     void handlePlayerInput(ServerboundPlayerInputPacket packet, CallbackInfo ci)
     {

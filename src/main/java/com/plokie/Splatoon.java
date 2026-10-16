@@ -9,6 +9,7 @@ import com.plokie.commands.PingCommand;
 
 import com.plokie.customitems.CustomItemManager;
 import com.plokie.customitems.items.BuildingRails;
+import com.plokie.dialog.DialogBuilder;
 import com.plokie.helpers.CommandBuilder;
 import com.plokie.helpers.Helpers;
 import com.plokie.helpers.ScheduleEvent;
@@ -121,6 +122,8 @@ public class Splatoon implements ModInitializer {
 		CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
 			dispatcher.register(Commands.literal("ping").executes(PingCommand::execute));
 		});
+
+		DialogBuilder.initialiseCommand();
 
 		CommandBuilder.command("removeallrails").argumentPlayer("player").executes(ctx->{
 			try {

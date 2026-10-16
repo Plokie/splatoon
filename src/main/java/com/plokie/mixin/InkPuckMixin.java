@@ -335,7 +335,7 @@ public class InkPuckMixin implements IProjectile {
 //        float radius =  expandTime * 5.0f; // expand over time
 //        float radius = 8.0f;
 
-        float radius = Helpers.lerp(5.0f, 8.0f, expandTime);
+        float radius = Helpers.lerp(3.0f, 6.0f, expandTime);
 
 //        Splatoon.LOGGER.info("Cleansing cloud radius {}", radius);
 

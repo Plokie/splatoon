@@ -215,6 +215,13 @@ public class PlayerMixin implements IPlayerMixin {
 
     @Override public boolean isInInk() { return inInk; }
     @Override public boolean isInInkOnWall() { return onWall; }
+
+    HashMap<String, Boolean> inInkForces = new HashMap<>();
+    @Override
+    public void setInInkForce(String identifier, boolean value) {
+        inInkForces.put(identifier, value);
+    }
+
     @Override public int getTimeNotInInk() { return timeNotInInk; }
 
     @Unique float ink = 1.0f;
@@ -384,6 +391,12 @@ public class PlayerMixin implements IPlayerMixin {
 
             }
         }
+
+        for(var entry : inInkForces.entrySet())
+        {
+            inInk |= entry.getValue();
+        }
+
 
         int timeSinceClassChanged = player.tickCount - lastClassChangeTime;
         if(timeSinceClassChanged < 60)

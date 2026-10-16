@@ -1,27 +1,51 @@
 package com.plokie.management.hats;
 
+import com.google.gson.JsonPrimitive;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.JsonOps;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import com.plokie.Splatoon;
+import com.plokie.dialog.DialogBuilder;
 import com.plokie.helpers.CommandBuilder;
 import com.plokie.helpers.Helpers;
 import com.plokie.helpers.ScheduleEvent;
 import com.plokie.management.PlayerStats;
+import com.plokie.mixin.SplashPotionMixin;
 import io.netty.buffer.ByteBuf;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.minecraft.ChatFormatting;
+import net.minecraft.commands.arguments.ResourceOrIdArgument;
+import net.minecraft.core.Holder;
+import net.minecraft.core.HolderSet;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.component.DataComponents;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
+import net.minecraft.network.chat.ClickEvent;
+import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.network.protocol.common.ClientboundShowDialogPacket;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.dialog.*;
+import net.minecraft.server.dialog.action.ActionTypes;
+import net.minecraft.server.dialog.action.CommandTemplate;
+import net.minecraft.server.dialog.action.ParsedTemplate;
+import net.minecraft.server.dialog.action.StaticAction;
+import net.minecraft.server.dialog.body.DialogBody;
+import net.minecraft.server.dialog.body.DialogBodyTypes;
+import net.minecraft.server.dialog.body.ItemBody;
+import net.minecraft.server.dialog.body.PlainMessage;
+import net.minecraft.server.dialog.input.BooleanInput;
+import net.minecraft.server.dialog.input.SingleOptionInput;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.tags.DialogTags;
 import net.minecraft.util.StringRepresentable;
 import net.minecraft.util.datafix.DataFixTypes;
+import net.minecraft.util.parsing.packrat.commands.CommandArgumentParser;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.player.Player;
@@ -728,6 +752,24 @@ public class HatDatabase extends SavedData {
 
             return "Sorted hats...";
         }).permission(stack->true).register();
+
+        CommandBuilder.command("hats").subcommand("view").executes(ctx->{
+            ServerPlayer sendToPlayer = ctx.getStack().getSource().getPlayer();
+            if(sendToPlayer != null)
+            {
+                DialogBuilder.create("hatview").title(Component.literal("Hats"))
+                        .addInputBoolean("my_boolean", Component.literal("Test"), "True", "False", true)
+                        .onSubmit((player, values)->{
+                            String value = values.getOrDefault("my_boolean", "couldnt find!");
+                            Splatoon.LOGGER.info("Response boolean = {}", value);
+                        })
+                .buildAndSend(sendToPlayer);
+
+
+            }
+
+            return "Opening hat dialog...";
+        }).register();
 
         CommandBuilder.command("hats").subcommand("reload").executes(ctx->{
             ServerPlayer caller = ctx.getStack().getSource().getPlayer();

@@ -3,6 +3,7 @@ package com.plokie.mixin;
 import com.mojang.math.Transformation;
 import com.plokie.Splatoon;
 import com.plokie.customitems.items.BuildingBlock;
+import com.plokie.customitems.items.BuildingRails;
 import com.plokie.helpers.*;
 import com.plokie.interfaces.IPlayerTeamMixin;
 import com.plokie.interfaces.IProjectile;
@@ -12,6 +13,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.tags.BlockTags;
+import net.minecraft.util.Tuple;
 import net.minecraft.world.DifficultyInstance;
 import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.entity.*;
@@ -223,7 +225,15 @@ public class SheepBombMixin implements IProjectile {
 
                         Helpers.inkSlimesInRadius(sheep.position(), 3.0f, player);
 
-                        BuildingBlock.damageWallsInRadius(sheep.position(), 3.0f, 0.275f);
+                        BuildingBlock.damageWallsInRadius(sheep.position(), 3.0f, 0.334f);
+                    
+                        List<BuildingRails.FetchedRail> nodesInRange = BuildingRails.getNodesInRadius(sheep.position(), 3.0f);
+                        for (BuildingRails.FetchedRail rail : nodesInRange) {
+
+                            BuildingRails.RailNode nextNode = rail.getNextNode();
+
+                            rail.node().changeHealth(sheep.level(), -0.5f, nextNode);
+                        }
                     }
                 }
 

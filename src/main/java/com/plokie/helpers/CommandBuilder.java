@@ -165,6 +165,13 @@ public class CommandBuilder {
             return node;
         }
 
+        public static CommandStackNode argumentGreedyString(String name) {
+            CommandStackNode node = new CommandStackNode(Type.Argument);
+            node.name = name;
+            node.argumentSupplier = ()->Commands.argument(name, StringArgumentType.greedyString());
+            return node;
+        }
+
         public static CommandStackNode argumentString(String name, List<String> autocomplete) {
             CommandStackNode node = new CommandStackNode(Type.Argument);
             node.name = name;
@@ -300,6 +307,13 @@ public class CommandBuilder {
     {
         //commandStack = commandStack.then(Commands.argument(name, StringArgumentType.word()));
         commandStackQueue.add(CommandStackNode.argumentString(name));
+        return this;
+    }
+
+    public CommandBuilder argumentGreedyString(String name)
+    {
+        //commandStack = commandStack.then(Commands.argument(name, StringArgumentType.word()));
+        commandStackQueue.add(CommandStackNode.argumentGreedyString(name));
         return this;
     }
 

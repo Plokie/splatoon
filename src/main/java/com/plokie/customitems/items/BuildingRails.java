@@ -6,8 +6,11 @@ import com.plokie.classes.abilities.Ability;
 import com.plokie.classes.abilities.AbilityManager;
 import com.plokie.customitems.CustomItem;
 import com.plokie.customitems.ICustomItem;
+import com.plokie.helpers.Effects;
 import com.plokie.helpers.Helpers;
+import com.plokie.helpers.Teams;
 import com.plokie.interfaces.IPlayerMixin;
+import com.plokie.interfaces.IPlayerTeamMixin;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents;
 import net.minecraft.ChatFormatting;
@@ -29,7 +32,9 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.CommonColors;
+import net.minecraft.util.Tuple;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
@@ -58,8 +63,9 @@ import java.util.concurrent.atomic.AtomicReference;
 public class BuildingRails extends ICustomItem {
     public static void dataCallback(Player player, ItemStack item)
     {
-        Block wallBlock = Blocks.RAIL;
-        ResourceLocation model = BuiltInRegistries.BLOCK.getKey(wallBlock);
+//        Block wallBlock = Blocks.RAIL;
+//        ResourceLocation model = BuiltInRegistries.BLOCK.getKey(wallBlock);
+        ResourceLocation model = BuiltInRegistries.ITEM.getKey(Items.MINECART);
         item.set(DataComponents.ITEM_MODEL, model);
 
         BlockPredicate blockPredicate = BlockPredicate.Builder.block().build();
@@ -101,7 +107,7 @@ public class BuildingRails extends ICustomItem {
                         {
                             var blocksInChunk = s_cachedFetchedRails.get(chunkPos);
                             if(blocksInChunk != null) {
-                                Splatoon.LOGGER.info("Removed cached rail block Position={} chunk={}", bp, chunkPos);
+                                //Splatoon.LOGGER.info("Removed cached rail block Position={} chunk={}", bp, chunkPos);
                                 blocksInChunk.remove(bp);
                             }
                         }
@@ -122,7 +128,7 @@ public class BuildingRails extends ICustomItem {
                 }
             }
 
-            Splatoon.LOGGER.info("Refunding {} rails...", numRailsToRefund);
+            //Splatoon.LOGGER.info("Refunding {} rails...", numRailsToRefund);
 
             Ability ability = ((IPlayerMixin)brokenByPlayer).getAbility(AbilityManager.AbilityEnum.BuildingRails);
             if(ability != null) {
@@ -197,7 +203,21 @@ public class BuildingRails extends ICustomItem {
     public record FetchedRail(PlacedRails placedRails, int channelIndex, RailNode node) {
         public int calculateNodeIndex()
         {
-            return placedRails.channels.get(channelIndex).indexOf(node);
+            return getChannel().indexOf(node);
+        }
+        public List<RailNode> getChannel() { return placedRails.channels.get(channelIndex); }
+
+        public RailNode getNextNode()
+        {
+            List<RailNode> channel = getChannel();
+            int idx = calculateNodeIndex();
+            int nextIdx = idx + 1;
+            if(nextIdx >= 0 && nextIdx < channel.size())
+            {
+                return channel.get(nextIdx);
+            }
+
+            return null;
         }
     }
 
@@ -220,27 +240,12 @@ public class BuildingRails extends ICustomItem {
             return null;
         }
 
-//        for(var entry : blocksInChunk.entrySet())
-//        {
-//            Splatoon.LOGGER.info("\t=={}=={}", chunkPos, entry.getKey());
-//        }
-
         if(!blocksInChunk.containsKey(position)) {
             //Splatoon.LOGGER.info("\tDoes not contain block position in chunk.");
             return null;
         }
 
-//        FetchedRail fetchedRail = blocksInChunk.get(position);
-
-        //Splatoon.LOGGER.info("\tFound FetchedRail channel={} node={}", fetchedRail.channelIndex, fetchedRail.nodeIndex);
-
         return blocksInChunk.get(position);
-
-//        for(var entry : s_placedRails.entrySet())
-//        {
-//            FetchedRail fetchedRail = getRailNodeForPosition(position, entry.getKey());
-//            if(fetchedRail != null) return fetchedRail;
-//        }
     }
     public static FetchedRail getRailNodeForPosition(BlockPos position, UUID forPlayerUUID)
     {
@@ -250,52 +255,6 @@ public class BuildingRails extends ICustomItem {
         if(!railHere.placedRails.playerUUID.equals(forPlayerUUID)) return null;
 
         return railHere;
-
-//        if(!s_placedRails.containsKey(forPlayerUUID)) return null;
-//        PlacedRails placedRails = s_placedRails.get(forPlayerUUID);
-//
-//        Splatoon.LOGGER.info("Querying rails at position {} for {}", position, forPlayerUUID);
-//
-//        int channelIdx=0;
-//        for(List<RailNode> channel : placedRails.channels)
-//        {
-//            Splatoon.LOGGER.info("\tCheck channel {}", channelIdx);
-//
-//            for(int i=0; i<channel.size()-1; i++) {
-//                Splatoon.LOGGER.info("\t\tCheck node {}", i);
-//
-//                RailNode nodeA = channel.get(i);
-//                RailNode nodeB = channel.get(i + 1);
-//
-//                Vec3 a = nodeA.position.getCenter();
-//                Vec3 b = nodeB.position.getCenter();
-//
-//                int channelIdx0 = channelIdx;
-//                int nodeIndex = i;
-//                AtomicReference<FetchedRail> returnValue = new AtomicReference<>();
-//
-//                BlockGetter.traverseBlocks(a, b, null, (context, bp)->{
-//                    Splatoon.LOGGER.info("\t\tCheck rail at {}", bp);
-//                    if(position.getX() == bp.getX() && position.getY() == bp.getY() && position.getZ() == bp.getZ()) {
-//                        Splatoon.LOGGER.info("\t\tFound rail at {}", bp);
-//                        returnValue.set(new FetchedRail(placedRails, channelIdx0, nodeIndex));
-//                        return null;
-//                    }
-//
-//                    return null;
-//                }, (ctx)->{return null;});
-//
-//                if(returnValue.get() != null) {
-//                    Splatoon.LOGGER.info("\tReturning rail...");
-//                    return returnValue.get();
-//                }
-//            }
-//
-//            channelIdx++;
-//        }
-
-
-//        return null;
     }
 
     static HashMap<UUID, PlacedRails> s_placedRails = new HashMap<>();
@@ -311,6 +270,64 @@ public class BuildingRails extends ICustomItem {
         if(!s_placedRails.containsKey(player.getUUID())) return null;
 
         return s_placedRails.get(player.getUUID());
+    }
+
+    public static List<FetchedRail> getNodesInRadius(Vec3 pos, float radius)
+    {
+        List<FetchedRail> nodes = new ArrayList<>();
+
+        List<ChunkPos> chunksToCheck = new ArrayList<>();
+
+        ChunkPos rootChunkPos = new ChunkPos(Helpers.toBlockPos(pos));
+        chunksToCheck.add(rootChunkPos);
+
+        for(int i=-1; i<=1; i++)
+        {
+            for(int j=-1; j<=1; j++)
+            {
+                if(i==0 && j==0) continue;
+
+                //todo: filter by how close pos is to the chunk edge (by radius)
+
+                ChunkPos neighbourPos = new ChunkPos(rootChunkPos.x + i, rootChunkPos.z + j);
+                chunksToCheck.add(neighbourPos);
+            }
+        }
+
+        for(ChunkPos chunkPos : chunksToCheck)
+        {
+            if(!s_cachedFetchedRails.containsKey(chunkPos)) continue;
+
+            for(var entry : s_cachedFetchedRails.get(chunkPos).entrySet())
+            {
+                BlockPos bp = entry.getKey();
+                Vec3 railPos = bp.getCenter();
+
+                if(railPos.distanceToSqr(pos) < radius*radius)
+                {
+                    FetchedRail fetchedRail = entry.getValue();
+                    RailNode railNode = fetchedRail.node;
+
+                    boolean doAdd = true;
+                    for(FetchedRail railAlreadyThere : nodes)
+                    {
+                        if(railAlreadyThere.node == railNode) {
+                            doAdd = false;
+                            break;
+                        }
+                    }
+
+                    if(doAdd)
+                    {
+                        nodes.add(fetchedRail);
+                    }
+                }
+
+            }
+
+        }
+
+        return nodes;
     }
 
     public static void deleteAllRails(Level level)
@@ -346,7 +363,7 @@ public class BuildingRails extends ICustomItem {
                         {
                             var blocksInChunk = s_cachedFetchedRails.get(chunkPos);
                             if(blocksInChunk != null) {
-                                Splatoon.LOGGER.info("AllRemoved cached rail block Position={} chunk={}", bp, chunkPos);
+                                //Splatoon.LOGGER.info("AllRemoved cached rail block Position={} chunk={}", bp, chunkPos);
                                 blocksInChunk.remove(bp);
                             }
                         }
@@ -376,9 +393,18 @@ public class BuildingRails extends ICustomItem {
             Player player = server.getPlayerList().getPlayer(playerUUID);
             if(player == null) continue;
 
+            int teamCol = CommonColors.WHITE;
+            IPlayerTeamMixin playerTeam = Teams.getTeamMixinFromPlayer(player);
+            if(playerTeam != null) {
+                teamCol = playerTeam.getTeamColourInt();
+            }
+
             PlacedRails rails = entry.getValue();
 
             DustParticleOptions yellowDust = new DustParticleOptions(CommonColors.YELLOW, 1);
+            DustParticleOptions brokenDust = new DustParticleOptions(CommonColors.RED, 1);
+            DustParticleOptions teamDust = new DustParticleOptions(teamCol, 1);
+
 
             for(List<RailNode> channelNodes : rails.channels )
             {
@@ -390,12 +416,7 @@ public class BuildingRails extends ICustomItem {
                     Vec3 a = nodeA.position.getCenter();
                     Vec3 b = nodeB.position.getCenter();
 
-                    int col = CommonColors.WHITE;
-                    if(nodeA.isBroken) {
-                        col = CommonColors.RED;
-                    }
 
-                    DustParticleOptions dustParticleOptions = new DustParticleOptions(col, 1);
 
                     ((ServerLevel)player.level()).sendParticles(
                             yellowDust,
@@ -414,9 +435,17 @@ public class BuildingRails extends ICustomItem {
                     for(float j=0; j < length; j += 1.0f) {
                         Vec3 p = a.add(dir.scale(j));
 
+                        ((ServerLevel)player.level()).sendParticles(
+                                teamDust,
+                                p.x, p.y - 0.5f, p.z,
+                                1, // count
+                                0.0, 0.0, 0.0, // delta
+                                0.0 // speed
+                        );
+
                         if(nodeA.isBroken) {
                             ((ServerLevel)player.level()).sendParticles(
-                                    dustParticleOptions,
+                                    brokenDust,
                                     p.x, p.y, p.z,
                                     1, // count
                                     0.0, 0.0, 0.0, // delta
@@ -468,7 +497,7 @@ public class BuildingRails extends ICustomItem {
 
             FetchedRail fetchedRail = new FetchedRail(playerPlacedRails, playerPlacedRails.selectedChannel, fromNode);
 
-            Splatoon.LOGGER.info("Added cached rail block Position={} chunk={}, channel={} size/node={}", bpCopy, chunkPos, playerPlacedRails.selectedChannel, nodeIdx);
+            //Splatoon.LOGGER.info("Added cached rail block Position={} chunk={}, channel={} size/node={}", bpCopy, chunkPos, playerPlacedRails.selectedChannel, nodeIdx);
 
             s_cachedFetchedRails.get(chunkPos).put(bpCopy, fetchedRail);
 
@@ -509,8 +538,10 @@ public class BuildingRails extends ICustomItem {
         return stackCount;
     }
 
-    public boolean plotRailLineFunc(Player player, BlockPos bpa, BlockPos bpb)
+    public Tuple<Boolean, String> plotRailLineFunc(Player player, BlockPos bpa, BlockPos bpb)
     {
+        String returnMessage = "";
+
         int numStoredRails = calculateNumStoredRails(player);
 //        int numStoredRails = 32;
 
@@ -539,20 +570,24 @@ public class BuildingRails extends ICustomItem {
             if(Math.ceil(i) > numStoredRails) {
                 isInvalid = true;
                 dustCol = CommonColors.RED;
+                if(returnMessage.isEmpty()) returnMessage = "Insufficient rail count for plotted length";
             }
 
             if(i > 1) {
                 if(!player.level().getBlockState(bp).is(Blocks.AIR)) {
                     isInvalid = true;
                     dustCol = CommonColors.RED;
+                    if(returnMessage.isEmpty()) returnMessage = "Path intersects with a block";
                 }
                 if(player.level().getBlockState(bpDown).is(Blocks.AIR)) {
                     isInvalid = true;
                     dustCol = CommonColors.RED;
+                    if(returnMessage.isEmpty()) returnMessage = "Rails cannot be suspended in the air";
                 }
                 if(player.level().getBlockState(bpDown).is(Splatoon.Tags.AUX_BLOCKS)) {
                     isInvalid = true;
                     dustCol = CommonColors.RED;
+                    if(returnMessage.isEmpty()) returnMessage = "Rails cannot path over Builder's brick walls";
                 }
             }
 
@@ -569,13 +604,13 @@ public class BuildingRails extends ICustomItem {
             );
         }
 
-        return !isInvalid;
+        return new Tuple<>(!isInvalid, returnMessage);
     }
 
     public void onStartHeld(Player player)
     {
         if(!hasSetupTick) {
-            Splatoon.LOGGER.info("BuildingBlock first tick setup");
+            //Splatoon.LOGGER.info("BuildingBlock first tick setup");
             ServerTickEvents.START_SERVER_TICK.register(this::tick);
             hasSetupTick = true;
         }
@@ -683,7 +718,7 @@ public class BuildingRails extends ICustomItem {
                             attachToPos = firstNode;
                         }
 
-                        boolean isValid = plotRailLineFunc(player, attachToPos, placePos);
+                        plotRailLineFunc(player, attachToPos, placePos);
                     }
                 }
             }
@@ -692,26 +727,26 @@ public class BuildingRails extends ICustomItem {
 
     public static boolean railBlockBroken(Player brokenBy, BlockPos blockPos)
     {
-        Splatoon.LOGGER.info("Rail block broken");
+        //Splatoon.LOGGER.info("Rail block broken");
 
         FetchedRail fetchedRail = getRailNodeForPosition(blockPos, brokenBy.getUUID());
         if(fetchedRail != null) {
-            Splatoon.LOGGER.info("\tIs owned by this player");
+            //Splatoon.LOGGER.info("\tIs owned by this player");
 
             PlacedRails placedRails = fetchedRail.placedRails;
             List<RailNode> channel = placedRails.channels.get(fetchedRail.channelIndex);
 
-            Splatoon.LOGGER.info("\tBroke node index {} in channel {}", fetchedRail.calculateNodeIndex(), fetchedRail.channelIndex);
+            //Splatoon.LOGGER.info("\tBroke node index {} in channel {}", fetchedRail.calculateNodeIndex(), fetchedRail.channelIndex);
 
             int totalNumNodes = channel.size();
             int midPoint = totalNumNodes / 2;
 //            RailNode node = channel.get(fetchedRail.channelIndex);
 
-            Splatoon.LOGGER.info("\tTotal num nodes: {}, Midpoint: {}", totalNumNodes, midPoint);
+            //Splatoon.LOGGER.info("\tTotal num nodes: {}, Midpoint: {}", totalNumNodes, midPoint);
 
             if(fetchedRail.calculateNodeIndex() < midPoint )
             {
-                Splatoon.LOGGER.info("\tRemoving {} nodes from the front...", fetchedRail.calculateNodeIndex() + 1);
+                //Splatoon.LOGGER.info("\tRemoving {} nodes from the front...", fetchedRail.calculateNodeIndex() + 1);
 
                 // Remove all from front leading up to this node
                 for(int i=0; i <= fetchedRail.calculateNodeIndex(); i++) {
@@ -729,7 +764,7 @@ public class BuildingRails extends ICustomItem {
             else
             {
                 int numToRemove = (totalNumNodes - fetchedRail.calculateNodeIndex()) - 1;
-                Splatoon.LOGGER.info("\tRemoving {} nodes from the back...", numToRemove);
+                //Splatoon.LOGGER.info("\tRemoving {} nodes from the back...", numToRemove);
 
                 // Remove all from back leading up to this node
                 for(int i=0; i < numToRemove; i++) {
@@ -825,7 +860,7 @@ public class BuildingRails extends ICustomItem {
             BlockPos placePos = Helpers.calculateDesiredPlacement(hit);
             BlockState placeOnBlock = player.level().getBlockState(hit.getBlockPos());
 
-            Splatoon.LOGGER.info("Try place rail on {}", placeOnBlock.getBlock().getName().getString());
+            //Splatoon.LOGGER.info("Try place rail on {}", placeOnBlock.getBlock().getName().getString());
 
             if(!s_placedRails.containsKey(playerUUID))
             {
@@ -839,6 +874,8 @@ public class BuildingRails extends ICustomItem {
 
             BlockPos attachToPos;
             boolean addToFront = false;
+
+            String invalidPlacementReason = "";
 
             boolean isValidPlacement = currentChannel.isEmpty();
             if(!isValidPlacement) {
@@ -859,26 +896,43 @@ public class BuildingRails extends ICustomItem {
                 }
 
 //                lastNode = currentChannel.getLast();
-                isValidPlacement = plotRailLineFunc(player, attachToPos, placePos);
+                var placementResult = plotRailLineFunc(player, attachToPos, placePos);
+                isValidPlacement = placementResult.getA();
+                if(!isValidPlacement)
+                {
+                    invalidPlacementReason = placementResult.getB();
+                }
             }
 
 
 
             if(hit.getDirection() != Direction.UP) {
                 isValidPlacement = false;
+                invalidPlacementReason = "Can only place on floors";
             }
 
             if(placeOnBlock.is(Splatoon.Tags.AUX_BLOCKS))
             {
                 isValidPlacement = false;
+                invalidPlacementReason = "Cannot place on brick walls";
             }
 
             if(isValidPlacement) {
+                player.level().playSound(
+                        null,
+                        placePos.getCenter().x, placePos.getCenter().y, placePos.getCenter().z,
+                        SoundEvents.ANVIL_LAND,
+                        SoundSource.MASTER,
+                        0.5f,
+                        1.0f
+                );
+
                 RailNode newNode = new RailNode(placePos);
 
                 if(currentChannel.isEmpty())
                 {
-                    player.level().setBlockAndUpdate(placePos, Blocks.RAIL.defaultBlockState());
+                    //player.level().setBlockAndUpdate(placePos, Blocks.RAIL.defaultBlockState());
+                    placeRails(player, placePos, placePos, newNode);
                 }
                 else {
                     if(addToFront) {
@@ -902,31 +956,52 @@ public class BuildingRails extends ICustomItem {
                 }
 
                 if(addToFront) {
-                    Splatoon.LOGGER.info("Add rail to front");
+                    //Splatoon.LOGGER.info("Add rail to front");
                     currentChannel.addFirst(newNode);
                 }
                 else
                 {
-                    Splatoon.LOGGER.info("Add rail to back");
+                    //Splatoon.LOGGER.info("Add rail to back");
                     currentChannel.addLast(newNode);
                 }
+            }
+            else
+            {
+                ((ServerPlayer)player).sendSystemMessage(Component.literal("Invalid rail placement: " + invalidPlacementReason).withStyle(ChatFormatting.RED));
+
+                player.playSound(SoundEvents.NOTE_BLOCK_BASS.value(), 1.0f, 1.0f);
+//                player.level().playSound(
+//                        null,
+//                        placePos.getCenter().x, placePos.getCenter().y, placePos.getCenter().z,
+//                        SoundEvents.NOTE_BLOCK_BASS,
+//                        SoundSource.MASTER,
+//                        1.0f,
+//                        1.0f
+//                );
             }
         }
     }
 
     public static class MinecartInstance {
+        public static final float speed = 3.0f;
+
         public MinecartInstance(Player passenger, BlockPos spawnPos, Vec3 dir, List<RailNode> channel, RailNode mountAtNode) {
             this.ridingChannel = channel;
             this.passengerUUID = passenger.getUUID();
 
+            Vec3 pos = spawnPos.getCenter();
 
+            ((IPlayerMixin)passenger).setInInkForce("minecart", true);
 
             Vec3 nodePos = mountAtNode.position.getCenter();
-            Vec3 pos = spawnPos.getCenter();
 
             Vec3 dirToNode = nodePos.subtract(pos).normalize();
 
             float dot = (float)dirToNode.dot(dir);
+
+            if(channel.indexOf(mountAtNode) == 0) dot = -1.0f;
+
+//            Splatoon.LOGGER.info("rail dot {}", dot);
 
             // if the node we're mounting at is behind us, we're moving forwards
             if(dot < 0.0) {
@@ -973,12 +1048,12 @@ public class BuildingRails extends ICustomItem {
 //                        }
 
 
-                        Splatoon.LOGGER.info("Minecart ejected by sneak");
+                        //Splatoon.LOGGER.info("Minecart ejected by sneak");
                         onEject();
                         return;
                     }
                     if(input.jump()) {
-                        Splatoon.LOGGER.info("Minecart ejected by jump");
+                        //Splatoon.LOGGER.info("Minecart ejected by jump");
 
                         Vec3 launchDir = passenger.getForward();
                         Vec3 launch = launchDir.scale(1.1f);
@@ -997,34 +1072,34 @@ public class BuildingRails extends ICustomItem {
                     passenger.startRiding(vehicle, true);
                 }
 
-                if(passenger.tickCount % Math.round(20*3.5) == 0) {
-                    Vec3 ppos = passenger.position();
-                    passenger.level().playSound(
-                            null,
-                            ppos.x, ppos.y, ppos.z,
-                            SoundEvents.MINECART_RIDING,
-                            SoundSource.HOSTILE,
-                            1.0f, 1.0f
-                    );
-                }
+//                if(passenger.tickCount % Math.round(20*3.5) == 0) {
+//                    Vec3 ppos = passenger.position();
+//                    passenger.level().playSound(
+//                            null,
+//                            ppos.x, ppos.y, ppos.z,
+//                            SoundEvents.MINECART_RIDING,
+//                            SoundSource.HOSTILE,
+//                            1.0f, 1.0f
+//                    );
+//                }
             }
 
             int indexOfPrevNode = ridingChannel.indexOf(prevNode);
             if(indexOfPrevNode == -1) {
-                Splatoon.LOGGER.info("Minecart node was removed");
+                //Splatoon.LOGGER.info("Minecart node was removed");
                 onEject();
                 return;
             }
             int indexOfNextNode = indexOfPrevNode + movingDir;
             if(indexOfNextNode < 0 || indexOfNextNode > (ridingChannel.size()-1)) {
-                Splatoon.LOGGER.info("Minecart reached end of route via index");
+                //Splatoon.LOGGER.info("Minecart reached end of route via index. {} -> {} (Movingdir = {})", indexOfPrevNode, indexOfNextNode, movingDir);
                 onEject();
                 return;
             }
 
             RailNode nextNode = ridingChannel.get(indexOfNextNode);
             if(nextNode == null) {
-                Splatoon.LOGGER.info("Minecart reached end of route via null");
+                //Splatoon.LOGGER.info("Minecart reached end of route via null");
                 onEject();
                 return;
             }
@@ -1034,7 +1109,7 @@ public class BuildingRails extends ICustomItem {
             isBroken |= movingDir==-1&&nextNode.isBroken;
 
             if(isBroken) {
-                Splatoon.LOGGER.info("Minecart ejected because rail node was broken");
+                //Splatoon.LOGGER.info("Minecart ejected because rail node was broken");
                 onEject();
                 return;
             }
@@ -1042,11 +1117,16 @@ public class BuildingRails extends ICustomItem {
             vehicle.lookAt(EntityAnchorArgument.Anchor.EYES, nextNode.position.getCenter());
 
             //vehicle.setDeltaMovement(vehicle.getForward().scale(0.5f));
-            vehicle.setPos(vehicle.position().add(vehicle.getForward().scale(0.6)));
+            vehicle.setPos(vehicle.position().add(vehicle.getForward().scale(speed)));
 
             Vec3 pos = vehicle.position();
 
-            if(pos.distanceTo(nextNode.position.getCenter()) < 1.0) {
+            double distanceBetweenNodes = prevNode.position.getCenter().distanceTo(nextNode.position.getCenter());
+            double distanceFromPrevNode = vehicle.position().distanceTo(prevNode.position.getCenter());
+            double distanceToNextNode = pos.distanceTo(nextNode.position.getCenter());
+
+            if((distanceFromPrevNode > distanceBetweenNodes) || (distanceToNextNode < 1.0))
+            {
                 vehicle.setPos(nextNode.position.getCenter());
                 prevNode = nextNode;
             }
@@ -1056,10 +1136,17 @@ public class BuildingRails extends ICustomItem {
 
         public void onEject()
         {
+
+
             if(vehicle != null) {
                 Entity passenger = vehicle.level().getEntity(passengerUUID);
                 if(passenger != null) {
+
                     if (passenger instanceof Player player) {
+                        Effects.givePotionEffect(player, MobEffects.SLOWNESS, 1, 2, true);
+
+                        ((IPlayerMixin)passenger).setInInkForce("minecart", false);
+
                         var soundKey = BuiltInRegistries.SOUND_EVENT.getKey(SoundEvents.MINECART_RIDING);
                         ((ServerPlayer)player).connection.send(new ClientboundStopSoundPacket(soundKey, SoundSource.HOSTILE));
                     }
@@ -1083,31 +1170,49 @@ public class BuildingRails extends ICustomItem {
         if(player.getItemInHand(InteractionHand.MAIN_HAND).is(Items.CARROT_ON_A_STICK)) return;
         if(CustomItem.BuildingRails.is(player.getItemInHand(InteractionHand.MAIN_HAND))) return;
 
+        if(player.hasEffect(MobEffects.SLOWNESS)) {
+            player.playSound(SoundEvents.NOTE_BLOCK_BASS.value(), 1.0f, 1.0f);
+//            Helpers.playSoundTo(player, SoundEvents.NOTE_BLOCK_BASS, 1.0f, 1.0f);
+//            player.level().playPlayerSound(SoundEvents.NOTE_BLOCK_BASS, SoundSource.HOSTILE, 1.0f, 1.0f);
+//            ((ServerLevel)player.level()).playSound();
+            return;
+        }
+
         FetchedRail fetchedRail = getRailNodeForPosition(pos);
         if(fetchedRail != null) {
-            Vec3 fwd = player.getForward();
 
-            if(s_minecarts.containsKey(player.getUUID())) {
-                s_minecarts.get(player.getUUID()).onEject();
-                s_minecarts.remove(player.getUUID());
-            }
+            UUID ownerUUID = fetchedRail.placedRails.playerUUID;
+//            Player owner = player.level().getPlayerByUUID(ownerUUID);
 
-            PlacedRails allRails = fetchedRail.placedRails;
-            List<RailNode> channel = allRails.channels.get(fetchedRail.channelIndex);
-
-            if(!fetchedRail.node.isBroken)
+            IPlayerTeamMixin playerTeam = Teams.getTeamMixinFromPlayer(player);
+            IPlayerTeamMixin ownerTeam = Teams.getTeamMixinFromPlayerUUID(ownerUUID);
+            if(playerTeam == ownerTeam)
             {
-                Splatoon.LOGGER.info("Creating new minecart instance at {}", pos);
+                Vec3 fwd = player.getForward();
 
-                player.level().playSound(
-                        null,
-                        pos.getX(), pos.getY(), pos.getZ(),
-                        SoundEvents.MINECART_RIDING,
-                        SoundSource.HOSTILE,
-                        1.0f, 1.0f
-                );
+                if(s_minecarts.containsKey(player.getUUID())) {
+                    s_minecarts.get(player.getUUID()).onEject();
+                    s_minecarts.remove(player.getUUID());
+                }
 
-                s_minecarts.put(player.getUUID(), new MinecartInstance(player, pos, fwd, channel, fetchedRail.node));
+                PlacedRails allRails = fetchedRail.placedRails;
+                List<RailNode> channel = allRails.channels.get(fetchedRail.channelIndex);
+
+                if(!fetchedRail.node.isBroken)
+                {
+                    //Splatoon.LOGGER.info("Creating new minecart instance at {}. Mounting at node {}", pos, channel.indexOf(fetchedRail.node));
+
+                    player.level().playSound(
+                            null,
+                            pos.getX(), pos.getY(), pos.getZ(),
+                            SoundEvents.ARMOR_EQUIP_NETHERITE,
+                            SoundSource.HOSTILE,
+                            1.0f, 1.0f
+                    );
+
+                    s_minecarts.put(player.getUUID(), new MinecartInstance(player, pos, fwd, channel, fetchedRail.node));
+                }
+
             }
 
 

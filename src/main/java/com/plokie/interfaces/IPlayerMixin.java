@@ -40,4 +40,6 @@ public interface IPlayerMixin {
     boolean isInInk();
 
     boolean isInInkOnWall();
+
+    void setInInkForce(String identifier, boolean value);
 }

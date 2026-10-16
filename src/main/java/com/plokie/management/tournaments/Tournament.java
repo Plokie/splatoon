@@ -82,6 +82,7 @@ public abstract class Tournament {
     Map<PlayerTeam, Integer> scores = new HashMap<>();
     boolean isOngoing = false;
     boolean isComplete = false;
+    Map<PlayerTeam, List<String>> teamMembersCache = new HashMap<>();
 
     List<Matchup> previousMatchups = new ArrayList<>();
     protected Queue<Matchup> matchupQueue = new ArrayDeque<>();
@@ -94,6 +95,8 @@ public abstract class Tournament {
     );
     public static final Codec<Map<PlayerTeam, Integer>> SCORES_CODEC = Codec.unboundedMap(PLAYERTEAM_CODEC, Codec.INT);
 
+    public static final Codec<Map<PlayerTeam, List<String>>> TEAM_MEMBERS_CODEC = Codec.unboundedMap(PLAYERTEAM_CODEC, Codec.list(Codec.STRING));
+
 
 
     public static final Codec<Tournament> CODEC = RecordCodecBuilder.create(instance->
@@ -104,8 +107,9 @@ public abstract class Tournament {
                     Codec.BOOL.fieldOf("isComplete").forGetter(Tournament::isComplete),
                     SCORES_CODEC.fieldOf("scores").forGetter(Tournament::getScores),
                     Matchup.LIST_CODEC.fieldOf("previousMatchups").forGetter(Tournament::getPreviousMatchups),
-                    Matchup.LIST_CODEC.fieldOf("matchupQueue").forGetter(tournament->tournament.getMatchupQueue().stream().toList())
-            ).apply(instance, (name, type, isOngoing, isComplete, scores, previousMatchups, matchupQueue)->{
+                    Matchup.LIST_CODEC.fieldOf("matchupQueue").forGetter(tournament->tournament.getMatchupQueue().stream().toList()),
+                    TEAM_MEMBERS_CODEC.optionalFieldOf("teamMembers", new HashMap<>()).forGetter(tournament -> tournament.teamMembersCache )
+            ).apply(instance, (name, type, isOngoing, isComplete, scores, previousMatchups, matchupQueue, teamMembers)->{
                 Tournament tournament;
 
                 switch(type) {
@@ -118,10 +122,12 @@ public abstract class Tournament {
                 tournament.isOngoing = isOngoing;
                 tournament.isComplete = isComplete;
                 tournament.scores.putAll(scores);
+                tournament.teamMembersCache.putAll(teamMembers);
 
                 Splatoon.LOGGER.info("\t{} isOngoing", isOngoing);
                 Splatoon.LOGGER.info("\t{} isCompelte", isComplete);
                 Splatoon.LOGGER.info("\t{} scores", scores.size());
+                Splatoon.LOGGER.info("\t{} teamMembersCache", teamMembers.size());
 
                 for(var entry : tournament.scores.entrySet()) {
                     tournament.teams.add(entry.getKey());
@@ -219,6 +225,46 @@ public abstract class Tournament {
         scores.put(team, 0);
     }
 
+    public void updateTeamMembersCache(PlayerTeam team)
+    {
+        if(!teamMembersCache.containsKey(team)) {
+            teamMembersCache.put(team, new ArrayList<>(team.getPlayers()));
+            return;
+        }
+
+        for(String playerName : team.getPlayers()) {
+            List<String> teamMembersList = teamMembersCache.get(team);
+            if(!teamMembersList.contains(playerName)) {
+                teamMembersList.add(playerName);
+            }
+        }
+    }
+
+    public boolean removeTeamMemberCache(PlayerTeam team, String playerName)
+    {
+        if(!teamMembersCache.containsKey(team)) {
+            return false;
+        }
+
+        return teamMembersCache.get(team).remove(playerName);
+    }
+
+    public void addTeamMemberCache(PlayerTeam team, String playerName)
+    {
+        if(!teamMembersCache.containsKey(team)) {
+            teamMembersCache.put(team, new ArrayList<>());
+        }
+
+        teamMembersCache.get(team).add(playerName);
+    }
+
+    public List<String> getTeamMembersCache(PlayerTeam team)
+    {
+        if(!teamMembersCache.containsKey(team)) { return new ArrayList<>(); }
+
+        return new ArrayList<>(teamMembersCache.get(team));
+    }
+
     public void removeTeam(PlayerTeam team)
     {
         teams.remove(team);
@@ -269,6 +315,10 @@ public abstract class Tournament {
             Splatoon.LOGGER.warn("Attempted to declare winner of tournmanent, but there is no current matchup (tournament might have not started yet, or has ended)");
             return false;
         }
+
+        // Add all members as participating team players to cache
+        updateTeamMembersCache(currentMatchup.getTeam0());
+        updateTeamMembersCache(currentMatchup.getTeam1());
 
         if(currentMatchup.team1 != winningTeam && currentMatchup.team0 != winningTeam) {
             Splatoon.LOGGER.warn("Attempted to declare winner of tournmanent, but the current matchup does not contain the declared winning team");

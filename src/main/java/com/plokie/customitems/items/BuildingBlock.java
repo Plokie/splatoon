@@ -287,33 +287,35 @@ public class BuildingBlock extends ICustomItem {
 
         Block auxBlock = team.getAuxBlock();
 
+        BlockPos placePos = Helpers.calculateDesiredPlacement(hit);
+        BlockPos placePosBelow = new BlockPos(placePos.getX(), placePos.getY() - 1, placePos.getZ());
 
-
-        boolean validPlacement = false;
-        if(coreDir == Direction.UP) validPlacement = true;
+        boolean validPlacement = !player.level().getBlockState(placePosBelow).is(Blocks.AIR);
+        //if(coreDir == Direction.UP) validPlacement = true;
 //        else {
 //            if(player.level().getBlockState(hit.getBlockPos()).is(auxBlock)) {
 //                validPlacement = true;
 //            }
 //        }
 
-        Vec3 newPos = hitPos.add(hitDir.multiply(0.5, 0.5, 0.5));
-        BlockPos newBlockPos = Helpers.toBlockPos(newPos);
+//        Vec3 newPos = hitPos.add(hitDir.multiply(0.5, 0.5, 0.5));
+//        BlockPos newBlockPos = Helpers.toBlockPos(newPos);
 
-        if(!player.level().getBlockState(newBlockPos).is(Blocks.AIR)) {
+        if(!player.level().getBlockState(placePos).is(Blocks.AIR)) {
             validPlacement = false;
         }
 
         if(validPlacement) {
 
 
-            BlockPos blockPosTop = Helpers.toBlockPos(newPos.add(0, wallHeight-1, 0));
+//            BlockPos blockPosTop = Helpers.toBlockPos(newPos.add(0, wallHeight-1, 0));
+            BlockPos blockPosTop = new BlockPos(placePos.getX(), placePos.getY() + (wallHeight-1), placePos.getZ());
 
     //        BlockState block = team.getAuxBlock().defaultBlockState();
 
-            Fill.replace((ServerLevel)player.level(), newBlockPos, blockPosTop, auxBlock, BlockTags.AIR);
+            Fill.replace((ServerLevel)player.level(), placePos, blockPosTop, auxBlock, BlockTags.AIR);
 
-            addPlacedBlock(player, newBlockPos);
+            addPlacedBlock(player, placePos);
 
             super.onUseBlock(player, hit);
         }

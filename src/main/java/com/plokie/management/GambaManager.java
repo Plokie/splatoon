@@ -188,6 +188,14 @@ public class GambaManager {
         return (HatDatabase.Hat) gambaSlots.toArray()[mid];
     }
 
+    HatDatabase.Hat getMiddleNextSlot()
+    {
+        int count = gambaSlots.size();
+        int mid = (int)Math.floor(count / 2.0f);
+
+        return (HatDatabase.Hat) gambaSlots.toArray()[mid+1];
+    }
+
     void update(MinecraftServer server)
     {
         for(Tuple<UUID, HatDatabase.Hat> award : wonQueue)
@@ -219,6 +227,22 @@ public class GambaManager {
 
         float speed = initialSpeed * ((float)Math.exp(-friction * spinTime));
 
+        if(speed <= 0.01f)
+        {
+            // One last tick chance
+            HatDatabase.Hat currentHat = getMiddleSlot();
+            HatDatabase.Hat nextHat = getMiddleNextSlot();
+
+            // if the next hat is rarer than the current middle one
+            if(nextHat.getRarity().weight < currentHat.getRarity().weight)
+            {
+                // extra 50% chance to roll over for one more tick
+                if(Math.random() < 0.5) {
+                    currentSlot++;
+                }
+            }
+        }
+
         currentSlot += speed;
 
         int slotDiff = (int)Math.floor(currentSlot) - prevSlot;
@@ -233,6 +257,8 @@ public class GambaManager {
         }
 
 //        Splatoon.LOGGER.info("Spin step {}: speed{}. {}",currentSlot, speed, spinningForTicks);
+
+
 
         if(speed <= 0.01f)
         {

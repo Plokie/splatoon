@@ -115,18 +115,19 @@ public class Intro implements IGameState {
         {
             if(timer == duration - ((i+1) * 100))
             {
+                Vec3 introPos = introGuide.position();
+                introGuide.level().playSound(
+                        null,
+                        introPos.x, introPos.y, introPos.z,
+                        SoundEvents.EXPERIENCE_ORB_PICKUP,
+                        SoundSource.MASTER,
+                        0.5f,
+                        1.0f
+                );
+
                 for(Player player : Splatoon.gameFlowManager.getGamersIncludingSpectators())
                 {
                     ServerPlayer serverPlayer = (ServerPlayer)player;
-
-                    player.level().playSound(
-                            player,
-                            player.getEyePosition().x, player.getEyePosition().y, player.getEyePosition().z,
-                            SoundEvents.EXPERIENCE_ORB_PICKUP,
-                            SoundSource.MASTER,
-                            0.5f,
-                            1.0f
-                    );
 
                     String text = currentGamemode.getIntroText().get(i);
                     serverPlayer.connection.send(new ClientboundSetSubtitleTextPacket(Component.literal(text)));

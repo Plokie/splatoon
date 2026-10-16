@@ -227,12 +227,116 @@ public class TournamentManager {
                     }
 
                     List<Tournament.Matchup> matchups = new ArrayList<>(tournament.getMatchupQueue().stream().toList());
+
+                    Tournament.Matchup currentMatchup = matchups.getFirst();
+                    matchups.removeFirst();
+
                     Collections.shuffle(matchups);
+
+                    matchups.addFirst(currentMatchup);
+
                     tournament.getMatchupQueue().clear();
                     tournament.getMatchupQueue().addAll(matchups);
 
 
                     return "Started tournament " + tournamentName;
+                }).register();
+
+        CommandBuilder.command("tournament")
+                .subcommand("modify")
+                .argumentString("tournament_name", this::getAllTournamentNames)
+                .subcommand("member_cache")
+                .argumentString("team", this::getTeamNames)
+                .subcommand("add")
+                .argumentString("member_name")
+                .executes(ctx->{
+                    String tournamentName = ctx.getArgumentString("tournament_name");
+                    Tournament tournament = getTournamentByName(tournamentName);
+                    if(tournament == null) {
+                        return "! Could not find tournament of name: " + tournamentName;
+                    }
+
+                    String teamName = ctx.getArgumentString("team");
+
+                    PlayerTeam team = Splatoon.SERVER.getScoreboard().getPlayerTeam(teamName);
+                    if(team == null) {
+                        return "! Could not find team of name: " + teamName;
+                    }
+
+                    String memberName = ctx.getArgumentString("member_name");
+
+                    tournament.addTeamMemberCache(team, memberName);
+
+                    return "Added " + memberName + " to member history for team " + teamName;
+                }).register();
+
+        CommandBuilder.command("tournament")
+                .subcommand("modify")
+                .argumentString("tournament_name", this::getAllTournamentNames)
+                .subcommand("member_cache")
+                .argumentString("team", this::getTeamNames)
+                .subcommand("view")
+                .executes(ctx->{
+                    String tournamentName = ctx.getArgumentString("tournament_name");
+                    Tournament tournament = getTournamentByName(tournamentName);
+                    if(tournament == null) {
+                        return "! Could not find tournament of name: " + tournamentName;
+                    }
+
+                    String teamName = ctx.getArgumentString("team");
+
+                    PlayerTeam team = Splatoon.SERVER.getScoreboard().getPlayerTeam(teamName);
+                    if(team == null) {
+                        return "! Could not find team of name: " + teamName;
+                    }
+
+                    ScheduleEvent.schedule(1, server->{
+                        MutableComponent returnMessage = Component.literal("");
+
+                        List<String> members = tournament.getTeamMembersCache(team);
+
+                        for(String memberName : members)
+                        {
+                            returnMessage = returnMessage.append(Component.literal(memberName + "\n"));
+                        }
+
+                        ctx.getStack().getSource().sendSystemMessage(returnMessage);
+                    });
+
+                    return "Returning team member cache for team " + teamName + "...";
+                }).register();
+
+        CommandBuilder.command("tournament")
+                .subcommand("modify")
+                .argumentString("tournament_name", this::getAllTournamentNames)
+                .subcommand("member_cache")
+                .argumentString("team", this::getTeamNames)
+                .subcommand("remove")
+                .argumentString("member_name")
+                .executes(ctx->{
+                    String tournamentName = ctx.getArgumentString("tournament_name");
+                    Tournament tournament = getTournamentByName(tournamentName);
+                    if(tournament == null) {
+                        return "! Could not find tournament of name: " + tournamentName;
+                    }
+
+                    String teamName = ctx.getArgumentString("team");
+
+                    PlayerTeam team = Splatoon.SERVER.getScoreboard().getPlayerTeam(teamName);
+                    if(team == null) {
+                        return "! Could not find team of name: " + teamName;
+                    }
+
+                    String memberName = ctx.getArgumentString("member_name");
+
+                    boolean didRemove = tournament.removeTeamMemberCache(team, memberName);
+
+                    if(didRemove) {
+                        return "Removed " + memberName + " from team member history for " + teamName;
+                    }
+                    else {
+                        return "Team did not contain this member for it to be removed";
+                    }
                 }).register();
 
         CommandBuilder.command("tournament").subcommand("view").subcommand("scores").executes(ctx->{
@@ -531,8 +635,17 @@ public class TournamentManager {
                     for(PlayerTeam team : tournament.getWinningTeams())
                     {
                         message = message.append(team.getFormattedDisplayName());
+                        message = message.append("\n");
+
+                        for(String teamMember : tournament.getTeamMembersCache(team))
+                        {
+                            message = message.append("|- " + teamMember + "\n");
+                        }
+
+                        message = message.append("\n");
                     }
                     message = message.append("\n");
+
                 }
             }
 

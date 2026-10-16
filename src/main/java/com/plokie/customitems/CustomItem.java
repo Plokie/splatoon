@@ -102,7 +102,7 @@ public enum CustomItem {
             .build()
     ),
     BuildingBlock(Builder
-            .item(Items.ENDER_EYE)
+            .item(Items.IRON_NUGGET)
             .name("Brick Wall")
             .dataCallback(com.plokie.customitems.items.BuildingBlock::dataCallback)
             .behaviour(new BuildingBlock())
