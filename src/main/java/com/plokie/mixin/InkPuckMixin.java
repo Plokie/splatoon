@@ -329,13 +329,13 @@ public class InkPuckMixin implements IProjectile {
 
     void cleansingCloud()
     {
-        float timeToExpand = 1.0f;
+        float timeToExpand = 2.0f;
         float expandTime = Math.clamp(self.tickCount / (20.0f*timeToExpand), 0.0f, 1.0f);
 
 //        float radius =  expandTime * 5.0f; // expand over time
 //        float radius = 8.0f;
 
-        float radius = Helpers.lerp(3.0f, 6.0f, expandTime);
+        float radius = Helpers.lerp(1.0f, 6.0f, expandTime);
 
 //        Splatoon.LOGGER.info("Cleansing cloud radius {}", radius);
 
@@ -376,7 +376,7 @@ public class InkPuckMixin implements IProjectile {
         //(Level level, Vector3d pos, double radius, float amount)
 
         if(self.tickCount % 2 == 0) {
-            Affects.hurtLivingEntitiesInRange(self.level(), self.position(), radius, 13.5f);
+            Affects.hurtLivingEntitiesInRange(self.level(), self.position(), radius, 10.0f);
 //            for (LivingEntity livingEntity : Helpers.getEntitiesInRadius(self.level(), LivingEntity.class, self.position(), radius)) {
 //
 //            }

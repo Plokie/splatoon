@@ -155,7 +155,7 @@ public class BuildingBlock extends ICustomItem {
     {
         BlockPos pos = blockInstance.position;
 
-        Splatoon.LOGGER.info("onBlockDestroyed {} fill {}", pos, wallHeight);
+//        Splatoon.LOGGER.info("onBlockDestroyed {} fill {}", pos, wallHeight);
         //BlockPos posAbove = new BlockPos(pos.getX(), pos.getY() + 1, pos.getZ());
 
         sendDestructionStage((ServerLevel) blockInstance.level, pos, 15);
@@ -256,7 +256,7 @@ public class BuildingBlock extends ICustomItem {
                 {
 
 
-                    Splatoon.LOGGER.info("Block {} destr stage change {} to {}", pos, blockInstance.previousDestrStage, destructionStage);
+//                    Splatoon.LOGGER.info("Block {} destr stage change {} to {}", pos, blockInstance.previousDestrStage, destructionStage);
 
                     blockInstance.previousDestrStage = destructionStage;
 
@@ -276,7 +276,7 @@ public class BuildingBlock extends ICustomItem {
             hasSetupTick = true;
         }
 
-        Splatoon.LOGGER.info("onUseBlock {}", player.getName().getString());
+//        Splatoon.LOGGER.info("onUseBlock {}", player.getName().getString());
 
         IPlayerTeamMixin team = Teams.getTeamMixinFromPlayer(player);
         if(team == null) return;

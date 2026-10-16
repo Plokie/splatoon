@@ -250,7 +250,11 @@ public class HatDatabase extends SavedData {
         public boolean hidden = false;
 
         public Hat getHat() {
-            return HatDatabase.getHatById(id);
+            Hat hat = HatDatabase.getHatById(id);
+            if(hat == null) {
+                Splatoon.LOGGER.error("Failed to get playerhat hat def by id {}", id);
+            }
+            return hat;
         }
 
         public static Codec<PlayerHat> CODEC = RecordCodecBuilder.create(instance->
@@ -693,6 +697,7 @@ public class HatDatabase extends SavedData {
                     for(PlayerHat playerHat : HatDatabase.getPlayerHats(player))
                     {
                         Hat hat = playerHat.getHat();
+                        if(hat == null) continue;
 
                         MutableComponent label = Component.literal(playerHat.count + "x ");
 
@@ -764,7 +769,7 @@ public class HatDatabase extends SavedData {
                                                         }
                                                     }
 
-                                                    DialogBuilder.triggerAction("open_view_all", player2);
+                                                    DialogBuilder.triggerAction("open_view_all", player3);
                                                 })
                                                 .setCloseAction(Component.literal("Back"), 200, tag2, (player3, tag3) -> {
                                                     DialogBuilder.triggerAction("view_hat", player3, tag3);
@@ -801,7 +806,8 @@ public class HatDatabase extends SavedData {
                     viewHatsRef.viewHatsDialog = dialogBuilder.buildWithoutSending();
                     DialogBuilder.send(viewHatsRef.viewHatsDialog, player);
                 })
-                .addAction(Component.literal("Hat market (Coming soon)"), "open_hat_market", 200, (player)->{
+                .addAction(Component.literal("Request a trade"), "open_trade_menu", 200, HatDatabase::requestTradeAction)
+                .addAction(Component.literal("Auction house (Coming soon)"), "open_hat_market", 200, (player)->{
 
                 })
                 ;
@@ -1369,5 +1375,53 @@ public class HatDatabase extends SavedData {
         ServerLifecycleEvents.AFTER_SAVE.register((server, a, b)->{
             save();
         });
+    }
+
+    static void requestTradeAction(ServerPlayer player)
+    {
+        DialogBuilder sendOfferScreen = DialogBuilder
+                .createDialogMultiAction("send_offer_screen", 1)
+                .title("Send an offer")
+                .addBodyText("Pick a player to start a trade with", 200)
+                ;
+
+        boolean didAdd = false;
+        for(ServerPlayer otherPlayer : Splatoon.SERVER.getPlayerList().getPlayers()) {
+            if(player == otherPlayer) continue;
+
+            CompoundTag tag = new CompoundTag();
+            //tag.putString("sender", player.getScoreboardName());
+            tag.putString("receiver", otherPlayer.getUUID().toString());
+
+            sendOfferScreen.addAction(otherPlayer.getName(), "send_offer", 150, tag, (sender, tag1)->{
+                CompoundTag ctag2 = tag1.asCompound().orElse(new CompoundTag());
+                Optional<String> receiverOpt = ctag2.getString("receiver");
+                if(receiverOpt.isEmpty()) return;
+
+                UUID receiverUUID = UUID.fromString(receiverOpt.get());
+
+                Player receiver = Splatoon.SERVER.getPlayerList().getPlayer(receiverUUID);
+                if(receiver == null) return;
+
+                sender.sendSystemMessage(Component.literal("Sent trade request to ").append(receiver.getDisplayName()).append(". They have 30 seconds to respond!")  );
+
+                Trading.createIncomingRequest(sender, receiver);
+
+                Splatoon.LOGGER.info("{} sent trade request to {}", sender.getName().getString(), receiver.getName().getString());
+            });
+
+            didAdd = true;
+        }
+
+        if(!didAdd)
+        {
+            sendOfferScreen.addAction(Component.literal("No other players online!"), "do_nothing", 150, (a)->{});
+        }
+
+        sendOfferScreen.setCloseAction(Component.literal("Back"), 200, player1 -> {
+//            DialogBuilder.send(menus.homeMenu, player1);
+        });
+
+        sendOfferScreen.buildAndSend(player);
     }
 }

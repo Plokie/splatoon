@@ -36,7 +36,7 @@ public class ServerCommonPacketListenerImplMixin {
             if(actionLastCalledTick.containsKey(actionId))
             {
                 int ticksSinceLastCall = currentTick - actionLastCalledTick.get(actionId);
-                if(ticksSinceLastCall < 20) {
+                if(ticksSinceLastCall < 2) {
                     return;
                 }
             }

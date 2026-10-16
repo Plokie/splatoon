@@ -17,6 +17,7 @@ import com.plokie.interfaces.IPlayerMixin;
 import com.plokie.interfaces.IPlayerStatsMixin;
 import com.plokie.management.*;
 import com.plokie.management.hats.HatDatabase;
+import com.plokie.management.hats.Trading;
 import com.plokie.management.maps.GamemodeMaps;
 import com.plokie.moving_blocks.MovingBlocksEntity;
 import com.plokie.moving_blocks.MovingBlocksEntityManager;
@@ -77,6 +78,7 @@ public class Splatoon implements ModInitializer {
 	public static GameFlowManager gameFlowManager = null;
 	GambaManager gambaManager = null;
 	TournamentManager tournamentManager = null;
+	Trading tradingManager = null;
 
 	@Override
 	public void onInitialize() {
@@ -114,6 +116,7 @@ public class Splatoon implements ModInitializer {
 		this.movingBlocksEntityManager = new MovingBlocksEntityManager();
 		this.gambaManager = new GambaManager();
 		this.tournamentManager = new TournamentManager();
+		this.tradingManager = new Trading();
 
 		HatDatabase.setup();
 

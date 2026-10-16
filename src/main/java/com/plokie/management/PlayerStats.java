@@ -336,6 +336,12 @@ public enum PlayerStats implements StringRepresentable {
         return (IPlayerStatsMixin) player;
     }
 
+    public static IPlayerStatsMixin get(UUID playerUUID) {
+        ServerPlayer player = Splatoon.SERVER.getPlayerList().getPlayer(playerUUID);
+        if(player == null) return null;
+        return get(player);
+    }
+
     public static PlayerStats vaulueOfIgnoreCase(String enumString) {
         for(PlayerStats stat : PlayerStats.values()) {
             if(stat.toString().equalsIgnoreCase(enumString))

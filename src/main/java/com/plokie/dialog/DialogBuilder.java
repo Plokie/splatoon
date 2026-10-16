@@ -21,6 +21,7 @@ import net.minecraft.server.dialog.body.DialogBody;
 import net.minecraft.server.dialog.body.ItemBody;
 import net.minecraft.server.dialog.body.PlainMessage;
 import net.minecraft.server.dialog.input.BooleanInput;
+import net.minecraft.server.dialog.input.NumberRangeInput;
 import net.minecraft.server.dialog.input.SingleOptionInput;
 import net.minecraft.server.dialog.input.TextInput;
 import net.minecraft.server.level.ServerPlayer;
@@ -49,7 +50,7 @@ public class DialogBuilder {
 
 //    Component submitText = Component.literal("Submit");
 //    Component closeText = Component.literal("Close");
-    ActionButton submitButton = new ActionButton(new CommonButtonData(Component.literal("Submit"), 200), Optional.empty());
+    ActionButton submitButton = null;
     ActionButton closeButton = new ActionButton(new CommonButtonData(Component.literal("Close"), 200), Optional.empty());
 
     DialogAction dialogAction = DialogAction.CLOSE;
@@ -150,6 +151,8 @@ public class DialogBuilder {
     public static DialogBuilder createDialogConfirmation(String dialogId)
     {
         return new DialogBuilder(dialogId, DialogType.Confirmation, (dialogData, self)->{
+            if(self.submitButton == null) self.submitButton = self.defaultSubmitBehaviour();
+
             return new ConfirmationDialog(
                     dialogData,
                     self.submitButton,
@@ -175,6 +178,13 @@ public class DialogBuilder {
                     columns
             );
         });
+    }
+
+    ActionButton defaultSubmitBehaviour()
+    {
+        return new ActionButton(new CommonButtonData(Component.literal("Submit"), 200), dialogInputs.isEmpty() ? Optional.empty() :Optional.of(
+                new CommandTemplate(constructParsedTemplate())
+        ));
     }
 
 //    public DialogBuilder makeCloseButtonSubmit()
@@ -279,6 +289,12 @@ public class DialogBuilder {
         this.submitButton = new ActionButton(new CommonButtonData(label, width), Optional.of(new StaticAction(
                 new ClickEvent.Custom(resourceLocation, Optional.empty())
         )) );
+        return this;
+    }
+
+    public DialogBuilder setSubmitAction(ActionButton actionButton)
+    {
+        this.submitButton = actionButton;
         return this;
     }
 
@@ -391,6 +407,15 @@ public class DialogBuilder {
         dialogInputs.put(key, new Input(safeKey(key), new TextInput(boxWidth, label, true, initialValue, maxLength, Optional.of(
                 new TextInput.MultilineOptions(Optional.of(boxHeight), Optional.of(maxLines))
         ))));
+        return this;
+    }
+
+    public DialogBuilder addInputIntegerRange(String key, Component label, int width, int lowerBoundInclusive, int upperBoundInclusive, int initial)
+    {
+        NumberRangeInput.RangeInfo rangeInfo = new NumberRangeInput.RangeInfo((float)lowerBoundInclusive, (float)upperBoundInclusive, Optional.of((float)initial), Optional.of(1.0f));
+
+        Input input = new Input(safeKey(key), new NumberRangeInput(width, label, "options.generic_value", rangeInfo));
+        dialogInputs.put(key, input);
         return this;
     }
 
