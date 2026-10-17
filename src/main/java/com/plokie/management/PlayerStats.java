@@ -173,6 +173,16 @@ public enum PlayerStats implements StringRepresentable {
             }
         }).permission((stack)->true).register();
 
+        CommandBuilder.command("bal").executes(ctx->{
+            ServerPlayer player = ctx.getStack().getSource().getPlayer();
+            if(player == null) return "! This command must be executed by a player";
+
+            int bal = PlayerStats.get(player).get(PlayerStats.MONEY);
+
+            return player.getScoreboardName() + " has " + bal + " gold";
+
+        }).permission(ctx->true).register();
+
         CommandBuilder.command("playerstat").subcommand("add").argumentString("type", lifetimeOrMatch).argumentPlayer("player").argumentEnum("stat", PlayerStats::values).argumentInteger("delta").executes(ctx->{
             try {
                 ServerPlayer player = ctx.getArgumentPlayer("player");
