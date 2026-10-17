@@ -4,7 +4,8 @@ public enum GamemodeMaps {
     UrchinUnderpass("Urchin Underpass", new UrchinUnderpass()),
     MorayTowers("Moray Towers", new MorayTowers()),
     Cyberscape("Cyberscape", new Cyberscape()),
-    Goldrush("Goldrush", new Goldrush());
+    Goldrush("Goldrush", new Goldrush()),
+    InkBlotAcademy("InkBlot Academy", new InkBlotAcademy());
 
     final String name;
     final GamemodeMap map;

@@ -8,30 +8,30 @@ import net.minecraft.world.phys.Vec3;
 public class Cyberscape extends GamemodeMap {
     public Cyberscape()
     {
-        teamSpawns.put(0, new Vec3(4129, 115, 1324));
-        teamSpawns.put(1, new Vec3(3983, 115, 1324));
+        teamSpawns.put(0, new Vec3(4124, 121, 1374));
+        teamSpawns.put(1, new Vec3(4002, 121, 1311));
 
         //this.introStartPosition = new Vec3(4015.663, 124.11913, 1347.858);
         //this.introStartRotation = new Vec2(-114.0f, 1.8f);
 
-        this.introStartPosition = new Vec3(4120.7, 128.74314, 1322.3);
-        this.introStartRotation = new Vec2(66.0f, 4.5f);
+        this.introStartPosition = new Vec3(4042.273, 127.5, 1316.5);
+        this.introStartRotation = new Vec2(-39.8f, 0.0f);
 
-        this.resultsPosition = new Vec3(4056.5, 131.0, 1378.5);
-        this.resultsRotation = new Vec2(180.0f, 22.7f);
+        this.resultsPosition = new Vec3(4078.511, 137.13, 1362.965);
+        this.resultsRotation = new Vec2(147.0f, 33.5f);
 
-        this.mapCorner = new Vec3(3991-20, 92, 1269);
-        this.mapSize = new Vec3(131+40, 85, 111);
+        this.mapCorner = new Vec3(3970, 100, 1305);
+        this.mapSize = new Vec3(173, 79, 80);
 
-        this.spectatorZone = new Vec3(4057, 145, 1324);
+        this.spectatorZone = new Vec3(4063, 145, 1342);
 
         this.getGroundBlock = y->Blocks.WHITE_CONCRETE_POWDER;
         this.getWallBlock = y->Blocks.WHITE_WOOL;
 
         for(int i=0;i<5;i++) {
-            this.podiums.add(new BlockPos(4064 + (i*4), 109, 1369));
+            this.podiums.add(new BlockPos(4093, 114, 1359 - (i*4)));
         }
-        this.podiumViewerPosition = new Vec3(4072.5, 111.0, 1358.5);
-        this.podiumViewerRotation = new Vec2(0.0f, 10.0f);
+        this.podiumViewerPosition = new Vec3(4084.5, 118.0, 1351.5);
+        this.podiumViewerRotation = new Vec2(-90.0f, 19.0f);
     }
 }

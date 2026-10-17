@@ -45,6 +45,7 @@ public class TurfWar extends Gamemode {
         maps.add(GamemodeMaps.UrchinUnderpass);
         maps.add(GamemodeMaps.MorayTowers);
         maps.add(GamemodeMaps.Cyberscape);
+        maps.add(GamemodeMaps.InkBlotAcademy);
 
         rewards.put(PlayerStats.BLOCKS_INKED, 1.0f / 750.0f);
         rewards.put(PlayerStats.AMOUNT_HEALED, 1.0f / 25.0f);
